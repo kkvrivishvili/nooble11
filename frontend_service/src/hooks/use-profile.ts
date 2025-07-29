@@ -4,7 +4,7 @@ import type { ProfileContextType } from '@/types/profile';
 
 /**
  * Custom hook to access the profile context.
- * Ensures the hook is used within a ProfileProvider.
+ * Ensures sthe hook is used within a ProfileProvider.
  */
 export const useProfile = (): ProfileContextType => {
   const context = useContext(ProfileContext);
