@@ -1,0 +1,44 @@
+/* CSS Variables para el sistema de themes */
+:root {
+    --profile-primary-color: #000000;
+    --profile-background-color: #ffffff;
+    --profile-border-radius: 12px;
+    --profile-font-family: system-ui, -apple-system, sans-serif;
+  }
+  
+  /* Clases utilitarias para usar las variables */
+  .profile-themed {
+    color: var(--profile-primary-color);
+    background-color: var(--profile-background-color);
+    border-radius: var(--profile-border-radius);
+    font-family: var(--profile-font-family);
+  }
+  
+  .profile-primary-color {
+    color: var(--profile-primary-color);
+  }
+  
+  .profile-bg-color {
+    background-color: var(--profile-background-color);
+  }
+  
+  .profile-border-radius {
+    border-radius: var(--profile-border-radius);
+  }
+  
+  /* Animations for theme transitions */
+  .profile-theme-transition {
+    transition: 
+      color 0.3s ease,
+      background-color 0.3s ease,
+      border-color 0.3s ease,
+      border-radius 0.3s ease;
+  }
+  
+  /* Background image support */
+  .profile-bg-image {
+    background-image: var(--profile-background-image);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }

@@ -6,6 +6,7 @@ import { useProfile } from '@/hooks/use-profile';
 import ProfileComponent from './components/ProfileComponent'
 import ContentComponent from './components/ContentComponent'
 import ChatInput from './components/ChatInput'
+import { ProfileThemeProvider } from '@/context/profile-theme-context';
 
 interface PublicProfileProps {
   username: string;
