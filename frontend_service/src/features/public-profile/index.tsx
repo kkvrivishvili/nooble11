@@ -3,7 +3,6 @@ import { cn } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query';
 import { publicProfileApi } from '@/api/public-profile-api';
 import ProfileComponent from './components/ProfileComponent'
-import ContentComponent from './components/ContentComponent'
 import PublicContentComponent from './components/PublicContentComponent'
 import ChatInput from './components/ChatInput'
 import { ProfileThemeProvider } from '@/context/profile-theme-context';
@@ -88,25 +87,14 @@ export default function PublicProfile({ username, isPreview = false }: PublicPro
           />
           
           {/* Content Tabs */}
-          {isPreview ? (
-            <ContentComponent
-              profile={profile}
-              isPreview={isPreview}
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-              currentAgentId={currentAgentId}
-              onAgentClick={handleAgentClick}
-            />
-          ) : (
-            <PublicContentComponent
-              profile={profile}
-              isPreview={isPreview}
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-              currentAgentId={currentAgentId}
-              onAgentClick={handleAgentClick}
-            />
-          )}
+          <PublicContentComponent
+            profile={profile}
+            isPreview={isPreview}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            currentAgentId={currentAgentId}
+            onAgentClick={handleAgentClick}
+          />
         </div>
       </ProfileThemeProvider>
       
