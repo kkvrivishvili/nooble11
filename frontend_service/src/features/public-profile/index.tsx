@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query';
-import { profileApi } from '@/api/profile-api';
+import { publicProfileApi } from '@/api/public-profile-api';
 import { useProfile } from '@/hooks/use-profile';
 import ProfileComponent from './components/ProfileComponent'
 import ContentComponent from './components/ContentComponent'
+import PublicContentComponent from './components/PublicContentComponent'
 import ChatInput from './components/ChatInput'
 import { ProfileThemeProvider } from '@/context/profile-theme-context';
 
@@ -19,10 +20,10 @@ export default function PublicProfile({ username, isPreview = false }: PublicPro
 
   // Use a separate query for the public profile page
   const { data: publicProfile, isLoading: isLoadingPublic } = useQuery({
-    queryKey: ['profile', username],
+    queryKey: ['public-profile', username],
     queryFn: () => {
       if (!username) return null;
-      return profileApi.getProfileByUsername(username);
+      return publicProfileApi.getPublicProfile(username);
     },
     enabled: !isPreview && !!username, // Only run this query on public pages
   });
@@ -90,14 +91,25 @@ export default function PublicProfile({ username, isPreview = false }: PublicPro
         />
         
         {/* Content Tabs */}
-        <ContentComponent
-          profile={profile}
-          isPreview={isPreview}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          currentAgentId={currentAgentId}
-          onAgentClick={handleAgentClick}
-        />
+        {isPreview ? (
+          <ContentComponent
+            profile={profile}
+            isPreview={isPreview}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            currentAgentId={currentAgentId}
+            onAgentClick={handleAgentClick}
+          />
+        ) : (
+          <PublicContentComponent
+            profile={profile}
+            isPreview={isPreview}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            currentAgentId={currentAgentId}
+            onAgentClick={handleAgentClick}
+          />
+        )}
       </div>
       
       {/* Chat Input - Always sticky at the bottom */}

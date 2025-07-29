@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { IconPlay, IconBrandYoutube } from '@tabler/icons-react';
+import { IconBrandYoutube, IconPlayerPlay } from '@tabler/icons-react';
 import { PublicWidgetProps } from './types';
 
 interface PublicYouTubeWidgetProps extends PublicWidgetProps {
@@ -9,6 +9,8 @@ interface PublicYouTubeWidgetProps extends PublicWidgetProps {
     autoplay: boolean;
     showControls: boolean;
   };
+  theme: any;
+  className: string;
 }
 
 export function PublicYouTubeWidget({ data, theme, className }: PublicYouTubeWidgetProps) {
@@ -60,7 +62,7 @@ export function PublicYouTubeWidget({ data, theme, className }: PublicYouTubeWid
               <div 
                 className="bg-red-600 rounded-full p-4 group-hover:scale-110 transition-transform shadow-lg"
               >
-                <IconPlay size={32} className="text-white ml-1" fill="white" />
+                <IconPlayerPlay size={32} className="text-white ml-1" fill="white" />
               </div>
             </div>
             {/* YouTube logo */}

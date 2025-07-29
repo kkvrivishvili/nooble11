@@ -1,15 +1,20 @@
 import React, { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ProfileWithAgents, Widget, ProfileLink, WidgetAgents } from '@/types/profile'
+import { ProfileWithAgents, Widget } from '@/types/profile'
 import { 
   IconLink,
   IconMessage,
 } from '@tabler/icons-react'
-import { PublicLinkWidget } from '@/features/public-profile/widgets/public-link-widget'
-import { PublicAgentsWidget } from '@/features/public-profile/widgets/public-agents-widget'
+import { PublicWidgetRenderer } from '@/features/public-profile/widgets/public-widget-renderer'
+import { useProfileTheme } from '@/context/profile-theme-context'
 
-interface ContentComponentProps {
+type ActiveWidget = {
+  widget: Widget;
+  data: any;
+}
+
+interface PublicContentComponentProps {
   profile: ProfileWithAgents
   isPreview?: boolean
   activeTab: string
@@ -18,15 +23,15 @@ interface ContentComponentProps {
   onAgentClick?: (agentId: string) => void
 }
 
-export default function ContentComponent({ 
+export default function PublicContentComponent({ 
   profile, 
   isPreview = false,
   activeTab,
   onTabChange,
   currentAgentId,
   onAgentClick
-}: ContentComponentProps) {
-  console.log('🔥 ContentComponent RELOADED - Fixed version', { profile });
+}: PublicContentComponentProps) {
+  const { theme } = useProfileTheme();
   const [messages] = useState<Array<{id: string, text: string, sender: 'user' | 'agent'}>>([]);
 
   // Early return if profile is not loaded
@@ -35,33 +40,6 @@ export default function ContentComponent({
   }
 
   const currentAgent = profile.agentDetails.find((a) => a.id === currentAgentId)
-
-  // Function to render different widget types
-  const renderWidget = (widget: Widget, data: ProfileLink | WidgetAgents) => {
-    switch (widget.type) {
-      case 'link':
-        return (
-          <PublicLinkWidget
-            key={widget.id}
-            widget={widget}
-            data={data as ProfileLink}
-          />
-        );
-      case 'agents':
-        return (
-          <PublicAgentsWidget
-            key={widget.id}
-            widget={widget}
-            data={{
-              ...(data as WidgetAgents),
-              onAgentClick
-            }}
-          />
-        );
-      default:
-        return null;
-    }
-  };
 
   // Get active widgets with their data
   const activeWidgets = profile.widgets
@@ -75,13 +53,62 @@ export default function ContentComponent({
         }
         case 'agents': {
           const agentData = profile.agentWidgets?.find(w => w.id === widget.id);
-          return agentData ? { widget, data: agentData } : null;
+          if (agentData) {
+            // Map agent IDs to actual agent objects
+            const agents = agentData.agentIds
+              .map(id => profile.agentDetails.find(a => a.id === id))
+              .filter(Boolean)
+              .map(agent => ({
+                id: agent!.id,
+                name: agent!.name,
+                description: agent!.description,
+                icon: agent!.icon
+              }));
+            
+            return {
+              widget,
+              data: {
+                ...agentData,
+                agents,
+                onAgentClick
+              }
+            };
+          }
+          return null;
+        }
+        case 'separator': {
+          const separatorData = profile.separatorWidgets?.find(w => w.id === widget.id);
+          return separatorData ? { widget, data: separatorData } : null;
+        }
+        case 'title': {
+          const titleData = profile.titleWidgets?.find(w => w.id === widget.id);
+          return titleData ? { widget, data: titleData } : null;
+        }
+        case 'gallery': {
+          const galleryData = profile.galleryWidgets?.find(w => w.id === widget.id);
+          return galleryData ? { widget, data: galleryData } : null;
+        }
+        case 'youtube': {
+          const youtubeData = profile.youtubeWidgets?.find(w => w.id === widget.id);
+          return youtubeData ? { widget, data: youtubeData } : null;
+        }
+        case 'maps': {
+          const mapsData = profile.mapsWidgets?.find(w => w.id === widget.id);
+          return mapsData ? { widget, data: mapsData } : null;
+        }
+        case 'spotify': {
+          const spotifyData = profile.spotifyWidgets?.find(w => w.id === widget.id);
+          return spotifyData ? { widget, data: spotifyData } : null;
+        }
+        case 'calendar': {
+          const calendarData = profile.calendarWidgets?.find(w => w.id === widget.id);
+          return calendarData ? { widget, data: calendarData } : null;
         }
         default:
           return null;
       }
     })
-    ?.filter((item): item is { widget: Widget; data: ProfileLink | WidgetAgents } => item !== null) || [];
+    ?.filter(Boolean) as ActiveWidget[] || [];
 
   return (
     <div className="w-full max-w-xl mx-auto px-4">
@@ -152,9 +179,16 @@ export default function ContentComponent({
         </TabsContent>
 
         <TabsContent value="links" className="space-y-3">
-          {activeWidgets.map(({ widget, data }) => 
-            renderWidget(widget, data)
-          )}
+          {activeWidgets.map(({ widget, data }) => (
+            <PublicWidgetRenderer
+              key={widget.id}
+              widget={widget}
+              data={data}
+              theme={theme}
+              onAgentClick={onAgentClick}
+              className="mb-4"
+            />
+          ))}
         </TabsContent>
       </Tabs>
     </div>
