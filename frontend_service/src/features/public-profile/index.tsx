@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query';
 import { publicProfileApi } from '@/api/public-profile-api';
-import { useProfile } from '@/hooks/use-profile';
 import ProfileComponent from './components/ProfileComponent'
 import ContentComponent from './components/ContentComponent'
 import PublicContentComponent from './components/PublicContentComponent'
@@ -15,22 +14,19 @@ interface PublicProfileProps {
 }
 
 export default function PublicProfile({ username, isPreview = false }: PublicProfileProps) {
-  // Use the context hook for the preview mode
-  const contextProfile = useProfile();
-
-  // Use a separate query for the public profile page
+  // Always use the public profile API for both preview and public pages
   const { data: publicProfile, isLoading: isLoadingPublic } = useQuery({
     queryKey: ['public-profile', username],
     queryFn: () => {
       if (!username) return null;
       return publicProfileApi.getPublicProfile(username);
     },
-    enabled: !isPreview && !!username, // Only run this query on public pages
+    enabled: !!username, // Run this query whenever we have a username
   });
 
-  // Determine which profile and loading state to use
-  const profile = isPreview ? contextProfile.profile : publicProfile;
-  const isLoading = isPreview ? contextProfile.isLoading : isLoadingPublic;
+  // Use the same profile and loading state for both preview and public
+  const profile = publicProfile;
+  const isLoading = isLoadingPublic;
 
   const [activeTab, setActiveTab] = useState('chats');
   const [currentAgentId, setCurrentAgentId] = useState<string>();
