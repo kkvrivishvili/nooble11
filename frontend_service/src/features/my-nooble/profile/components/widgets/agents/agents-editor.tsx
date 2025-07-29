@@ -1,0 +1,196 @@
+// src/features/my-nooble/profile/components/widgets/agents/agents-editor.tsx
+import { useState } from 'react';
+import { Input } from '@/components/ui/input';
+import { IconUsers, IconAlertCircle, IconCheck } from '@tabler/icons-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { WidgetEditor } from '../common/widget-editor';
+import { AgentsWidgetData, WidgetEditorProps } from '@/types/widget';
+import { validateAgentsData } from './agents-config';
+import { useProfile } from '@/context/profile-context';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { cn } from '@/lib/utils';
+
+export function AgentsEditor({
+  data: initialData,
+  onSave,
+  onCancel,
+  isLoading = false,
+}: WidgetEditorProps<AgentsWidgetData>) {
+  const { profile } = useProfile();
+  const [formData, setFormData] = useState<AgentsWidgetData>({
+    title: initialData?.title || 'Chat con nuestros agentes',
+    agentIds: initialData?.agentIds || [],
+    displayStyle: initialData?.displayStyle || 'card',
+  });
+  
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Get available agents
+  const availableAgents = profile?.agentDetails.filter(agent => agent.isActive) || [];
+
+  const handleSave = async () => {
+    const validation = validateAgentsData(formData);
+    
+    if (!validation.isValid) {
+      setErrors(validation.errors);
+      return;
+    }
+    
+    setIsSaving(true);
+    try {
+      await onSave(formData);
+    } catch (error) {
+      setErrors({ 
+        general: error instanceof Error ? error.message : 'Error al guardar el widget' 
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const toggleAgent = (agentId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      agentIds: prev.agentIds.includes(agentId)
+        ? prev.agentIds.filter(id => id !== agentId)
+        : [...prev.agentIds, agentId]
+    }));
+    
+    // Clear agentIds error
+    if (errors.agentIds) {
+      const newErrors = { ...errors };
+      delete newErrors.agentIds;
+      setErrors(newErrors);
+    }
+  };
+
+  return (
+    <WidgetEditor
+      title={initialData ? 'Editar widget de agentes' : 'Nuevo widget de agentes'}
+      icon={IconUsers}
+      onSave={handleSave}
+      onCancel={onCancel}
+      isLoading={isLoading}
+      isSaving={isSaving}
+      error={errors.general}
+    >
+      {/* Title input */}
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          Título *
+        </label>
+        <Input
+          placeholder="Ej: Habla con nuestro equipo"
+          value={formData.title}
+          onChange={(e) => {
+            setFormData({ ...formData, title: e.target.value });
+            if (errors.title) {
+              const newErrors = { ...errors };
+              delete newErrors.title;
+              setErrors(newErrors);
+            }
+          }}
+          className={errors.title ? 'border-red-300' : ''}
+          disabled={isSaving || isLoading}
+          maxLength={100}
+        />
+        <div className="flex justify-between">
+          {errors.title && (
+            <p className="text-xs text-red-500 flex items-center gap-1">
+              <IconAlertCircle size={12} />
+              {errors.title}
+            </p>
+          )}
+          <span className="text-xs text-gray-500 ml-auto">
+            {formData.title.length}/100
+          </span>
+        </div>
+      </div>
+
+      {/* Agent selection */}
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          Selecciona agentes *
+        </label>
+        <div className="space-y-2 max-h-60 overflow-y-auto">
+          {availableAgents.length > 0 ? (
+            availableAgents.map(agent => (
+              <div
+                key={agent.id}
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
+                  formData.agentIds.includes(agent.id)
+                    ? "border-primary bg-primary/5"
+                    : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                )}
+                onClick={() => toggleAgent(agent.id)}
+              >
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="text-xs">{agent.icon}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <p className="font-medium text-sm">{agent.name}</p>
+                  {agent.description && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {agent.description}
+                    </p>
+                  )}
+                </div>
+                {formData.agentIds.includes(agent.id) && (
+                  <IconCheck size={16} className="text-primary" />
+                )}
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+              No tienes agentes disponibles. Crea algunos primero.
+            </p>
+          )}
+        </div>
+        {errors.agentIds && (
+          <p className="text-xs text-red-500 flex items-center gap-1">
+            <IconAlertCircle size={12} />
+            {errors.agentIds}
+          </p>
+        )}
+        <p className="text-xs text-gray-500">
+          Seleccionados: {formData.agentIds.length} de {availableAgents.length}
+        </p>
+      </div>
+
+      {/* Display style */}
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          Estilo de visualización
+        </label>
+        <RadioGroup
+          value={formData.displayStyle}
+          onValueChange={(value: 'card' | 'list' | 'bubble') => 
+            setFormData({ ...formData, displayStyle: value })
+          }
+        >
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="card" id="card" />
+            <Label htmlFor="card" className="font-normal cursor-pointer">
+              Tarjetas - Muestra detalles completos
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="list" id="list" />
+            <Label htmlFor="list" className="font-normal cursor-pointer">
+              Lista - Vista compacta
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="bubble" id="bubble" />
+            <Label htmlFor="bubble" className="font-normal cursor-pointer">
+              Burbujas - Botones redondeados
+            </Label>
+          </div>
+        </RadioGroup>
+      </div>
+    </WidgetEditor>
+  );
+}

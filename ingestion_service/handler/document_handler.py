@@ -1,0 +1,109 @@
+"""
+Handler para procesamiento de documentos.
+"""
+import logging
+import hashlib
+from typing import List, Dict, Any
+from pathlib import Path
+
+from llama_index.core import SimpleDirectoryReader, Document
+from llama_index.core.node_parser import SentenceSplitter
+import requests
+
+from common.handlers.base_handler import BaseHandler
+from ..models import DocumentIngestionRequest, ChunkModel, DocumentType
+from ..config.settings import IngestionSettings
+
+
+class DocumentHandler(BaseHandler):
+    """Handler para procesar documentos y generar chunks."""
+    
+    def __init__(self, app_settings: IngestionSettings):
+        super().__init__(app_settings)
+        self.chunk_parser = SentenceSplitter()
+    
+    async def process_document(
+        self,
+        request: DocumentIngestionRequest,
+        document_id: str
+    ) -> List[ChunkModel]:
+        """Procesa documento y retorna chunks."""
+        try:
+            # Cargar documento
+            document = await self._load_document(request)
+            
+            # Configurar parser
+            self.chunk_parser = SentenceSplitter(
+                chunk_size=request.chunk_size,
+                chunk_overlap=request.chunk_overlap
+            )
+            
+            # Parsear en chunks
+            nodes = self.chunk_parser.get_nodes_from_documents([document])
+            
+            # Convertir a ChunkModel
+            chunks = []
+            for idx, node in enumerate(nodes):
+                chunk = ChunkModel(
+                    document_id=document_id,
+                    content=node.get_content(),
+                    chunk_index=idx,
+                    metadata={
+                        **request.metadata,
+                        "document_name": request.document_name,
+                        "document_type": request.document_type.value,
+                        "start_char_idx": getattr(node, 'start_char_idx', None),
+                        "end_char_idx": getattr(node, 'end_char_idx', None)
+                    }
+                )
+                chunks.append(chunk)
+            
+            self._logger.info(f"Documento procesado en {len(chunks)} chunks")
+            return chunks
+            
+        except Exception as e:
+            self._logger.error(f"Error procesando documento: {e}")
+            raise
+    
+    async def _load_document(self, request: DocumentIngestionRequest) -> Document:
+        """Carga documento desde diferentes fuentes."""
+        content = None
+        metadata = {"source": request.document_type.value}
+        
+        if request.file_path:
+            file_path = Path(request.file_path)
+            if not file_path.exists():
+                raise FileNotFoundError(f"File not found: {request.file_path}")
+            
+            if request.document_type in [DocumentType.PDF, DocumentType.DOCX]:
+                reader = SimpleDirectoryReader(input_files=[str(file_path)])
+                docs = reader.load_data()
+                content = "\n\n".join([doc.text for doc in docs])
+            else:
+                content = file_path.read_text(encoding='utf-8')
+                
+        elif request.url:
+            response = await self._fetch_url(str(request.url))
+            content = response
+            metadata["url"] = str(request.url)
+            
+        elif request.content:
+            content = request.content
+        else:
+            raise ValueError("No content source provided")
+        
+        return Document(
+            text=content,
+            metadata=metadata,
+            id_=self._generate_doc_hash(content)
+        )
+    
+    async def _fetch_url(self, url: str) -> str:
+        """Descarga contenido desde URL."""
+        response = requests.get(url, timeout=30)
+        response.raise_for_status()
+        return response.text
+    
+    def _generate_doc_hash(self, content: str) -> str:
+        """Genera hash único para el documento."""
+        return hashlib.sha256(content.encode()).hexdigest()
