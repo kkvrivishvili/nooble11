@@ -1,3 +1,4 @@
+// src/features/public-profile/index.tsx
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query';
@@ -14,16 +15,17 @@ interface PublicProfileProps {
 
 export default function PublicProfile({ username, isPreview = false }: PublicProfileProps) {
   // Always use the public profile API for both preview and public pages
-  const { data: publicProfile, isLoading: isLoadingPublic } = useQuery({
+  const { data: publicProfile, isLoading: isLoadingPublic, error } = useQuery({
     queryKey: ['public-profile', username],
     queryFn: () => {
       if (!username) return null;
       return publicProfileApi.getPublicProfile(username);
     },
-    enabled: !!username, // Run this query whenever we have a username
+    enabled: !!username,
+    retry: 2,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
-  // Use the same profile and loading state for both preview and public
   const profile = publicProfile;
   const isLoading = isLoadingPublic;
 
@@ -31,7 +33,7 @@ export default function PublicProfile({ username, isPreview = false }: PublicPro
   const [currentAgentId, setCurrentAgentId] = useState<string>();
 
   useEffect(() => {
-    // Set the main agent as active by default when the profile loads
+    // Set the first agent as active by default when the profile loads
     if (profile?.agentDetails?.length && !currentAgentId) {
       setCurrentAgentId(profile.agentDetails[0].id);
     }
@@ -62,21 +64,32 @@ export default function PublicProfile({ username, isPreview = false }: PublicPro
     )
   }
 
-  if (!profile) {
+  if (error || !profile) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <p className="text-gray-600">No se encontró el perfil</p>
+          <div className="text-6xl mb-4">😕</div>
+          <h2 className="text-xl font-semibold mb-2">Perfil no encontrado</h2>
+          <p className="text-gray-600">
+            {error ? 'Error al cargar el perfil' : 'No se encontró el perfil solicitado'}
+          </p>
+          <p className="text-gray-500 text-sm mt-2">
+            Usuario: {username}
+          </p>
         </div>
       </div>
     )
   }
 
+  // Debug: Log design info
+  console.log('🎨 Profile design:', profile.design);
+
   return (
     <div className={cn(
-      "min-h-screen bg-gray-50 relative"
-      // Removed overflow-hidden in preview mode so content can scroll with parent
+      "min-h-screen relative transition-all duration-300",
+      isPreview && "rounded-lg overflow-hidden"
     )}>
+      {/* Wrap everything in ProfileThemeProvider with the profile's design */}
       <ProfileThemeProvider profileDesign={profile.design}>
         <div className="pb-24"> 
           {/* Profile Header */}
@@ -99,21 +112,15 @@ export default function PublicProfile({ username, isPreview = false }: PublicPro
       </ProfileThemeProvider>
       
       {/* Chat Input - Always sticky at the bottom */}
-      <div 
-        className={cn(
-          "w-full z-50 sticky bottom-0 left-0 right-0"
-        )}
-        style={{ 
-          position: 'sticky',
-          bottom: 0,
-          left: 0,
-          right: 0
-        }}
-      >
-        <ChatInput
-          onSendMessage={handleSendMessage}
-        />
-      </div>
+      {!isPreview && (
+        <div 
+          className="w-full z-50 fixed bottom-0 left-0 right-0"
+        >
+          <ChatInput
+            onSendMessage={handleSendMessage}
+          />
+        </div>
+      )}
     </div>
   )
 }

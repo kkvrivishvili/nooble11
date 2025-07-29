@@ -17,7 +17,7 @@ class PublicProfileAPI {
   async getPublicProfile(username: string): Promise<ProfileWithAgents | null> {
     if (!username) return null;
 
-    console.log('🔍 Getting public profile for username:', username);
+    // console.log('🔍 Getting public profile for username:', username);
 
     // Get base profile by username
     const { data: profile, error: profileError } = await supabase
@@ -37,9 +37,9 @@ class PublicProfileAPI {
       ? widgets.slice().sort((a, b) => a.position - b.position) 
       : [];
     
-    console.log('🎯 All widgets from profile:', widgets);
-    console.log('🎯 Active widgets:', widgets.filter(w => w.isActive));
-    console.log('🎯 Widget types:', widgets.map(w => ({ id: w.id, type: w.type, isActive: w.isActive })));
+    // console.log('🎯 All widgets from profile:', widgets);
+    // console.log('🎯 Active widgets:', widgets.filter(w => w.isActive));
+    // console.log('🎯 Widget types:', widgets.map(w => ({ id: w.id, type: w.type, isActive: w.isActive })));
 
     // Get agents details
     const agentIds = (profile.agents || []) as string[];
@@ -273,15 +273,15 @@ class PublicProfileAPI {
     }
 
     // Construct the complete profile object
-    console.log('📊 Widget data summary:');
-    console.log('- linkWidgets:', linkWidgets?.length || 0);
-    console.log('- separatorWidgets:', separatorWidgets?.length || 0);
-    console.log('- titleWidgets:', titleWidgets?.length || 0);
-    console.log('- youtubeWidgets:', youtubeWidgets?.length || 0);
-    console.log('- galleryWidgets:', galleryWidgets?.length || 0);
-    console.log('- mapsWidgets:', mapsWidgets?.length || 0);
-    console.log('- spotifyWidgets:', spotifyWidgets?.length || 0);
-    console.log('- calendarWidgets:', calendarWidgets?.length || 0);
+    // console.log('📊 Widget data summary:');
+    // console.log('- linkWidgets:', linkWidgets?.length || 0);
+    // console.log('- separatorWidgets:', separatorWidgets?.length || 0);
+    // console.log('- titleWidgets:', titleWidgets?.length || 0);
+    // console.log('- youtubeWidgets:', youtubeWidgets?.length || 0);
+    // console.log('- galleryWidgets:', galleryWidgets?.length || 0);
+    // console.log('- mapsWidgets:', mapsWidgets?.length || 0);
+    // console.log('- spotifyWidgets:', spotifyWidgets?.length || 0);
+    // console.log('- calendarWidgets:', calendarWidgets?.length || 0);
     
     const profileWithAgents: ProfileWithAgents = {
       ...profile,
