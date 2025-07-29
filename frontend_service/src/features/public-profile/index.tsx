@@ -82,35 +82,37 @@ export default function PublicProfile({ username, isPreview = false }: PublicPro
       "min-h-screen bg-gray-50 relative"
       // Removed overflow-hidden in preview mode so content can scroll with parent
     )}>
-      <div className="pb-24"> 
-        {/* Profile Header */}
-        <ProfileComponent 
-          profile={profile} 
-          isPreview={isPreview}
-          showSocialLinks={activeTab === 'links'}
-        />
-        
-        {/* Content Tabs */}
-        {isPreview ? (
-          <ContentComponent
-            profile={profile}
+      <ProfileThemeProvider profileDesign={profile.design}>
+        <div className="pb-24"> 
+          {/* Profile Header */}
+          <ProfileComponent 
+            profile={profile} 
             isPreview={isPreview}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            currentAgentId={currentAgentId}
-            onAgentClick={handleAgentClick}
+            showSocialLinks={activeTab === 'links'}
           />
-        ) : (
-          <PublicContentComponent
-            profile={profile}
-            isPreview={isPreview}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            currentAgentId={currentAgentId}
-            onAgentClick={handleAgentClick}
-          />
-        )}
-      </div>
+          
+          {/* Content Tabs */}
+          {isPreview ? (
+            <ContentComponent
+              profile={profile}
+              isPreview={isPreview}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              currentAgentId={currentAgentId}
+              onAgentClick={handleAgentClick}
+            />
+          ) : (
+            <PublicContentComponent
+              profile={profile}
+              isPreview={isPreview}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              currentAgentId={currentAgentId}
+              onAgentClick={handleAgentClick}
+            />
+          )}
+        </div>
+      </ProfileThemeProvider>
       
       {/* Chat Input - Always sticky at the bottom */}
       <div 

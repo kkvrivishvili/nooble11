@@ -55,15 +55,22 @@ class PublicProfileAPI {
       .filter(w => w.type === 'link' && w.isActive)
       .map(w => w.id);
     
+    console.log('Link widget IDs:', linkWidgetIds);
+    
     let linkWidgets: ProfileLink[] = [];
     if (linkWidgetIds.length > 0) {
       const { data: links, error: linksError } = await supabase
-        .from('profile_links')
+        .from('widget_links')
         .select('*')
         .in('id', linkWidgetIds);
       
+      if (linksError) {
+        console.error('Error fetching link widgets:', linksError);
+      }
+      
       if (!linksError && links) {
         linkWidgets = links;
+        console.log('Link widgets fetched:', links);
       }
     }
 
@@ -72,6 +79,8 @@ class PublicProfileAPI {
       .filter(w => w.type === 'agents' && w.isActive)
       .map(w => w.id);
     
+    console.log('Agent widget IDs:', agentWidgetIds);
+    
     let agentWidgets: WidgetAgents[] = [];
     if (agentWidgetIds.length > 0) {
       const { data: agentWidgetsData, error: agentWidgetsError } = await supabase
@@ -79,8 +88,13 @@ class PublicProfileAPI {
         .select('*')
         .in('id', agentWidgetIds);
       
+      if (agentWidgetsError) {
+        console.error('Error fetching agent widgets:', agentWidgetsError);
+      }
+      
       if (!agentWidgetsError && agentWidgetsData) {
         agentWidgets = agentWidgetsData;
+        console.log('Agent widgets fetched:', agentWidgetsData);
       }
     }
 
@@ -89,6 +103,8 @@ class PublicProfileAPI {
       .filter(w => w.type === 'separator' && w.isActive)
       .map(w => w.id);
     
+    console.log('Separator widget IDs:', separatorWidgetIds);
+    
     let separatorWidgets: any[] = [];
     if (separatorWidgetIds.length > 0) {
       const { data: separatorWidgetsData, error: separatorWidgetsError } = await supabase
@@ -96,8 +112,13 @@ class PublicProfileAPI {
         .select('*')
         .in('id', separatorWidgetIds);
       
+      if (separatorWidgetsError) {
+        console.error('Error fetching separator widgets:', separatorWidgetsError);
+      }
+      
       if (!separatorWidgetsError && separatorWidgetsData) {
         separatorWidgets = separatorWidgetsData;
+        console.log('Separator widgets fetched:', separatorWidgetsData);
       }
     }
 
@@ -106,6 +127,8 @@ class PublicProfileAPI {
       .filter(w => w.type === 'title' && w.isActive)
       .map(w => w.id);
     
+    console.log('Title widget IDs:', titleWidgetIds);
+    
     let titleWidgets: any[] = [];
     if (titleWidgetIds.length > 0) {
       const { data: titleWidgetsData, error: titleWidgetsError } = await supabase
@@ -113,8 +136,13 @@ class PublicProfileAPI {
         .select('*')
         .in('id', titleWidgetIds);
       
+      if (titleWidgetsError) {
+        console.error('Error fetching title widgets:', titleWidgetsError);
+      }
+      
       if (!titleWidgetsError && titleWidgetsData) {
         titleWidgets = titleWidgetsData;
+        console.log('Title widgets fetched:', titleWidgetsData);
       }
     }
 
@@ -123,6 +151,8 @@ class PublicProfileAPI {
       .filter(w => w.type === 'gallery' && w.isActive)
       .map(w => w.id);
     
+    console.log('Gallery widget IDs:', galleryWidgetIds);
+    
     let galleryWidgets: WidgetGallery[] = [];
     if (galleryWidgetIds.length > 0) {
       const { data: galleryWidgetsData, error: galleryWidgetsError } = await supabase
@@ -130,8 +160,13 @@ class PublicProfileAPI {
         .select('*')
         .in('id', galleryWidgetIds);
       
+      if (galleryWidgetsError) {
+        console.error('Error fetching gallery widgets:', galleryWidgetsError);
+      }
+      
       if (!galleryWidgetsError && galleryWidgetsData) {
         galleryWidgets = galleryWidgetsData;
+        console.log('Gallery widgets fetched:', galleryWidgetsData);
       }
     }
 
@@ -140,6 +175,8 @@ class PublicProfileAPI {
       .filter(w => w.type === 'youtube' && w.isActive)
       .map(w => w.id);
     
+    console.log('YouTube widget IDs:', youtubeWidgetIds);
+    
     let youtubeWidgets: any[] = [];
     if (youtubeWidgetIds.length > 0) {
       const { data: youtubeWidgetsData, error: youtubeWidgetsError } = await supabase
@@ -147,8 +184,13 @@ class PublicProfileAPI {
         .select('*')
         .in('id', youtubeWidgetIds);
       
+      if (youtubeWidgetsError) {
+        console.error('Error fetching YouTube widgets:', youtubeWidgetsError);
+      }
+      
       if (!youtubeWidgetsError && youtubeWidgetsData) {
         youtubeWidgets = youtubeWidgetsData;
+        console.log('YouTube widgets fetched:', youtubeWidgetsData);
       }
     }
 
@@ -157,6 +199,8 @@ class PublicProfileAPI {
       .filter(w => w.type === 'maps' && w.isActive)
       .map(w => w.id);
     
+    console.log('Maps widget IDs:', mapsWidgetIds);
+    
     let mapsWidgets: any[] = [];
     if (mapsWidgetIds.length > 0) {
       const { data: mapsWidgetsData, error: mapsWidgetsError } = await supabase
@@ -164,8 +208,13 @@ class PublicProfileAPI {
         .select('*')
         .in('id', mapsWidgetIds);
       
+      if (mapsWidgetsError) {
+        console.error('Error fetching Maps widgets:', mapsWidgetsError);
+      }
+      
       if (!mapsWidgetsError && mapsWidgetsData) {
         mapsWidgets = mapsWidgetsData;
+        console.log('Maps widgets fetched:', mapsWidgetsData);
       }
     }
 
@@ -174,6 +223,8 @@ class PublicProfileAPI {
       .filter(w => w.type === 'spotify' && w.isActive)
       .map(w => w.id);
     
+    console.log('Spotify widget IDs:', spotifyWidgetIds);
+    
     let spotifyWidgets: any[] = [];
     if (spotifyWidgetIds.length > 0) {
       const { data: spotifyWidgetsData, error: spotifyWidgetsError } = await supabase
@@ -181,8 +232,13 @@ class PublicProfileAPI {
         .select('*')
         .in('id', spotifyWidgetIds);
       
+      if (spotifyWidgetsError) {
+        console.error('Error fetching Spotify widgets:', spotifyWidgetsError);
+      }
+      
       if (!spotifyWidgetsError && spotifyWidgetsData) {
         spotifyWidgets = spotifyWidgetsData;
+        console.log('Spotify widgets fetched:', spotifyWidgetsData);
       }
     }
 
@@ -191,6 +247,8 @@ class PublicProfileAPI {
       .filter(w => w.type === 'calendar' && w.isActive)
       .map(w => w.id);
     
+    console.log('Calendar widget IDs:', calendarWidgetIds);
+    
     let calendarWidgets: any[] = [];
     if (calendarWidgetIds.length > 0) {
       const { data: calendarWidgetsData, error: calendarWidgetsError } = await supabase
@@ -198,8 +256,13 @@ class PublicProfileAPI {
         .select('*')
         .in('id', calendarWidgetIds);
       
+      if (calendarWidgetsError) {
+        console.error('Error fetching Calendar widgets:', calendarWidgetsError);
+      }
+      
       if (!calendarWidgetsError && calendarWidgetsData) {
         calendarWidgets = calendarWidgetsData;
+        console.log('Calendar widgets fetched:', calendarWidgetsData);
       }
     }
 

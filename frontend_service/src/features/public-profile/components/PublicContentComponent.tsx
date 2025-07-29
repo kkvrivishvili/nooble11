@@ -9,7 +9,7 @@ import {
 import { PublicWidgetRenderer } from '@/features/public-profile/widgets/public-widget-renderer'
 import { useProfileTheme } from '@/context/profile-theme-context'
 
-type ActiveWidget = {
+interface ActiveWidget {
   widget: Widget;
   data: any;
 }
@@ -39,13 +39,18 @@ export default function PublicContentComponent({
     return <div>Loading...</div>;
   }
 
+  console.log('Profile data:', profile);
+
+  if (!profile) {
+    return <div>Loading...</div>;
+  }
+
   const currentAgent = profile.agentDetails.find((a) => a.id === currentAgentId)
 
   // Get active widgets with their data
   const activeWidgets = profile.widgets
-    ?.filter(w => w.isActive)
-    ?.sort((a, b) => a.position - b.position)
-    ?.map(widget => {
+    .filter(widget => widget.isActive)
+    .map(widget => {
       switch (widget.type) {
         case 'link': {
           const linkData = profile.linkWidgets?.find(l => l.id === widget.id);
@@ -109,6 +114,8 @@ export default function PublicContentComponent({
       }
     })
     ?.filter(Boolean) as ActiveWidget[] || [];
+
+  console.log('Active widgets:', activeWidgets);
 
   return (
     <div className="w-full max-w-xl mx-auto px-4">
@@ -179,16 +186,19 @@ export default function PublicContentComponent({
         </TabsContent>
 
         <TabsContent value="links" className="space-y-3">
-          {activeWidgets.map(({ widget, data }) => (
-            <PublicWidgetRenderer
-              key={widget.id}
-              widget={widget}
-              data={data}
-              theme={theme}
-              onAgentClick={onAgentClick}
-              className="mb-4"
-            />
-          ))}
+          {activeWidgets.map(({ widget, data }) => {
+            console.log('Rendering widget:', widget, 'with data:', data);
+            return (
+              <div key={widget.id}>
+                <PublicWidgetRenderer
+                  widget={widget}
+                  data={data}
+                  theme={theme}
+                  onAgentClick={onAgentClick}
+                />
+              </div>
+            );
+          })}
         </TabsContent>
       </Tabs>
     </div>
