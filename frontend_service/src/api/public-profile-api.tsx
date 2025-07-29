@@ -60,7 +60,7 @@ class PublicProfileAPI {
     let linkWidgets: ProfileLink[] = [];
     if (linkWidgetIds.length > 0) {
       const { data: links, error: linksError } = await supabase
-        .from('widget_links')
+        .from('widgetLinks')
         .select('*')
         .in('id', linkWidgetIds);
       
@@ -84,7 +84,7 @@ class PublicProfileAPI {
     let agentWidgets: WidgetAgents[] = [];
     if (agentWidgetIds.length > 0) {
       const { data: agentWidgetsData, error: agentWidgetsError } = await supabase
-        .from('widget_agents')
+        .from('widgetAgents')
         .select('*')
         .in('id', agentWidgetIds);
       
@@ -108,7 +108,7 @@ class PublicProfileAPI {
     let separatorWidgets: any[] = [];
     if (separatorWidgetIds.length > 0) {
       const { data: separatorWidgetsData, error: separatorWidgetsError } = await supabase
-        .from('widget_separators')
+        .from('widgetSeparator')
         .select('*')
         .in('id', separatorWidgetIds);
       
@@ -132,7 +132,7 @@ class PublicProfileAPI {
     let titleWidgets: any[] = [];
     if (titleWidgetIds.length > 0) {
       const { data: titleWidgetsData, error: titleWidgetsError } = await supabase
-        .from('widget_titles')
+        .from('widgetTitle')
         .select('*')
         .in('id', titleWidgetIds);
       
@@ -156,7 +156,7 @@ class PublicProfileAPI {
     let galleryWidgets: WidgetGallery[] = [];
     if (galleryWidgetIds.length > 0) {
       const { data: galleryWidgetsData, error: galleryWidgetsError } = await supabase
-        .from('widget_galleries')
+        .from('widgetGallery')
         .select('*')
         .in('id', galleryWidgetIds);
       
@@ -180,7 +180,7 @@ class PublicProfileAPI {
     let youtubeWidgets: any[] = [];
     if (youtubeWidgetIds.length > 0) {
       const { data: youtubeWidgetsData, error: youtubeWidgetsError } = await supabase
-        .from('widget_youtubes')
+        .from('widgetYoutube')
         .select('*')
         .in('id', youtubeWidgetIds);
       
@@ -204,7 +204,7 @@ class PublicProfileAPI {
     let mapsWidgets: any[] = [];
     if (mapsWidgetIds.length > 0) {
       const { data: mapsWidgetsData, error: mapsWidgetsError } = await supabase
-        .from('widget_maps')
+        .from('widgetMaps')
         .select('*')
         .in('id', mapsWidgetIds);
       
@@ -228,7 +228,7 @@ class PublicProfileAPI {
     let spotifyWidgets: any[] = [];
     if (spotifyWidgetIds.length > 0) {
       const { data: spotifyWidgetsData, error: spotifyWidgetsError } = await supabase
-        .from('widget_spotifies')
+        .from('widgetSpotify')
         .select('*')
         .in('id', spotifyWidgetIds);
       
@@ -252,7 +252,7 @@ class PublicProfileAPI {
     let calendarWidgets: any[] = [];
     if (calendarWidgetIds.length > 0) {
       const { data: calendarWidgetsData, error: calendarWidgetsError } = await supabase
-        .from('widget_calendars')
+        .from('widgetCalendar')
         .select('*')
         .in('id', calendarWidgetIds);
       
