@@ -40,6 +40,11 @@ export default function PublicContentComponent({
   }
 
   console.log('Profile data:', profile);
+  console.log('Profile widgets:', profile.widgets);
+  console.log('Profile linkWidgets:', profile.linkWidgets);
+  console.log('Profile separatorWidgets:', profile.separatorWidgets);
+  console.log('Profile titleWidgets:', profile.titleWidgets);
+  console.log('Profile youtubeWidgets:', profile.youtubeWidgets);
 
   if (!profile) {
     return <div>Loading...</div>;
