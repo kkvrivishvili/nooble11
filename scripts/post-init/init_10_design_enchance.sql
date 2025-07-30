@@ -22,7 +22,8 @@ ALTER COLUMN design SET DEFAULT '{
     "linkStyle": "card",
     "socialPosition": "top",
     "contentWidth": "normal",
-    "spacing": "normal"
+    "spacing": "normal",
+    "showChatInput": true
   },
   "version": 2
 }'::jsonb;
@@ -59,7 +60,8 @@ BEGIN
         'linkStyle', COALESCE(profile_record.design->'layout'->>'linkStyle', 'card'),
         'socialPosition', COALESCE(profile_record.design->'layout'->>'socialPosition', 'top'),
         'contentWidth', COALESCE(profile_record.design->'layout'->>'contentWidth', 'normal'),
-        'spacing', COALESCE(profile_record.design->'layout'->>'spacing', 'normal')
+        'spacing', COALESCE(profile_record.design->'layout'->>'spacing', 'normal'),
+        'showChatInput', COALESCE((profile_record.design->'layout'->>'showChatInput')::boolean, true)
       ),
       'version', 2
     ),
@@ -138,7 +140,8 @@ COMMENT ON COLUMN public.profiles.design IS 'Enhanced design configuration suppo
     linkStyle: "card" | "button" | "minimal",
     socialPosition: "top" | "bottom" | "hidden",
     contentWidth: "narrow" | "normal" | "wide",
-    spacing: "compact" | "normal" | "relaxed"
+    spacing: "compact" | "normal" | "relaxed",
+    showChatInput: boolean
   },
   version: number
 }';
