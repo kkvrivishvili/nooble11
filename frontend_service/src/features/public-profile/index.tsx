@@ -1,21 +1,158 @@
-// src/features/public-profile/index.tsx
-import { useState, useEffect } from 'react'
+// src/features/public-profile/index.tsx - Enhanced version with wallpaper
+import React, { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query';
 import { publicProfileApi } from '@/api/public-profile-api';
+import { useProfile } from '@/context/profile-context';
+import { ProfileDesign } from '@/types/profile';
 import ProfileComponent from './components/ProfileComponent'
 import PublicContentComponent from './components/PublicContentComponent'
 import ChatInput from './components/ChatInput'
-import { ProfileThemeProvider } from '@/context/profile-theme-context';
+import { ProfileThemeProvider, useProfileTheme } from '@/context/profile-theme-context';
+// Styles are loaded globally in the app, not here
 
 interface PublicProfileProps {
   username: string;
-  isPreview?: boolean
+  isPreview?: boolean;
+  previewDesign?: ProfileDesign;
+}
+
+// Wallpaper component
+function ProfileWallpaper() {
+  const { theme } = useProfileTheme();
+  
+  if (!theme.wallpaper) return null;
+  
+  // Video wallpaper
+  if (theme.wallpaper.type === 'video' && theme.wallpaper.videoUrl) {
+    return (
+      <div className="profile-video-wallpaper">
+        <video
+          autoPlay
+          loop={theme.wallpaper.videoLoop}
+          muted={theme.wallpaper.videoMuted}
+          playsInline
+        >
+          <source src={theme.wallpaper.videoUrl} type="video/mp4" />
+        </video>
+        {theme.wallpaper.videoOverlay && (
+          <div 
+            className="absolute inset-0 z-0"
+            style={{ backgroundColor: theme.wallpaper.videoOverlay }}
+          />
+        )}
+      </div>
+    );
+  }
+  
+  // Regular wallpaper
+  return (
+    <>
+      <div className="profile-wallpaper" />
+      {theme.wallpaper.type === 'blur' && (
+        <div className="profile-wallpaper-blur" />
+      )}
+      {theme.wallpaper.type === 'image' && theme.wallpaper.imageOverlay && (
+        <div 
+          className="fixed inset-0 z-[-1]"
+          style={{ backgroundColor: theme.wallpaper.imageOverlay }}
+        />
+      )}
+    </>
+  );
+}
+
+// Profile content wrapper
+function ProfileContent({ profile, isPreview }: { profile: any; isPreview: boolean }) {
+  const { theme, layout } = useProfileTheme();
+  const [activeTab, setActiveTab] = useState('chats');
+  const [currentAgentId, setCurrentAgentId] = useState<string>();
+
+  useEffect(() => {
+    if (profile?.agentDetails?.length && !currentAgentId) {
+      setCurrentAgentId(profile.agentDetails[0].id);
+    }
+  }, [profile?.agentDetails, currentAgentId]);
+
+  const handleSendMessage = (message: string) => {
+    if (message.trim() && activeTab === 'links') {
+      setActiveTab('chats');
+    }
+  };
+
+  const handleAgentClick = (agentId: string) => {
+    setCurrentAgentId(agentId);
+  };
+
+  // Apply button styles based on theme
+  const getButtonClass = () => {
+    const baseClass = 'profile-button';
+    const fillClass = `profile-button-${theme.buttonFill || 'solid'}`;
+    return cn(baseClass, fillClass);
+  };
+
+  // Apply link styles based on layout
+  const getLinkClass = () => {
+    return `profile-link-${layout.linkStyle || 'card'}`;
+  };
+
+  return (
+    <div className="profile-container">
+      <ProfileWallpaper />
+      
+      <div className="profile-content pb-24">
+        {/* Hero wallpaper */}
+        {theme.wallpaper?.type === 'hero' && theme.wallpaper.heroImage && (
+          <div 
+            className="w-full h-64 -mx-4 -mt-8 mb-8 bg-cover bg-center"
+            style={{ 
+              backgroundImage: `url(${theme.wallpaper.heroImage})`,
+              backgroundPosition: theme.wallpaper.heroPosition || 'center'
+            }}
+          />
+        )}
+        
+        {/* Profile Header */}
+        <div className="profile-animate-in">
+          <ProfileComponent 
+            profile={profile} 
+            isPreview={isPreview}
+            showSocialLinks={activeTab === 'links' && layout.socialPosition === 'top'}
+          />
+        </div>
+        
+        {/* Content Tabs */}
+        <div className="profile-animate-in" style={{ animationDelay: '0.1s' }}>
+          <PublicContentComponent
+            profile={profile}
+            isPreview={isPreview}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            currentAgentId={currentAgentId}
+            onAgentClick={handleAgentClick}
+          />
+        </div>
+        
+        {/* Bottom social links */}
+        {activeTab === 'links' && layout.socialPosition === 'bottom' && profile.socialLinks?.length > 0 && (
+          <div className="flex gap-3 justify-center mt-6 profile-animate-in" style={{ animationDelay: '0.2s' }}>
+            {/* Social links would be rendered here */}
+          </div>
+        )}
+      </div>
+      
+      {/* Chat Input */}
+      {!isPreview && (
+        <div className="w-full z-50 fixed bottom-0 left-0 right-0">
+          <ChatInput onSendMessage={handleSendMessage} />
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function PublicProfile({ username, isPreview = false }: PublicProfileProps) {
-  // Always use the public profile API for both preview and public pages
-  const { data: publicProfile, isLoading: isLoadingPublic, error } = useQuery({
+  const { data: publicProfile, isLoading, error } = useQuery({
     queryKey: ['public-profile', username],
     queryFn: () => {
       if (!username) return null;
@@ -23,35 +160,10 @@ export default function PublicProfile({ username, isPreview = false }: PublicPro
     },
     enabled: !!username,
     retry: 2,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5,
   });
 
   const profile = publicProfile;
-  const isLoading = isLoadingPublic;
-
-  const [activeTab, setActiveTab] = useState('chats');
-  const [currentAgentId, setCurrentAgentId] = useState<string>();
-
-  useEffect(() => {
-    // Set the first agent as active by default when the profile loads
-    if (profile?.agentDetails?.length && !currentAgentId) {
-      setCurrentAgentId(profile.agentDetails[0].id);
-    }
-  }, [profile?.agentDetails, currentAgentId]);
-
-  const handleSendMessage = (message: string) => {
-    if (message.trim()) {
-      // Si estamos en Links, cambiar a Chats
-      if (activeTab === 'links') {
-        setActiveTab('chats')
-      }
-      // Aquí irá la lógica para enviar el mensaje
-    }
-  }
-
-  const handleAgentClick = (agentId: string) => {
-    setCurrentAgentId(agentId)
-  }
 
   if (isLoading) {
     return (
@@ -61,7 +173,7 @@ export default function PublicProfile({ username, isPreview = false }: PublicPro
           <p className="mt-4 text-gray-600">Cargando perfil...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (error || !profile) {
@@ -73,16 +185,10 @@ export default function PublicProfile({ username, isPreview = false }: PublicPro
           <p className="text-gray-600">
             {error ? 'Error al cargar el perfil' : 'No se encontró el perfil solicitado'}
           </p>
-          <p className="text-gray-500 text-sm mt-2">
-            Usuario: {username}
-          </p>
         </div>
       </div>
-    )
+    );
   }
-
-  // Debug: Log design info
-  console.log('🎨 Profile design:', profile.design);
 
   return (
     <div className={cn(
@@ -91,36 +197,8 @@ export default function PublicProfile({ username, isPreview = false }: PublicPro
     )}>
       {/* Wrap everything in ProfileThemeProvider with the profile's design */}
       <ProfileThemeProvider profileDesign={profile.design}>
-        <div className="pb-24"> 
-          {/* Profile Header */}
-          <ProfileComponent 
-            profile={profile} 
-            isPreview={isPreview}
-            showSocialLinks={activeTab === 'links'}
-          />
-          
-          {/* Content Tabs */}
-          <PublicContentComponent
-            profile={profile}
-            isPreview={isPreview}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            currentAgentId={currentAgentId}
-            onAgentClick={handleAgentClick}
-          />
-        </div>
+        <ProfileContent profile={profile} isPreview={isPreview} />
       </ProfileThemeProvider>
-      
-      {/* Chat Input - Always sticky at the bottom */}
-      {!isPreview && (
-        <div 
-          className="w-full z-50 fixed bottom-0 left-0 right-0"
-        >
-          <ChatInput
-            onSendMessage={handleSendMessage}
-          />
-        </div>
-      )}
     </div>
-  )
+  );
 }

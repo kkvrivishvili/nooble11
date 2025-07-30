@@ -1,3 +1,4 @@
+// src/features/public-profile/widgets/public-maps-widget.tsx
 import React from 'react';
 import { IconMapPin, IconExternalLink } from '@tabler/icons-react';
 import { PublicWidgetProps } from './types';
@@ -28,8 +29,34 @@ export function PublicMapsWidget({ data, theme, className }: PublicMapsWidgetPro
   // Generate static map image URL (using a placeholder since Google Static Maps requires API key)
   const getStaticMapUrl = () => {
     // In production, you'd use Google Static Maps API with your API key
-    // For now, we'll use a placeholder that shows the concept
-    return `https://via.placeholder.com/600x300/f0f0f0/666666?text=Mapa+de+${encodeURIComponent(data.address.substring(0, 20))}`;
+    return `https://via.placeholder.com/600x300/e5e7eb/6b7280?text=${encodeURIComponent('📍 ' + data.address.substring(0, 30))}`;
+  };
+
+  const containerStyles = {
+    borderRadius: theme?.borderRadius === 'sharp' ? '0.5rem' :
+                 theme?.borderRadius === 'curved' ? '0.75rem' : '1rem',
+    overflow: 'hidden',
+    boxShadow: theme?.buttonShadow === 'none' ? 'none' :
+               theme?.buttonShadow === 'hard' ? '4px 4px 0 rgba(0,0,0,0.2)' :
+               '0 2px 8px rgba(0,0,0,0.15)',
+  };
+
+  const buttonStyles = {
+    backgroundColor: theme?.buttonFill === 'glass' 
+      ? 'rgba(255, 255, 255, 0.1)'
+      : theme?.buttonFill === 'outline'
+      ? 'transparent'
+      : `${theme?.primaryColor || '#3b82f6'}20`,
+    color: theme?.primaryColor || '#3b82f6',
+    border: theme?.buttonFill === 'outline' 
+      ? `2px solid ${theme?.primaryColor || '#3b82f6'}`
+      : `1px solid ${theme?.primaryColor || '#3b82f6'}`,
+    borderRadius: theme?.borderRadius === 'sharp' ? '0.5rem' :
+                 theme?.borderRadius === 'curved' ? '0.75rem' : '9999px',
+    backdropFilter: theme?.buttonFill === 'glass' ? 'blur(10px)' : 'none',
+    WebkitBackdropFilter: theme?.buttonFill === 'glass' ? 'blur(10px)' : 'none',
+    fontFamily: theme?.fontFamily === 'serif' ? 'serif' :
+               theme?.fontFamily === 'mono' ? 'monospace' : 'sans-serif',
   };
 
   return (
@@ -37,13 +64,9 @@ export function PublicMapsWidget({ data, theme, className }: PublicMapsWidgetPro
       <div className="space-y-3">
         {/* Static map image */}
         <div 
-          className="relative aspect-[2/1] rounded-lg overflow-hidden cursor-pointer group"
+          className="relative aspect-[2/1] cursor-pointer group"
           onClick={handleMapClick}
-          style={{
-            borderRadius: theme?.borderRadius === 'sm' ? '6px' : 
-                         theme?.borderRadius === 'md' ? '8px' :
-                         theme?.borderRadius === 'lg' ? '12px' : '16px'
-          }}
+          style={containerStyles}
         >
           <img
             src={getStaticMapUrl()}
@@ -54,7 +77,14 @@ export function PublicMapsWidget({ data, theme, className }: PublicMapsWidgetPro
           {/* Overlay with map pin */}
           <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all flex items-center justify-center">
             <div 
-              className="bg-white bg-opacity-90 p-3 rounded-full shadow-lg group-hover:scale-110 transition-transform"
+              className="p-3 rounded-full shadow-lg group-hover:scale-110 transition-transform"
+              style={{
+                backgroundColor: theme?.buttonFill === 'glass'
+                  ? 'rgba(255, 255, 255, 0.9)'
+                  : 'white',
+                backdropFilter: theme?.buttonFill === 'glass' ? 'blur(10px)' : 'none',
+                WebkitBackdropFilter: theme?.buttonFill === 'glass' ? 'blur(10px)' : 'none',
+              }}
             >
               <IconMapPin size={24} style={{ color: theme?.primaryColor || '#ef4444' }} />
             </div>
@@ -62,7 +92,14 @@ export function PublicMapsWidget({ data, theme, className }: PublicMapsWidgetPro
           
           {/* External link indicator */}
           <div className="absolute top-3 right-3">
-            <div className="bg-black bg-opacity-50 p-2 rounded-full">
+            <div 
+              className="p-2 rounded-full"
+              style={{
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+              }}
+            >
               <IconExternalLink size={16} className="text-white" />
             </div>
           </div>
@@ -71,19 +108,31 @@ export function PublicMapsWidget({ data, theme, className }: PublicMapsWidgetPro
         {/* Address and call-to-action */}
         <div className="text-center space-y-2">
           <p 
-            className="font-medium"
-            style={{ color: theme?.primaryColor }}
+            className="font-medium flex items-center justify-center gap-1"
+            style={{ 
+              color: theme?.textColor || theme?.primaryColor,
+              fontFamily: theme?.fontFamily === 'serif' ? 'serif' :
+                         theme?.fontFamily === 'mono' ? 'monospace' : 'sans-serif',
+            }}
           >
-            <IconMapPin size={16} className="inline mr-1" />
+            <IconMapPin size={16} />
             {data.address}
           </p>
           <button
             onClick={handleMapClick}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg transition-all hover:scale-105 active:scale-95"
-            style={{
-              backgroundColor: `${theme?.primaryColor || '#3b82f6'}20`,
-              color: theme?.primaryColor || '#3b82f6',
-              border: `1px solid ${theme?.primaryColor || '#3b82f6'}`,
+            className="inline-flex items-center gap-2 px-4 py-2 transition-all hover:scale-105 active:scale-95"
+            style={buttonStyles}
+            onMouseEnter={(e) => {
+              if (theme?.buttonFill === 'outline') {
+                e.currentTarget.style.backgroundColor = theme?.primaryColor || '#3b82f6';
+                e.currentTarget.style.color = theme?.buttonTextColor || '#ffffff';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (theme?.buttonFill === 'outline') {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = theme?.primaryColor || '#3b82f6';
+              }
             }}
           >
             <IconExternalLink size={16} />

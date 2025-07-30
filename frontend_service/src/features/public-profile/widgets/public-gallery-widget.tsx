@@ -1,5 +1,6 @@
+// src/features/public-profile/widgets/public-gallery-widget.tsx
 import React, { useState } from 'react';
-import { IconPhoto, IconExternalLink, IconShoppingBag, IconTag } from '@tabler/icons-react';
+import { IconPhoto, IconExternalLink, IconShoppingBag, IconTag, IconX } from '@tabler/icons-react';
 import { PublicWidgetProps } from './types';
 
 interface PublicGalleryWidgetProps extends PublicWidgetProps {
@@ -55,14 +56,32 @@ export function PublicGalleryWidget({ data, productsData = [], theme, className 
       3: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
       4: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
     };
-    return columnClasses[data.columns as keyof typeof columnClasses];
+    return columnClasses[data.columns as keyof typeof columnClasses] || 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
+  };
+
+  const cardStyles = {
+    borderRadius: theme?.borderRadius === 'sharp' ? '0.5rem' :
+                 theme?.borderRadius === 'curved' ? '0.75rem' : '1rem',
+    overflow: 'hidden',
+    boxShadow: theme?.buttonShadow === 'none' ? 'none' :
+               theme?.buttonShadow === 'hard' ? '3px 3px 0 rgba(0,0,0,0.2)' :
+               '0 2px 4px rgba(0,0,0,0.1)',
+    fontFamily: theme?.fontFamily === 'serif' ? 'serif' :
+               theme?.fontFamily === 'mono' ? 'monospace' : 'sans-serif',
+    backgroundColor: theme?.buttonFill === 'glass'
+      ? 'rgba(255, 255, 255, 0.1)'
+      : theme?.backgroundColor || '#ffffff',
+    backdropFilter: theme?.buttonFill === 'glass' ? 'blur(10px)' : 'none',
+    WebkitBackdropFilter: theme?.buttonFill === 'glass' ? 'blur(10px)' : 'none',
   };
 
   if (products.length === 0) {
     return (
       <div className={`text-center py-8 ${className}`}>
         <IconPhoto size={48} className="mx-auto mb-3 opacity-30" />
-        <p className="opacity-60">No hay productos para mostrar</p>
+        <p style={{ color: theme?.textColor || theme?.primaryColor, opacity: 0.6 }}>
+          No hay productos para mostrar
+        </p>
       </div>
     );
   }
@@ -73,7 +92,11 @@ export function PublicGalleryWidget({ data, productsData = [], theme, className 
       {data.title && (
         <h3 
           className="font-semibold mb-4 text-lg"
-          style={{ color: theme?.primaryColor }}
+          style={{ 
+            color: theme?.textColor || theme?.primaryColor,
+            fontFamily: theme?.fontFamily === 'serif' ? 'serif' :
+                       theme?.fontFamily === 'mono' ? 'monospace' : 'sans-serif',
+          }}
         >
           {data.title}
         </h3>
@@ -86,16 +109,10 @@ export function PublicGalleryWidget({ data, productsData = [], theme, className 
             key={product.id}
             className={`group cursor-pointer ${product.link ? 'hover:scale-105' : ''} transition-transform`}
             onClick={() => handleProductClick(product)}
+            style={cardStyles}
           >
             {/* Product image */}
-            <div 
-              className="aspect-square overflow-hidden bg-gray-100 relative"
-              style={{
-                borderRadius: theme?.borderRadius === 'sm' ? '6px' : 
-                             theme?.borderRadius === 'md' ? '8px' :
-                             theme?.borderRadius === 'lg' ? '12px' : '16px'
-              }}
-            >
+            <div className="aspect-square overflow-hidden bg-gray-100 relative">
               {product.images.length > 0 ? (
                 <img
                   src={product.images[0]}
@@ -104,13 +121,24 @@ export function PublicGalleryWidget({ data, productsData = [], theme, className 
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
-                  <IconPhoto size={48} className="opacity-30" />
+                  <IconPhoto 
+                    size={48} 
+                    style={{ color: theme?.primaryColor, opacity: 0.3 }}
+                  />
                 </div>
               )}
               
               {/* Service/Product badge */}
               {product.isService && (
-                <div className="absolute top-2 right-2 bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium">
+                <div 
+                  className="absolute top-2 right-2 px-2 py-1 rounded text-xs font-medium"
+                  style={{
+                    backgroundColor: theme?.primaryColor || '#3b82f6',
+                    color: theme?.buttonTextColor || '#ffffff',
+                    borderRadius: theme?.borderRadius === 'sharp' ? '0.25rem' :
+                                 theme?.borderRadius === 'curved' ? '0.5rem' : '9999px',
+                  }}
+                >
                   Servicio
                 </div>
               )}
@@ -118,7 +146,14 @@ export function PublicGalleryWidget({ data, productsData = [], theme, className 
               {/* Link indicator */}
               {product.link && (
                 <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all flex items-center justify-center">
-                  <div className="bg-white bg-opacity-90 p-3 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div 
+                    className="p-3 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    style={{
+                      backgroundColor: theme?.buttonFill === 'glass'
+                        ? 'rgba(255, 255, 255, 0.9)'
+                        : 'rgba(255, 255, 255, 0.9)',
+                    }}
+                  >
                     <IconExternalLink size={20} style={{ color: theme?.primaryColor }} />
                   </div>
                 </div>
@@ -126,24 +161,35 @@ export function PublicGalleryWidget({ data, productsData = [], theme, className 
             </div>
             
             {/* Product info */}
-            <div className="mt-3 space-y-1">
+            <div className="p-3 space-y-1">
               <div className="flex items-start justify-between">
                 <h4 
                   className="font-medium text-sm line-clamp-2 flex-1"
-                  style={{ color: theme?.primaryColor }}
+                  style={{ color: theme?.textColor || theme?.primaryColor }}
                 >
                   {product.name}
                 </h4>
                 {product.isService ? (
-                  <IconTag size={16} className="ml-2 flex-shrink-0 opacity-60" />
+                  <IconTag 
+                    size={16} 
+                    className="ml-2 flex-shrink-0" 
+                    style={{ color: theme?.primaryColor, opacity: 0.6 }}
+                  />
                 ) : (
-                  <IconShoppingBag size={16} className="ml-2 flex-shrink-0 opacity-60" />
+                  <IconShoppingBag 
+                    size={16} 
+                    className="ml-2 flex-shrink-0" 
+                    style={{ color: theme?.primaryColor, opacity: 0.6 }}
+                  />
                 )}
               </div>
               
               {/* Description */}
               {data.showDescription && product.description && (
-                <p className="text-xs opacity-70 line-clamp-2">
+                <p 
+                  className="text-xs line-clamp-2"
+                  style={{ color: theme?.textColor || theme?.primaryColor, opacity: 0.7 }}
+                >
                   {product.description}
                 </p>
               )}
@@ -158,7 +204,15 @@ export function PublicGalleryWidget({ data, productsData = [], theme, className 
                     {formatPrice(product.price, product.currency)}
                   </p>
                   {product.category && (
-                    <span className="text-xs opacity-50 bg-gray-100 px-2 py-1 rounded">
+                    <span 
+                      className="text-xs px-2 py-1 rounded"
+                      style={{ 
+                        backgroundColor: `${theme?.primaryColor}10`,
+                        color: theme?.primaryColor,
+                        borderRadius: theme?.borderRadius === 'sharp' ? '0.25rem' :
+                                     theme?.borderRadius === 'curved' ? '0.5rem' : '9999px',
+                      }}
+                    >
                       {product.category}
                     </span>
                   )}
@@ -179,13 +233,24 @@ export function PublicGalleryWidget({ data, productsData = [], theme, className 
             <img
               src={selectedImage}
               alt="Imagen ampliada"
-              className="max-w-full max-h-full object-contain rounded-lg"
+              className="max-w-full max-h-full object-contain"
+              style={{
+                borderRadius: theme?.borderRadius === 'sharp' ? '0.5rem' :
+                             theme?.borderRadius === 'curved' ? '0.75rem' : '1rem',
+              }}
             />
             <button
               onClick={() => setSelectedImage(null)}
-              className="absolute top-4 right-4 bg-white bg-opacity-20 hover:bg-opacity-30 p-2 rounded-full"
+              className="absolute top-4 right-4 p-2 rounded-full transition-all hover:scale-110"
+              style={{
+                backgroundColor: theme?.buttonFill === 'glass'
+                  ? 'rgba(255, 255, 255, 0.2)'
+                  : 'rgba(255, 255, 255, 0.2)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+              }}
             >
-              <IconExternalLink size={20} className="text-white rotate-45" />
+              <IconX size={20} className="text-white" />
             </button>
           </div>
         </div>

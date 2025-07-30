@@ -1,3 +1,4 @@
+// src/features/public-profile/widgets/public-separator-widget.tsx
 import React from 'react';
 import { PublicWidgetProps } from './types';
 
@@ -11,7 +12,12 @@ interface PublicSeparatorWidgetProps extends PublicWidgetProps {
   };
 }
 
-export function PublicSeparatorWidget({ data, className }: PublicSeparatorWidgetProps) {
+export function PublicSeparatorWidget({ data, theme, className }: PublicSeparatorWidgetProps) {
+  // Use theme primary color if color is default gray
+  const separatorColor = data.color === '#cccccc' && theme?.primaryColor 
+    ? `${theme.primaryColor}30` // 30% opacity of primary color
+    : data.color;
+
   return (
     <div 
       className={className}
@@ -23,8 +29,9 @@ export function PublicSeparatorWidget({ data, className }: PublicSeparatorWidget
       <hr
         style={{
           border: 'none',
-          borderTop: `${data.thickness}px ${data.style} ${data.color}`,
+          borderTop: `${data.thickness}px ${data.style} ${separatorColor}`,
           margin: 0,
+          opacity: theme?.wallpaper?.type === 'pattern' ? 0.5 : 1, // Reduce opacity on patterned backgrounds
         }}
       />
     </div>

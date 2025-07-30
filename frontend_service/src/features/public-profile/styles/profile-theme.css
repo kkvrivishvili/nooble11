@@ -1,44 +1,238 @@
-/* CSS Variables para el sistema de themes */
+/* src/features/public-profile/styles/profile-theme.css */
+
+/* CSS Variables para el sistema de themes mejorado */
 :root {
-    --profile-primary-color: #000000;
-    --profile-background-color: #ffffff;
-    --profile-border-radius: 12px;
-    --profile-font-family: system-ui, -apple-system, sans-serif;
+  /* Colors */
+  --profile-primary-color: #000000;
+  --profile-background-color: #ffffff;
+  --profile-text-color: #111827;
+  --profile-button-text-color: #ffffff;
+  
+  /* Typography */
+  --profile-font-family: system-ui, -apple-system, sans-serif;
+  
+  /* Borders & Shapes */
+  --profile-border-radius: 0.5rem;
+  
+  /* Button Styles */
+  --profile-button-fill: solid;
+  --profile-button-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  
+  /* Wallpaper */
+  --profile-wallpaper: #ffffff;
+  --profile-wallpaper-size: auto;
+  --profile-wallpaper-position: center;
+  --profile-blur-intensity: 0;
+  
+  /* Layout */
+  --profile-content-width: 36rem;
+  --profile-spacing: 1rem;
+}
+
+/* Base profile container */
+.profile-container {
+  min-height: 100vh;
+  position: relative;
+  color: var(--profile-text-color);
+  font-family: var(--profile-font-family);
+  transition: all 0.3s ease;
+}
+
+/* Wallpaper layer */
+.profile-wallpaper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -2;
+  background: var(--profile-wallpaper);
+  background-size: var(--profile-wallpaper-size);
+  background-position: var(--profile-wallpaper-position);
+  background-repeat: repeat;
+}
+
+/* Blur overlay for blur wallpaper type */
+.profile-wallpaper-blur {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  backdrop-filter: blur(var(--profile-blur-intensity));
+  -webkit-backdrop-filter: blur(var(--profile-blur-intensity));
+}
+
+/* Video wallpaper container */
+.profile-video-wallpaper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+  overflow: hidden;
+}
+
+.profile-video-wallpaper video {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  min-width: 100%;
+  min-height: 100%;
+  width: auto;
+  height: auto;
+  transform: translate(-50%, -50%);
+  object-fit: cover;
+}
+
+/* Content container */
+.profile-content {
+  position: relative;
+  z-index: 1;
+  max-width: var(--profile-content-width);
+  margin: 0 auto;
+  padding: var(--profile-spacing);
+}
+
+/* Button styles based on fill type */
+.profile-button {
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--profile-border-radius);
+  font-family: var(--profile-font-family);
+  transition: all 0.2s ease;
+  box-shadow: var(--profile-button-shadow);
+  border: 2px solid var(--profile-primary-color);
+  cursor: pointer;
+  font-weight: 500;
+}
+
+/* Solid fill */
+.profile-button-solid {
+  background-color: var(--profile-primary-color);
+  color: var(--profile-button-text-color);
+}
+
+.profile-button-solid:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--profile-button-shadow);
+}
+
+/* Glass fill */
+.profile-button-glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--profile-primary-color);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.profile-button-glass:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Outline fill */
+.profile-button-outline {
+  background-color: transparent;
+  color: var(--profile-primary-color);
+}
+
+.profile-button-outline:hover {
+  background-color: var(--profile-primary-color);
+  color: var(--profile-button-text-color);
+}
+
+/* Link styles based on style type */
+.profile-link-card {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: var(--profile-border-radius);
+  padding: var(--profile-spacing);
+  transition: all 0.2s ease;
+}
+
+.profile-link-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.profile-link-button {
+  /* Use button styles */
+}
+
+.profile-link-minimal {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.profile-link-minimal:hover {
+  padding-left: 0.5rem;
+}
+
+/* Pattern backgrounds need special handling */
+.profile-pattern-dots {
+  background-image: radial-gradient(circle, currentColor 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.profile-pattern-lines {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    currentColor 10px,
+    currentColor 11px
+  );
+}
+
+.profile-pattern-grid {
+  background-image: 
+    repeating-linear-gradient(0deg, currentColor, currentColor 1px, transparent 1px, transparent 20px),
+    repeating-linear-gradient(90deg, currentColor, currentColor 1px, transparent 1px, transparent 20px);
+}
+
+.profile-pattern-waves {
+  background-image: 
+    repeating-radial-gradient(
+      circle at 0 0,
+      transparent 0,
+      currentColor 10px,
+      transparent 10px,
+      transparent 20px,
+      currentColor 20px,
+      currentColor 30px,
+      transparent 30px,
+      transparent 40px
+    );
+}
+
+/* Animations */
+@keyframes profile-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.profile-animate-in {
+  animation: profile-fade-in 0.5s ease-out;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  :root {
+    --profile-content-width: 100%;
   }
   
-  /* Clases utilitarias para usar las variables */
-  .profile-themed {
-    color: var(--profile-primary-color);
-    background-color: var(--profile-background-color);
-    border-radius: var(--profile-border-radius);
-    font-family: var(--profile-font-family);
+  .profile-content {
+    padding: 0.75rem;
   }
-  
-  .profile-primary-color {
-    color: var(--profile-primary-color);
-  }
-  
-  .profile-bg-color {
-    background-color: var(--profile-background-color);
-  }
-  
-  .profile-border-radius {
-    border-radius: var(--profile-border-radius);
-  }
-  
-  /* Animations for theme transitions */
-  .profile-theme-transition {
-    transition: 
-      color 0.3s ease,
-      background-color 0.3s ease,
-      border-color 0.3s ease,
-      border-radius 0.3s ease;
-  }
-  
-  /* Background image support */
-  .profile-bg-image {
-    background-image: var(--profile-background-image);
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-  }
+}

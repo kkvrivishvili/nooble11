@@ -91,23 +91,74 @@ export interface Agent {
   template?: AgentTemplate;
 }
 
-// Design types
+// Enhanced Design types
 export interface ProfileTheme {
+  // Colors
   primaryColor: string;
   backgroundColor: string;
-  backgroundImage?: string;
-  borderRadius?: 'sm' | 'md' | 'lg' | 'xl';
+  textColor?: string;
+  buttonTextColor?: string;
+  
+  // Typography
   fontFamily?: 'sans' | 'serif' | 'mono';
+  fontSize?: 'sm' | 'md' | 'lg';
+  
+  // Styling
+  borderRadius?: 'sharp' | 'curved' | 'round';
+  buttonFill?: 'solid' | 'glass' | 'outline';
+  buttonShadow?: 'none' | 'subtle' | 'hard';
+  
+  // Wallpaper
+  wallpaper?: ProfileWallpaper;
+}
+
+export interface ProfileWallpaper {
+  type: 'hero' | 'fill' | 'gradient' | 'blur' | 'pattern' | 'image' | 'video';
+  // Hero type
+  heroImage?: string;
+  heroPosition?: 'top' | 'center' | 'bottom';
+  
+  // Fill type
+  fillColor?: string;
+  
+  // Gradient type
+  gradientColors?: string[];
+  gradientDirection?: 'up' | 'down' | 'left' | 'right' | 'diagonal';
+  gradientType?: 'linear' | 'radial';
+  
+  // Blur type
+  blurIntensity?: number;
+  blurColor?: string;
+  
+  // Pattern type
+  patternType?: 'dots' | 'lines' | 'grid' | 'waves' | 'circles';
+  patternColor?: string;
+  patternOpacity?: number;
+  
+  // Image type
+  imageUrl?: string;
+  imagePosition?: 'center' | 'top' | 'bottom' | 'left' | 'right';
+  imageSize?: 'cover' | 'contain' | 'auto';
+  imageOverlay?: string; // rgba color for overlay
+  
+  // Video type
+  videoUrl?: string;
+  videoMuted?: boolean;
+  videoLoop?: boolean;
+  videoOverlay?: string;
 }
 
 export interface ProfileLayout {
   linkStyle?: 'card' | 'button' | 'minimal';
   socialPosition?: 'top' | 'bottom' | 'hidden';
+  contentWidth?: 'narrow' | 'normal' | 'wide';
+  spacing?: 'compact' | 'normal' | 'relaxed';
 }
 
 export interface ProfileDesign {
   theme: ProfileTheme;
   layout?: ProfileLayout;
+  version?: number; // For migration purposes
 }
 
 // Profile interface

@@ -1,146 +1,125 @@
 // src/hooks/use-design.ts
-import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { designApi } from '@/api/design-api';
 import { ProfileDesign } from '@/types/profile';
-import { useProfile } from '@/context/profile-context';
 import { toast } from 'sonner';
 
 export function useDesign() {
   const queryClient = useQueryClient();
-  const { profile, refreshProfile } = useProfile();
-  // Using sonner toast directly
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // Get current design
-  const { data: currentDesign, isLoading, error } = useQuery({
-    queryKey: ['design', profile?.id],
+  // Query for current design
+  const {
+    data: currentDesign,
+    isLoading,
+    error
+  } = useQuery({
+    queryKey: ['profile-design'],
     queryFn: () => designApi.getDesign(),
-    enabled: !!profile?.id,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
-  // Update design mutation
+  // Mutation for updating design
   const updateDesignMutation = useMutation({
     mutationFn: (design: Partial<ProfileDesign>) => designApi.updateDesign(design),
     onMutate: async (newDesign) => {
       // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ['design', profile?.id] });
-      
+      await queryClient.cancelQueries({ queryKey: ['profile-design'] });
+
       // Snapshot the previous value
-      const previousDesign = queryClient.getQueryData(['design', profile?.id]);
-      
+      const previousDesign = queryClient.getQueryData<ProfileDesign>(['profile-design']);
+
       // Optimistically update to the new value
-      queryClient.setQueryData(['design', profile?.id], (old: ProfileDesign | undefined) => {
-        if (!old) return old;
-        return {
-          theme: { ...old.theme, ...(newDesign.theme || {}) },
-          layout: { ...old.layout, ...(newDesign.layout || {}) }
-        };
-      });
-      
+      if (previousDesign) {
+        queryClient.setQueryData<ProfileDesign>(['profile-design'], {
+          ...previousDesign,
+          ...newDesign,
+          theme: {
+            ...previousDesign.theme,
+            ...(newDesign.theme || {})
+          },
+          layout: {
+            ...previousDesign.layout,
+            ...(newDesign.layout || {})
+          }
+        });
+      }
+
+      // Return a context object with the snapshotted value
       return { previousDesign };
     },
     onError: (err, newDesign, context) => {
-      // If the mutation fails, use the context to roll back
-      queryClient.setQueryData(['design', profile?.id], context?.previousDesign);
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousDesign) {
+        queryClient.setQueryData(['profile-design'], context.previousDesign);
+      }
       
-      toast.error("Error al guardar diseño. No se pudo guardar el diseño. Inténtalo de nuevo.");
+      toast.error("No se pudo actualizar el diseño. Por favor intenta de nuevo.");
     },
     onSuccess: () => {
-      setHasUnsavedChanges(false);
-      // Refresh the profile to get updated design
-      refreshProfile();
-      
-      toast.success("Diseño guardado. Los cambios se han aplicado correctamente.");
+      toast.success("Los cambios se han guardado correctamente.");
     },
     onSettled: () => {
       // Always refetch after error or success
-      queryClient.invalidateQueries({ queryKey: ['design', profile?.id] });
+      queryClient.invalidateQueries({ queryKey: ['profile-design'] });
+      // Also invalidate the profile to update the preview
+      queryClient.invalidateQueries({ queryKey: ['myProfile'] });
+    },
+  });
+
+  // Mutation for resetting to default
+  const resetDesignMutation = useMutation({
+    mutationFn: () => designApi.resetToDefault(),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['profile-design'] });
+    },
+    onSuccess: () => {
+      toast.success("Se ha restaurado el diseño predeterminado.");
+    },
+    onError: () => {
+      toast.error("No se pudo restablecer el diseño. Por favor intenta de nuevo.");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile-design'] });
+      queryClient.invalidateQueries({ queryKey: ['myProfile'] });
     },
   });
 
   // Apply preset mutation
   const applyPresetMutation = useMutation({
-    mutationFn: (presetName: string) => designApi.applyPreset(presetName as any),
-    onSuccess: (data) => {
-      queryClient.setQueryData(['design', profile?.id], data);
-      refreshProfile();
-      setHasUnsavedChanges(false);
-      
-      toast.success("Preset aplicado. El preset se ha aplicado correctamente.");
+    mutationFn: (presetName: 'minimal' | 'subtle' | 'classic' | 'unique' | 'zen' | 'modern' | 'industrial' | 'retro' | 'vibrant') => designApi.applyPreset(presetName),
+    onSuccess: () => {
+      toast.success("El preset se ha aplicado correctamente.");
     },
     onError: () => {
-      toast.error("Error. No se pudo aplicar el preset.");
-    }
-  });
-
-  // Reset to default mutation
-  const resetToDefaultMutation = useMutation({
-    mutationFn: () => designApi.resetToDefault(),
-    onSuccess: (data) => {
-      queryClient.setQueryData(['design', profile?.id], data);
-      refreshProfile();
-      setHasUnsavedChanges(false);
-      
-      toast.success("Diseño restablecido. Se ha restablecido el diseño por defecto.");
+      toast.error("No se pudo aplicar el preset. Por favor intenta de nuevo.");
     },
-    onError: () => {
-      toast.error("Error. No se pudo restablecer el diseño.");
-    }
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile-design'] });
+      queryClient.invalidateQueries({ queryKey: ['myProfile'] });
+    },
   });
-
-  // Update theme only
-  const updateTheme = (theme: Partial<ProfileDesign['theme']>) => {
-    updateDesignMutation.mutate({ theme });
-  };
-
-  // Update layout only
-  const updateLayout = (layout: Partial<ProfileDesign['layout']>) => {
-    updateDesignMutation.mutate({ layout });
-  };
-
-  // Apply preset
-  const applyPreset = (presetName: string) => {
-    applyPresetMutation.mutate(presetName);
-  };
-
-  // Reset to default
-  const resetToDefault = () => {
-    resetToDefaultMutation.mutate();
-  };
-
-  // Get available presets
-  const getPresets = () => {
-    return designApi.getPresets();
-  };
-
-  // Mark changes as unsaved
-  const markAsChanged = () => {
-    setHasUnsavedChanges(true);
-  };
 
   return {
-    // Data
     currentDesign,
-    hasUnsavedChanges,
     isLoading,
-    error,
-    
-    // Mutations
-    updateDesign: updateDesignMutation.mutate,
-    updateTheme,
-    updateLayout,
-    applyPreset,
-    resetToDefault,
-    
-    // Utilities
-    getPresets,
-    markAsChanged,
-    
-    // Loading states
+    isError: !!error,
     isSaving: updateDesignMutation.isPending,
-    isApplyingPreset: applyPresetMutation.isPending,
-    isResetting: resetToDefaultMutation.isPending,
+    isResetting: resetDesignMutation.isPending,
+    updateDesign: updateDesignMutation.mutate,
+    resetToDefault: resetDesignMutation.mutate,
+    applyPreset: applyPresetMutation.mutate,
+    updateTheme: (theme: Partial<ProfileDesign['theme']>) => 
+      updateDesignMutation.mutate({ theme }),
+    updateLayout: (layout: Partial<ProfileDesign['layout']>) => 
+      updateDesignMutation.mutate({ layout }),
+    updateWallpaper: (wallpaper: ProfileDesign['theme']['wallpaper']) => {
+      if (!currentDesign?.theme) return;
+      updateDesignMutation.mutate({ 
+        theme: { 
+          ...currentDesign.theme,
+          wallpaper 
+        } 
+      });
+    },
   };
 }
