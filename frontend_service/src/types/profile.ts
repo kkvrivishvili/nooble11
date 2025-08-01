@@ -113,10 +113,7 @@ export interface ProfileTheme {
 }
 
 export interface ProfileWallpaper {
-  type: 'hero' | 'fill' | 'gradient' | 'blur' | 'pattern' | 'image' | 'video';
-  // Hero type
-  heroImage?: string;
-  heroPosition?: 'top' | 'center' | 'bottom';
+  type: 'fill' | 'gradient' | 'blur' | 'pattern' | 'image' | 'video';
   
   // Fill type
   fillColor?: string;

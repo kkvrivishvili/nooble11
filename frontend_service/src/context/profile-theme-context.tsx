@@ -51,13 +51,14 @@ export function ProfileThemeProvider({
       case 'fill':
         return wallpaper.fillColor || '#ffffff';
       
-      case 'gradient':
+      case 'gradient': {
         if (!wallpaper.gradientColors || wallpaper.gradientColors.length === 0) return '';
         const direction = wallpaper.gradientDirection === 'diagonal' ? 'to bottom right' :
                          wallpaper.gradientDirection === 'up' ? 'to top' :
                          wallpaper.gradientDirection === 'down' ? 'to bottom' :
                          wallpaper.gradientDirection === 'left' ? 'to left' : 'to right';
         return `linear-gradient(${direction}, ${wallpaper.gradientColors.join(', ')})`;
+      }
       
       case 'blur':
         // This creates a backdrop blur effect
@@ -72,10 +73,6 @@ export function ProfileThemeProvider({
       
       case 'video':
         // Video backgrounds need to be handled differently with a video element
-        return 'transparent';
-      
-      case 'hero':
-        // Hero images are handled in the profile component
         return 'transparent';
       
       default:

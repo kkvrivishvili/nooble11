@@ -1,7 +1,8 @@
-// src/features/public-profile/widgets/public-calendar-widget.tsx
-import React from 'react';
+// src/features/public-profile/widgets/public-calendar-widget.tsx - Refactored with BaseWidget utilities
 import { IconCalendar, IconClock, IconExternalLink } from '@tabler/icons-react';
 import { PublicWidgetProps } from './types';
+import BaseWidget from './BaseWidget';
+import { getBorderRadius, getShadowStyle, getFontFamily } from '@/features/public-profile/utils/theme-styles';
 
 interface PublicCalendarWidgetProps extends PublicWidgetProps {
   data: {
@@ -24,16 +25,14 @@ export function PublicCalendarWidget({ data, theme, className }: PublicCalendarW
   };
 
   const containerStyles = {
-    borderRadius: theme?.borderRadius === 'sharp' ? '0.5rem' :
-                 theme?.borderRadius === 'curved' ? '0.75rem' : '1rem',
+    borderRadius: theme ? getBorderRadius(theme) : '1rem',
     borderColor: theme?.primaryColor || '#e5e7eb',
     backgroundColor: theme?.buttonFill === 'glass'
       ? 'rgba(255, 255, 255, 0.05)'
       : `${theme?.primaryColor || '#f3f4f6'}05`,
     backdropFilter: theme?.buttonFill === 'glass' ? 'blur(10px)' : 'none',
     WebkitBackdropFilter: theme?.buttonFill === 'glass' ? 'blur(10px)' : 'none',
-    fontFamily: theme?.fontFamily === 'serif' ? 'serif' :
-               theme?.fontFamily === 'mono' ? 'monospace' : 'sans-serif',
+    fontFamily: theme ? getFontFamily(theme.fontFamily) : 'sans-serif',
   };
 
   const buttonStyles = {
@@ -48,11 +47,8 @@ export function PublicCalendarWidget({ data, theme, className }: PublicCalendarW
     border: theme?.buttonFill === 'outline'
       ? `2px solid ${theme?.primaryColor || '#3b82f6'}`
       : 'none',
-    borderRadius: theme?.borderRadius === 'sharp' ? '0.5rem' :
-                 theme?.borderRadius === 'curved' ? '0.75rem' : '9999px',
-    boxShadow: theme?.buttonShadow === 'none' ? 'none' :
-               theme?.buttonShadow === 'hard' ? '4px 4px 0 rgba(0,0,0,0.2)' :
-               '0 2px 4px rgba(0,0,0,0.1)',
+    borderRadius: theme ? getBorderRadius(theme) : '9999px',
+    boxShadow: theme ? getShadowStyle(theme) : 'none',
     backdropFilter: theme?.buttonFill === 'glass' ? 'blur(10px)' : 'none',
     WebkitBackdropFilter: theme?.buttonFill === 'glass' ? 'blur(10px)' : 'none',
   };
@@ -76,27 +72,24 @@ export function PublicCalendarWidget({ data, theme, className }: PublicCalendarW
             <IconCalendar size={32} style={{ color: theme?.primaryColor || '#3b82f6' }} />
           </div>
           
-          <h3 
+          <BaseWidget.Text
+            theme={theme}
+            variant="primary"
             className="text-xl font-semibold mb-2"
-            style={{ 
-              color: theme?.textColor || theme?.primaryColor,
-              fontFamily: theme?.fontFamily === 'serif' ? 'serif' :
-                         theme?.fontFamily === 'mono' ? 'monospace' : 'sans-serif',
-            }}
+            as="h3"
           >
             {data.title}
-          </h3>
+          </BaseWidget.Text>
           
-          <p 
+          <BaseWidget.Text
+            theme={theme}
+            variant="primary"
             className="text-sm flex items-center justify-center gap-1"
-            style={{ 
-              color: theme?.textColor || theme?.primaryColor,
-              opacity: 0.7 
-            }}
+            style={{ opacity: 0.7 }}
           >
             <IconClock size={14} />
             Calendario de {getCalendlyUsername()}
-          </p>
+          </BaseWidget.Text>
         </div>
 
         {/* Features list */}
@@ -106,27 +99,27 @@ export function PublicCalendarWidget({ data, theme, className }: PublicCalendarW
               className="w-2 h-2 rounded-full" 
               style={{ backgroundColor: theme?.primaryColor }}
             ></div>
-            <span style={{ color: theme?.textColor || theme?.primaryColor, opacity: 0.8 }}>
+            <BaseWidget.Text theme={theme} variant="primary" style={{ opacity: 0.8 }}>
               Selecciona fecha y hora disponible
-            </span>
+            </BaseWidget.Text>
           </div>
           <div className="flex items-center gap-2">
             <div 
               className="w-2 h-2 rounded-full" 
               style={{ backgroundColor: theme?.primaryColor }}
             ></div>
-            <span style={{ color: theme?.textColor || theme?.primaryColor, opacity: 0.8 }}>
+            <BaseWidget.Text theme={theme} variant="primary" style={{ opacity: 0.8 }}>
               Confirmación automática por email
-            </span>
+            </BaseWidget.Text>
           </div>
           <div className="flex items-center gap-2">
             <div 
               className="w-2 h-2 rounded-full" 
               style={{ backgroundColor: theme?.primaryColor }}
             ></div>
-            <span style={{ color: theme?.textColor || theme?.primaryColor, opacity: 0.8 }}>
+            <BaseWidget.Text theme={theme} variant="primary" style={{ opacity: 0.8 }}>
               Enlace de videollamada incluido
-            </span>
+            </BaseWidget.Text>
           </div>
         </div>
 
@@ -158,12 +151,14 @@ export function PublicCalendarWidget({ data, theme, className }: PublicCalendarW
 
         {/* Powered by Calendly */}
         <div className="text-center mt-3">
-          <p 
+          <BaseWidget.Text
+            theme={theme}
+            variant="primary"
             className="text-xs"
-            style={{ color: theme?.textColor || theme?.primaryColor, opacity: 0.5 }}
+            style={{ opacity: 0.5 }}
           >
             Powered by Calendly
-          </p>
+          </BaseWidget.Text>
         </div>
       </div>
     </div>

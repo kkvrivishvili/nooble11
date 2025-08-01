@@ -1,5 +1,5 @@
-import React from 'react';
 import { PublicWidgetProps } from './types';
+import BaseWidget from './BaseWidget';
 
 interface PublicTitleWidgetProps extends PublicWidgetProps {
   data: {
@@ -35,20 +35,18 @@ export function PublicTitleWidget({ data, theme, className }: PublicTitleWidgetP
   };
 
   return (
-    <h2 
+    <BaseWidget.Text
+      theme={theme}
+      variant="primary"
       className={`
         ${sizeClasses[data.fontSize]}
         ${weightClasses[data.fontWeight]}
         ${alignClasses[data.textAlign]}
         ${className}
       `}
-      style={{ 
-        color: theme?.primaryColor || '#111827',
-        fontFamily: theme?.fontFamily === 'serif' ? 'serif' :
-                   theme?.fontFamily === 'mono' ? 'monospace' : 'sans-serif'
-      }}
+      as="h2"
     >
       {data.text}
-    </h2>
+    </BaseWidget.Text>
   );
 }

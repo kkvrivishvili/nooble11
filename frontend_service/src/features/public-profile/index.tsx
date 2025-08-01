@@ -1,13 +1,13 @@
 // src/features/public-profile/index.tsx - Enhanced version with wallpaper
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query';
 import { publicProfileApi } from '@/api/public-profile-api';
-import { useProfile } from '@/context/profile-context';
-import { ProfileDesign } from '@/types/profile';
+import { ProfileDesign, ProfileWithAgents } from '@/types/profile';
 import ProfileComponent from './components/ProfileComponent'
 import PublicContentComponent from './components/PublicContentComponent'
 import ChatInput from './components/ChatInput'
+import SocialLinks from './components/SocialLinks'
 import { ProfileThemeProvider, useProfileTheme } from '@/context/profile-theme-context';
 // Styles are loaded globally in the app, not here
 
@@ -63,8 +63,8 @@ function ProfileWallpaper() {
 }
 
 // Profile content wrapper
-function ProfileContent({ profile, isPreview }: { profile: any; isPreview: boolean }) {
-  const { theme, layout } = useProfileTheme();
+function ProfileContent({ profile, isPreview }: { profile: ProfileWithAgents; isPreview: boolean }) {
+  const { layout } = useProfileTheme();
   const [activeTab, setActiveTab] = useState('chats');
   const [currentAgentId, setCurrentAgentId] = useState<string>();
 
@@ -84,33 +84,11 @@ function ProfileContent({ profile, isPreview }: { profile: any; isPreview: boole
     setCurrentAgentId(agentId);
   };
 
-  // Apply button styles based on theme
-  const getButtonClass = () => {
-    const baseClass = 'profile-button';
-    const fillClass = `profile-button-${theme.buttonFill || 'solid'}`;
-    return cn(baseClass, fillClass);
-  };
-
-  // Apply link styles based on layout
-  const getLinkClass = () => {
-    return `profile-link-${layout.linkStyle || 'card'}`;
-  };
-
   return (
     <div className="profile-container">
       <ProfileWallpaper />
       
       <div className="profile-content pb-24">
-        {/* Hero wallpaper */}
-        {theme.wallpaper?.type === 'hero' && theme.wallpaper.heroImage && (
-          <div 
-            className="w-full h-64 -mx-4 -mt-8 mb-8 bg-cover bg-center"
-            style={{ 
-              backgroundImage: `url(${theme.wallpaper.heroImage})`,
-              backgroundPosition: theme.wallpaper.heroPosition || 'center'
-            }}
-          />
-        )}
         
         {/* Profile Header */}
         <div className="profile-animate-in">
@@ -134,9 +112,14 @@ function ProfileContent({ profile, isPreview }: { profile: any; isPreview: boole
         </div>
         
         {/* Bottom social links */}
-        {activeTab === 'links' && layout.socialPosition === 'bottom' && profile.socialLinks?.length > 0 && (
-          <div className="flex gap-3 justify-center mt-6 profile-animate-in" style={{ animationDelay: '0.2s' }}>
-            {/* Social links would be rendered here */}
+        {activeTab === 'links' && layout.socialPosition === 'bottom' && (
+          <div className="mt-6 profile-animate-in" style={{ animationDelay: '0.2s' }}>
+            <SocialLinks 
+              socialLinks={profile.socialLinks || []}
+              isPreview={isPreview}
+              position="bottom"
+              iconSize={20}
+            />
           </div>
         )}
       </div>
@@ -151,8 +134,8 @@ function ProfileContent({ profile, isPreview }: { profile: any; isPreview: boole
   );
 }
 
-export default function PublicProfile({ username, isPreview = false }: PublicProfileProps) {
-  const { data: publicProfile, isLoading, error } = useQuery({
+export default function PublicProfile({ username, isPreview = false, previewDesign }: PublicProfileProps) {
+  const { data: publicProfile, isLoading, error } = useQuery<ProfileWithAgents | null>({
     queryKey: ['public-profile', username],
     queryFn: () => {
       if (!username) return null;
@@ -190,13 +173,16 @@ export default function PublicProfile({ username, isPreview = false }: PublicPro
     );
   }
 
+  // Use previewDesign if provided and we're in preview mode, otherwise use profile.design
+  const designToUse = isPreview && previewDesign ? previewDesign : profile.design;
+
   return (
     <div className={cn(
       "min-h-screen relative transition-all duration-300",
       isPreview && "rounded-lg overflow-hidden"
     )}>
-      {/* Wrap everything in ProfileThemeProvider with the profile's design */}
-      <ProfileThemeProvider profileDesign={profile.design}>
+      {/* Wrap everything in ProfileThemeProvider with the appropriate design */}
+      <ProfileThemeProvider profileDesign={designToUse}>
         <ProfileContent profile={profile} isPreview={isPreview} />
       </ProfileThemeProvider>
     </div>

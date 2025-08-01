@@ -27,6 +27,16 @@ ALTER COLUMN design SET DEFAULT '{
   "version": 2
 }'::jsonb;
 
+-- Add constraint to prevent hero wallpaper type
+ALTER TABLE public.profiles
+ADD CONSTRAINT check_wallpaper_type
+CHECK (
+  design->'theme'->'wallpaper'->>'type' IS NULL OR
+  design->'theme'->'wallpaper'->>'type' IN (
+    'fill', 'gradient', 'blur', 'pattern', 'image', 'video'
+  )
+);
+
 -- Function to migrate existing profiles to new design structure
 CREATE OR REPLACE FUNCTION migrate_profile_designs()
 RETURNS void AS $$
@@ -39,6 +49,17 @@ BEGIN
     WHERE design IS NOT NULL 
     AND (design->>'version' IS NULL OR (design->>'version')::int < 2)
   LOOP
+    -- Remove hero wallpaper type if exists
+    IF profile_record.design->'theme'->'wallpaper'->>'type' = 'hero' THEN
+      UPDATE public.profiles
+      SET design = jsonb_set(
+        design,
+        '{theme,wallpaper}',
+        '{"type": "fill", "fillColor": "#ffffff"}'::jsonb
+      )
+      WHERE id = profile_record.id;
+    END IF;
+    
     UPDATE public.profiles
     SET design = jsonb_build_object(
       'theme', jsonb_build_object(
@@ -50,10 +71,15 @@ BEGIN
         'buttonFill', COALESCE(profile_record.design->'theme'->>'buttonFill', 'solid'),
         'buttonShadow', COALESCE(profile_record.design->'theme'->>'buttonShadow', 'subtle'),
         'fontFamily', COALESCE(profile_record.design->'theme'->>'fontFamily', 'sans'),
-        'wallpaper', COALESCE(
-          profile_record.design->'theme'->'wallpaper',
-          jsonb_build_object('type', 'fill', 'fillColor', '#ffffff')
-        )
+        'wallpaper', CASE 
+          WHEN profile_record.design->'theme'->'wallpaper'->>'type' = 'hero' THEN
+            jsonb_build_object('type', 'fill', 'fillColor', '#ffffff')
+          ELSE
+            COALESCE(
+              profile_record.design->'theme'->'wallpaper',
+              jsonb_build_object('type', 'fill', 'fillColor', '#ffffff')
+            )
+          END
       ),
       'layout', jsonb_build_object(
         'linkStyle', COALESCE(profile_record.design->'layout'->>'linkStyle', 'card'),
@@ -100,8 +126,8 @@ BEGIN
       BEGIN
         wallpaper_type := NEW.design->'theme'->'wallpaper'->>'type';
         
-        -- Ensure wallpaper type is valid
-        IF wallpaper_type NOT IN ('hero', 'fill', 'gradient', 'blur', 'pattern', 'image', 'video') THEN
+        -- Ensure wallpaper type is valid (no hero)
+        IF wallpaper_type NOT IN ('fill', 'gradient', 'blur', 'pattern', 'image', 'video') THEN
           RAISE EXCEPTION 'Invalid wallpaper type: %', wallpaper_type;
         END IF;
       END;
@@ -130,7 +156,7 @@ COMMENT ON COLUMN public.profiles.design IS 'Enhanced design configuration suppo
     buttonShadow: "none" | "subtle" | "hard",
     fontFamily: "sans" | "serif" | "mono",
     wallpaper: {
-      type: "hero" | "fill" | "gradient" | "blur" | "pattern" | "image" | "video",
+      type: "fill" | "gradient" | "blur" | "pattern" | "image" | "video",
       // Additional properties based on type
     }
   },

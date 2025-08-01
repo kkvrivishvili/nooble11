@@ -1,7 +1,9 @@
-// src/features/public-profile/widgets/public-gallery-widget.tsx
-import React, { useState } from 'react';
+// src/features/public-profile/widgets/public-gallery-widget.tsx - Refactored with BaseWidget utilities
+import { useState } from 'react';
 import { IconPhoto, IconExternalLink, IconShoppingBag, IconTag, IconX } from '@tabler/icons-react';
 import { PublicWidgetProps } from './types';
+import BaseWidget from './BaseWidget';
+import { getBorderRadius, getShadowStyle, getFontFamily } from '@/features/public-profile/utils/theme-styles';
 
 interface PublicGalleryWidgetProps extends PublicWidgetProps {
   data: {
@@ -60,14 +62,10 @@ export function PublicGalleryWidget({ data, productsData = [], theme, className 
   };
 
   const cardStyles = {
-    borderRadius: theme?.borderRadius === 'sharp' ? '0.5rem' :
-                 theme?.borderRadius === 'curved' ? '0.75rem' : '1rem',
+    borderRadius: theme ? getBorderRadius(theme) : '1rem',
     overflow: 'hidden',
-    boxShadow: theme?.buttonShadow === 'none' ? 'none' :
-               theme?.buttonShadow === 'hard' ? '3px 3px 0 rgba(0,0,0,0.2)' :
-               '0 2px 4px rgba(0,0,0,0.1)',
-    fontFamily: theme?.fontFamily === 'serif' ? 'serif' :
-               theme?.fontFamily === 'mono' ? 'monospace' : 'sans-serif',
+    boxShadow: theme ? getShadowStyle(theme) : 'none',
+    fontFamily: theme ? getFontFamily(theme.fontFamily) : 'sans-serif',
     backgroundColor: theme?.buttonFill === 'glass'
       ? 'rgba(255, 255, 255, 0.1)'
       : theme?.backgroundColor || '#ffffff',
@@ -79,9 +77,9 @@ export function PublicGalleryWidget({ data, productsData = [], theme, className 
     return (
       <div className={`text-center py-8 ${className}`}>
         <IconPhoto size={48} className="mx-auto mb-3 opacity-30" />
-        <p style={{ color: theme?.textColor || theme?.primaryColor, opacity: 0.6 }}>
+        <BaseWidget.Text theme={theme} variant="primary" style={{ opacity: 0.6 }}>
           No hay productos para mostrar
-        </p>
+        </BaseWidget.Text>
       </div>
     );
   }
@@ -90,16 +88,14 @@ export function PublicGalleryWidget({ data, productsData = [], theme, className 
     <div className={className}>
       {/* Title */}
       {data.title && (
-        <h3 
+        <BaseWidget.Text
+          theme={theme}
+          variant="primary"
           className="font-semibold mb-4 text-lg"
-          style={{ 
-            color: theme?.textColor || theme?.primaryColor,
-            fontFamily: theme?.fontFamily === 'serif' ? 'serif' :
-                       theme?.fontFamily === 'mono' ? 'monospace' : 'sans-serif',
-          }}
+          as="h3"
         >
           {data.title}
-        </h3>
+        </BaseWidget.Text>
       )}
 
       {/* Products grid */}
@@ -135,8 +131,7 @@ export function PublicGalleryWidget({ data, productsData = [], theme, className 
                   style={{
                     backgroundColor: theme?.primaryColor || '#3b82f6',
                     color: theme?.buttonTextColor || '#ffffff',
-                    borderRadius: theme?.borderRadius === 'sharp' ? '0.25rem' :
-                                 theme?.borderRadius === 'curved' ? '0.5rem' : '9999px',
+                    borderRadius: theme ? getBorderRadius(theme) : '9999px',
                   }}
                 >
                   Servicio
@@ -163,12 +158,14 @@ export function PublicGalleryWidget({ data, productsData = [], theme, className 
             {/* Product info */}
             <div className="p-3 space-y-1">
               <div className="flex items-start justify-between">
-                <h4 
+                <BaseWidget.Text
+                  theme={theme}
+                  variant="primary"
                   className="font-medium text-sm line-clamp-2 flex-1"
-                  style={{ color: theme?.textColor || theme?.primaryColor }}
+                  as="h4"
                 >
                   {product.name}
-                </h4>
+                </BaseWidget.Text>
                 {product.isService ? (
                   <IconTag 
                     size={16} 
@@ -186,31 +183,33 @@ export function PublicGalleryWidget({ data, productsData = [], theme, className 
               
               {/* Description */}
               {data.showDescription && product.description && (
-                <p 
+                <BaseWidget.Text
+                  theme={theme}
+                  variant="primary"
                   className="text-xs line-clamp-2"
-                  style={{ color: theme?.textColor || theme?.primaryColor, opacity: 0.7 }}
+                  style={{ opacity: 0.7 }}
                 >
                   {product.description}
-                </p>
+                </BaseWidget.Text>
               )}
               
               {/* Price */}
               {data.showPrice && (
                 <div className="flex items-center justify-between">
-                  <p 
+                  <BaseWidget.Text
+                    theme={theme}
+                    variant="primary"
                     className="font-semibold text-sm"
-                    style={{ color: theme?.primaryColor }}
                   >
                     {formatPrice(product.price, product.currency)}
-                  </p>
+                  </BaseWidget.Text>
                   {product.category && (
                     <span 
                       className="text-xs px-2 py-1 rounded"
                       style={{ 
                         backgroundColor: `${theme?.primaryColor}10`,
                         color: theme?.primaryColor,
-                        borderRadius: theme?.borderRadius === 'sharp' ? '0.25rem' :
-                                     theme?.borderRadius === 'curved' ? '0.5rem' : '9999px',
+                        borderRadius: theme ? getBorderRadius(theme) : '9999px',
                       }}
                     >
                       {product.category}
@@ -235,8 +234,7 @@ export function PublicGalleryWidget({ data, productsData = [], theme, className 
               alt="Imagen ampliada"
               className="max-w-full max-h-full object-contain"
               style={{
-                borderRadius: theme?.borderRadius === 'sharp' ? '0.5rem' :
-                             theme?.borderRadius === 'curved' ? '0.75rem' : '1rem',
+                borderRadius: theme ? getBorderRadius(theme) : '1rem',
               }}
             />
             <button

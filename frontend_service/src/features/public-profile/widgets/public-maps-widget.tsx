@@ -1,7 +1,8 @@
-// src/features/public-profile/widgets/public-maps-widget.tsx
-import React from 'react';
+// src/features/public-profile/widgets/public-maps-widget.tsx - Refactored with BaseWidget utilities
 import { IconMapPin, IconExternalLink } from '@tabler/icons-react';
 import { PublicWidgetProps } from './types';
+import BaseWidget from './BaseWidget';
+import { getBorderRadius, getShadowStyle, getFontFamily } from '@/features/public-profile/utils/theme-styles';
 
 interface PublicMapsWidgetProps extends PublicWidgetProps {
   data: {
@@ -33,12 +34,9 @@ export function PublicMapsWidget({ data, theme, className }: PublicMapsWidgetPro
   };
 
   const containerStyles = {
-    borderRadius: theme?.borderRadius === 'sharp' ? '0.5rem' :
-                 theme?.borderRadius === 'curved' ? '0.75rem' : '1rem',
+    borderRadius: theme ? getBorderRadius(theme) : '1rem',
     overflow: 'hidden',
-    boxShadow: theme?.buttonShadow === 'none' ? 'none' :
-               theme?.buttonShadow === 'hard' ? '4px 4px 0 rgba(0,0,0,0.2)' :
-               '0 2px 8px rgba(0,0,0,0.15)',
+    boxShadow: theme ? getShadowStyle(theme) : 'none',
   };
 
   const buttonStyles = {
@@ -51,12 +49,10 @@ export function PublicMapsWidget({ data, theme, className }: PublicMapsWidgetPro
     border: theme?.buttonFill === 'outline' 
       ? `2px solid ${theme?.primaryColor || '#3b82f6'}`
       : `1px solid ${theme?.primaryColor || '#3b82f6'}`,
-    borderRadius: theme?.borderRadius === 'sharp' ? '0.5rem' :
-                 theme?.borderRadius === 'curved' ? '0.75rem' : '9999px',
+    borderRadius: theme ? getBorderRadius(theme) : '9999px',
     backdropFilter: theme?.buttonFill === 'glass' ? 'blur(10px)' : 'none',
     WebkitBackdropFilter: theme?.buttonFill === 'glass' ? 'blur(10px)' : 'none',
-    fontFamily: theme?.fontFamily === 'serif' ? 'serif' :
-               theme?.fontFamily === 'mono' ? 'monospace' : 'sans-serif',
+    fontFamily: theme ? getFontFamily(theme.fontFamily) : 'sans-serif',
   };
 
   return (
@@ -107,17 +103,14 @@ export function PublicMapsWidget({ data, theme, className }: PublicMapsWidgetPro
         
         {/* Address and call-to-action */}
         <div className="text-center space-y-2">
-          <p 
+          <BaseWidget.Text
+            theme={theme}
+            variant="primary"
             className="font-medium flex items-center justify-center gap-1"
-            style={{ 
-              color: theme?.textColor || theme?.primaryColor,
-              fontFamily: theme?.fontFamily === 'serif' ? 'serif' :
-                         theme?.fontFamily === 'mono' ? 'monospace' : 'sans-serif',
-            }}
           >
             <IconMapPin size={16} />
             {data.address}
-          </p>
+          </BaseWidget.Text>
           <button
             onClick={handleMapClick}
             className="inline-flex items-center gap-2 px-4 py-2 transition-all hover:scale-105 active:scale-95"

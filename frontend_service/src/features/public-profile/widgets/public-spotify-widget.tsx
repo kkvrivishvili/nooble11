@@ -1,7 +1,8 @@
-// src/features/public-profile/widgets/public-spotify-widget.tsx
-import React from 'react';
+// src/features/public-profile/widgets/public-spotify-widget.tsx - Refactored with BaseWidget utilities
 import { IconBrandSpotify, IconExternalLink } from '@tabler/icons-react';
 import { PublicWidgetProps } from './types';
+import BaseWidget from './BaseWidget';
+import { getBorderRadius, getShadowStyle, getFontFamily } from '@/features/public-profile/utils/theme-styles';
 
 interface PublicSpotifyWidgetProps extends PublicWidgetProps {
   data: {
@@ -43,20 +44,17 @@ export function PublicSpotifyWidget({ data, theme, className }: PublicSpotifyWid
   if (!spotifyId) {
     return (
       <div className={`p-4 text-center ${className}`}>
-        <p style={{ color: theme?.textColor || theme?.primaryColor }}>
+        <BaseWidget.Text theme={theme} variant="primary">
           Enlace de Spotify no válido
-        </p>
+        </BaseWidget.Text>
       </div>
     );
   }
 
   const containerStyles = {
-    borderRadius: theme?.borderRadius === 'sharp' ? '0.5rem' :
-                 theme?.borderRadius === 'curved' ? '0.75rem' : '1rem',
+    borderRadius: theme ? getBorderRadius(theme) : '1rem',
     overflow: 'hidden',
-    boxShadow: theme?.buttonShadow === 'none' ? 'none' :
-               theme?.buttonShadow === 'hard' ? '4px 4px 0 rgba(0,0,0,0.2)' :
-               '0 2px 8px rgba(0,0,0,0.15)',
+    boxShadow: theme ? getShadowStyle(theme) : 'none',
     backgroundColor: theme?.buttonFill === 'glass' 
       ? 'rgba(255, 255, 255, 0.1)'
       : theme?.backgroundColor || '#ffffff',
@@ -74,8 +72,7 @@ export function PublicSpotifyWidget({ data, theme, className }: PublicSpotifyWid
     border: theme?.buttonFill === 'outline' 
       ? '2px solid #1DB954'
       : 'none',
-    fontFamily: theme?.fontFamily === 'serif' ? 'serif' :
-               theme?.fontFamily === 'mono' ? 'monospace' : 'sans-serif',
+    fontFamily: theme ? getFontFamily(theme.fontFamily) : 'sans-serif',
   };
 
   return (

@@ -1,4 +1,4 @@
-// src/api/design-api.ts - Updated version with enhanced design options
+// src/api/design-api.ts - Updated version without hero and export/import
 import { supabase } from '@/lib/supabase';
 import { ProfileDesign } from '@/types/profile';
 import { PostgrestError, AuthError } from '@supabase/supabase-js';
@@ -18,7 +18,7 @@ const getUserId = async (): Promise<string> => {
   return session.user.id;
 };
 
-// Enhanced design presets with wallpapers
+// Enhanced design presets
 export const designPresets = {
   minimal: {
     theme: {
@@ -420,33 +420,5 @@ export const designApi = {
     if (design.layout && typeof design.layout !== 'object') return false;
     
     return true;
-  },
-
-  /**
-   * Export design as JSON
-   */
-  async exportDesign(): Promise<string> {
-    const design = await this.getDesign();
-    return JSON.stringify(design, null, 2);
-  },
-
-  /**
-   * Import design from JSON
-   */
-  async importDesign(jsonString: string): Promise<ProfileDesign> {
-    try {
-      const design = JSON.parse(jsonString);
-      
-      if (!this.validateDesign(design)) {
-        throw new Error('Invalid design format');
-      }
-      
-      return this.updateDesign(design);
-    } catch (error) {
-      if (error instanceof SyntaxError) {
-        throw new Error('Invalid JSON format');
-      }
-      throw error;
-    }
   }
 };

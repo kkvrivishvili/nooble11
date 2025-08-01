@@ -1,26 +1,26 @@
-// src/features/public-profile/widgets/public-agents-widget.tsx
-import React from 'react';
+// src/features/public-profile/widgets/public-agents-widget.tsx - Refactored with BaseWidget utilities
 import { IconMessage } from '@tabler/icons-react';
 import { PublicWidgetProps, PublicAgentsWidgetData } from './types';
+import BaseWidget from './BaseWidget';
+import { getShadowStyle, getBorderRadius, getFontFamily } from '@/features/public-profile/utils/theme-styles';
 
 interface PublicAgentsWidgetProps extends PublicWidgetProps {
   data: PublicAgentsWidgetData;
 }
 
 export function PublicAgentsWidget({ data, theme, className }: PublicAgentsWidgetProps) {
-  const getButtonStyles = (isCard: boolean = false) => {
-    const baseRadius = theme?.borderRadius === 'sharp' ? '0.5rem' :
-                      theme?.borderRadius === 'curved' ? '0.75rem' : '1rem';
+  // Use theme utilities for consistent styling
+  const getCardStyles = (isCard: boolean = false) => {
+    if (!theme) return {};
     
     const baseStyles = {
-      borderRadius: baseRadius,
+      borderRadius: getBorderRadius(theme),
       transition: 'all 0.2s ease',
-      fontFamily: theme?.fontFamily === 'serif' ? 'serif' :
-                 theme?.fontFamily === 'mono' ? 'monospace' : 'sans-serif',
+      fontFamily: getFontFamily(theme.fontFamily),
     };
 
     if (isCard) {
-      if (theme?.buttonFill === 'glass') {
+      if (theme.buttonFill === 'glass') {
         return {
           ...baseStyles,
           backgroundColor: 'rgba(255, 255, 255, 0.1)',
@@ -31,18 +31,12 @@ export function PublicAgentsWidget({ data, theme, className }: PublicAgentsWidge
       }
       return {
         ...baseStyles,
-        backgroundColor: theme?.backgroundColor || '#ffffff',
-        border: `1px solid ${theme?.primaryColor || '#e5e7eb'}`,
+        backgroundColor: theme.backgroundColor || '#ffffff',
+        border: `1px solid ${theme.primaryColor || '#e5e7eb'}`,
       };
     }
     
     return baseStyles;
-  };
-
-  const getShadowStyle = () => {
-    if (theme?.buttonShadow === 'none') return 'none';
-    if (theme?.buttonShadow === 'hard') return '3px 3px 0 rgba(0, 0, 0, 0.2)';
-    return '0 2px 4px rgba(0, 0, 0, 0.1)';
   };
 
   const renderAgentCard = (agent: typeof data.agents[0]) => (
@@ -51,8 +45,8 @@ export function PublicAgentsWidget({ data, theme, className }: PublicAgentsWidge
       onClick={() => data.onAgentClick?.(agent.id)}
       className="w-full p-3 transition-all duration-200 hover:shadow-md active:scale-[0.98]"
       style={{
-        ...getButtonStyles(true),
-        boxShadow: getShadowStyle(),
+        ...getCardStyles(true),
+        boxShadow: theme ? getShadowStyle(theme) : 'none',
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'translateY(-2px)';
@@ -97,8 +91,7 @@ export function PublicAgentsWidget({ data, theme, className }: PublicAgentsWidge
       className="w-full flex items-center gap-3 p-2 rounded-lg transition-colors"
       style={{
         backgroundColor: 'transparent',
-        fontFamily: theme?.fontFamily === 'serif' ? 'serif' :
-                   theme?.fontFamily === 'mono' ? 'monospace' : 'sans-serif',
+        fontFamily: theme ? getFontFamily(theme.fontFamily) : 'sans-serif',
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.backgroundColor = `${theme?.primaryColor || '#000'}10`;
@@ -123,9 +116,8 @@ export function PublicAgentsWidget({ data, theme, className }: PublicAgentsWidge
       color: theme?.primaryColor || '#374151',
       border: `1px solid ${theme?.primaryColor || '#e5e7eb'}`,
       borderRadius: theme?.borderRadius === 'sharp' ? '0.5rem' :
-                   theme?.borderRadius === 'curved' ? '1rem' : '9999px',
-      fontFamily: theme?.fontFamily === 'serif' ? 'serif' :
-                 theme?.fontFamily === 'mono' ? 'monospace' : 'sans-serif',
+                   theme?.borderRadius === 'curved' ? '1rem' : '9999px', // Bubble keeps its unique radius logic
+      fontFamily: theme ? getFontFamily(theme.fontFamily) : 'sans-serif',
     };
 
     return (
@@ -143,16 +135,13 @@ export function PublicAgentsWidget({ data, theme, className }: PublicAgentsWidge
 
   return (
     <div className={className}>
-      <h3 
+      <BaseWidget.Text
+        variant="primary"
+        theme={theme}
         className="font-semibold mb-3 text-lg"
-        style={{ 
-          color: theme?.textColor || theme?.primaryColor || '#111827',
-          fontFamily: theme?.fontFamily === 'serif' ? 'serif' :
-                     theme?.fontFamily === 'mono' ? 'monospace' : 'sans-serif',
-        }}
       >
         {data.title}
-      </h3>
+      </BaseWidget.Text>
       
       {data.displayStyle === 'card' && (
         <div className="space-y-2">

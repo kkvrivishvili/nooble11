@@ -3,27 +3,7 @@ import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Profile } from '@/types/profile'
 import { useProfileTheme } from '@/context/profile-theme-context'
-import { 
-  IconBrandInstagram, 
-  IconBrandTiktok, 
-  IconBrandYoutube, 
-  IconBrandX,
-  IconBrandLinkedin,
-  IconBrandFacebook,
-  IconBrandSpotify,
-  IconLink
-} from '@tabler/icons-react'
-import { ComponentType } from 'react';
-
-const socialIcons: Record<string, ComponentType<{ size: number; strokeWidth: number; className?: string }>> = {
-  instagram: IconBrandInstagram,
-  tiktok: IconBrandTiktok,
-  youtube: IconBrandYoutube,
-  twitter: IconBrandX,
-  linkedin: IconBrandLinkedin,
-  facebook: IconBrandFacebook,
-  spotify: IconBrandSpotify,
-}
+import SocialLinks from './SocialLinks'
 
 interface ProfileComponentProps {
   profile: Profile
@@ -38,44 +18,11 @@ export default function ProfileComponent({
 }: ProfileComponentProps) {
   const { theme, layout } = useProfileTheme();
 
-  // Get avatar border radius based on theme
-  const getAvatarRadius = () => {
-    if (theme.borderRadius === 'sharp') return 'rounded-md';
-    if (theme.borderRadius === 'round') return 'rounded-full';
-    return 'rounded-xl'; // curved
-  };
+  // Use theme utility for avatar radius (avatar uses specific Tailwind classes)
+  const avatarRadiusClass = theme.borderRadius === 'sharp' ? 'rounded-md' :
+                           theme.borderRadius === 'round' ? 'rounded-full' : 'rounded-xl';
 
-  // Get social button styles
-  const getSocialButtonStyles = () => {
-    const baseRadius = theme.borderRadius === 'sharp' ? '0.25rem' :
-                      theme.borderRadius === 'curved' ? '0.5rem' : '9999px';
-    
-    if (theme.buttonFill === 'glass') {
-      return {
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255, 255, 255, 0.2)',
-        color: theme.primaryColor,
-        borderRadius: baseRadius,
-      };
-    } else if (theme.buttonFill === 'outline') {
-      return {
-        backgroundColor: 'transparent',
-        border: `2px solid ${theme.primaryColor}`,
-        color: theme.primaryColor,
-        borderRadius: baseRadius,
-      };
-    } else {
-      return {
-        backgroundColor: `${theme.primaryColor}20`,
-        color: theme.primaryColor,
-        borderRadius: baseRadius,
-      };
-    }
-  };
-
-  const socialButtonStyles = getSocialButtonStyles();
+  // Social links are now handled by the consolidated SocialLinks component
 
   return (
     <div 
@@ -100,7 +47,7 @@ export default function ProfileComponent({
         <Avatar className={cn(
           "border-2 transition-all duration-300",
           isPreview ? "h-16 w-16" : "h-20 w-20",
-          getAvatarRadius()
+          avatarRadiusClass
         )}
         style={{
           borderColor: theme.primaryColor,
@@ -149,48 +96,13 @@ export default function ProfileComponent({
       </p>
       
       {/* Social Links */}
-      {showSocialLinks && profile.socialLinks?.length > 0 && (
-        <div className={cn(
-          "flex gap-3 transition-all duration-300",
-          layout.socialPosition === 'bottom' && 'justify-center'
-        )}>
-          {profile.socialLinks.map((link) => {
-            const Icon = socialIcons[link.platform] || IconLink;
-            return (
-              <a
-                key={link.platform}
-                href={isPreview ? undefined : link.url}
-                target={isPreview ? undefined : "_blank"}
-                rel={isPreview ? undefined : "noopener noreferrer"}
-                className={cn(
-                  "p-2 transition-all duration-200 hover:scale-110 active:scale-95",
-                  isPreview && "cursor-default"
-                )}
-                style={socialButtonStyles}
-                onClick={isPreview ? (e) => e.preventDefault() : undefined}
-                onMouseEnter={(e) => {
-                  if (theme.buttonFill === 'outline') {
-                    e.currentTarget.style.backgroundColor = theme.primaryColor;
-                    e.currentTarget.style.color = theme.buttonTextColor || '#ffffff';
-                  } else if (theme.buttonFill === 'glass') {
-                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-                  } else {
-                    e.currentTarget.style.transform = 'scale(1.1)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  Object.assign(e.currentTarget.style, socialButtonStyles);
-                  e.currentTarget.style.transform = '';
-                }}
-              >
-                <Icon 
-                  size={isPreview ? 18 : 20} 
-                  strokeWidth={1.5} 
-                />
-              </a>
-            );
-          })}
-        </div>
+      {showSocialLinks && (
+        <SocialLinks 
+          socialLinks={profile.socialLinks || []}
+          isPreview={isPreview}
+          position="top"
+          iconSize={20}
+        />
       )}
     </div>
   );

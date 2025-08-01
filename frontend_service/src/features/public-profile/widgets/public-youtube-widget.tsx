@@ -1,7 +1,9 @@
-// src/features/public-profile/widgets/public-youtube-widget.tsx
-import React, { useState } from 'react';
+// src/features/public-profile/widgets/public-youtube-widget.tsx - Refactored with BaseWidget utilities
+import { useState } from 'react';
 import { IconBrandYoutube, IconPlayerPlay } from '@tabler/icons-react';
 import { PublicWidgetProps } from './types';
+import BaseWidget from './BaseWidget';
+import { getBorderRadius, getShadowStyle } from '@/features/public-profile/utils/theme-styles';
 
 interface PublicYouTubeWidgetProps extends PublicWidgetProps {
   data: {
@@ -37,27 +39,22 @@ export function PublicYouTubeWidget({ data, theme, className }: PublicYouTubeWid
   };
 
   const containerStyles = {
-    borderRadius: theme?.borderRadius === 'sharp' ? '0.5rem' :
-                 theme?.borderRadius === 'curved' ? '0.75rem' : '1rem',
+    borderRadius: theme ? getBorderRadius(theme) : '1rem',
     overflow: 'hidden',
-    boxShadow: theme?.buttonShadow === 'none' ? 'none' :
-               theme?.buttonShadow === 'hard' ? '4px 4px 0 rgba(0,0,0,0.2)' :
-               '0 2px 8px rgba(0,0,0,0.15)',
+    boxShadow: theme ? getShadowStyle(theme) : 'none',
   };
 
   return (
     <div className={className}>
       {data.title && (
-        <h3 
+        <BaseWidget.Text
+          theme={theme}
+          variant="primary"
           className="font-medium mb-3 text-lg"
-          style={{ 
-            color: theme?.textColor || theme?.primaryColor,
-            fontFamily: theme?.fontFamily === 'serif' ? 'serif' :
-                       theme?.fontFamily === 'mono' ? 'monospace' : 'sans-serif',
-          }}
+          as="h3"
         >
           {data.title}
-        </h3>
+        </BaseWidget.Text>
       )}
       
       <div 
