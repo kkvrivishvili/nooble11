@@ -38,8 +38,11 @@ export function PublicYouTubeWidget({ data, theme, className }: PublicYouTubeWid
     setIsPlaying(true);
   };
 
+  // Para YouTube widget, si el borde es 'round', usar 'curved' en su lugar
   const containerStyles = {
-    borderRadius: theme ? getBorderRadius(theme) : '1rem',
+    borderRadius: theme ? 
+      theme.borderRadius === 'round' ? '0.5rem' : getBorderRadius(theme) 
+      : '0.5rem',
     overflow: 'hidden',
     boxShadow: theme ? getShadowStyle(theme) : 'none',
   };
@@ -64,13 +67,34 @@ export function PublicYouTubeWidget({ data, theme, className }: PublicYouTubeWid
         {/* Thumbnail with play button overlay */}
         {!isPlaying ? (
           <div className="absolute inset-0 cursor-pointer group" onClick={handlePlay}>
+            {/* Fondo negro para evitar parpadeos mientras carga la imagen */}
+            <div className="absolute inset-0 bg-black"></div>
             <img
               src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
               alt={data.title || 'Video thumbnail'}
-              className="w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-cover z-10"
+              loading="lazy"
               onError={(e) => {
-                // Fallback to lower quality if maxresdefault doesn't exist
-                e.currentTarget.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+                // Cascada de fallbacks para encontrar la mejor miniatura disponible
+                const fallbacks = [
+                  `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+                  `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
+                  `https://img.youtube.com/vi/${videoId}/0.jpg`
+                ];
+                
+                const currentSrc = e.currentTarget.src;
+                const currentIndex = fallbacks.findIndex(src => 
+                  currentSrc.includes(src.split('/').pop() || '')
+                );
+                
+                // Si estamos en maxresdefault, intentamos el primer fallback
+                if (currentIndex === -1) {
+                  e.currentTarget.src = fallbacks[0];
+                } 
+                // De lo contrario, intentamos el siguiente fallback si existe
+                else if (currentIndex < fallbacks.length - 1) {
+                  e.currentTarget.src = fallbacks[currentIndex + 1];
+                }
               }}
             />
             {/* Dark overlay */}
@@ -82,15 +106,20 @@ export function PublicYouTubeWidget({ data, theme, className }: PublicYouTubeWid
                   style={{
                     backgroundColor: theme?.buttonFill === 'glass' 
                       ? 'rgba(255, 255, 255, 0.9)' 
-                      : '#ff0000',
+                      : theme?.primaryColor || '#ff0000',
+                    boxShadow: theme ? getShadowStyle(theme) : 'none',
                   }}
                 >
                   <IconPlayerPlay 
                     size={32} 
                     className="ml-1" 
                     style={{ 
-                      color: theme?.buttonFill === 'glass' ? '#ff0000' : 'white',
-                      fill: theme?.buttonFill === 'glass' ? '#ff0000' : 'white'
+                      color: theme?.buttonFill === 'glass' 
+                        ? (theme?.primaryColor || '#ff0000')
+                        : (theme?.buttonTextColor || '#ffffff'),
+                      fill: theme?.buttonFill === 'glass' 
+                        ? (theme?.primaryColor || '#ff0000')
+                        : (theme?.buttonTextColor || '#ffffff')
                     }}
                   />
                 </div>
@@ -98,12 +127,28 @@ export function PublicYouTubeWidget({ data, theme, className }: PublicYouTubeWid
             </div>
             {/* YouTube logo */}
             <div className="absolute top-3 right-3">
-              <IconBrandYoutube size={24} className="text-white drop-shadow-lg" />
+              <IconBrandYoutube 
+                size={24} 
+                className="drop-shadow-lg transition-colors" 
+                style={{
+                  color: theme?.textColor || theme?.primaryColor || '#ffffff',
+                  filter: `drop-shadow(0px 1px 1px rgba(0,0,0,0.5))`,
+                }}
+              />
             </div>
             {/* Title overlay if exists */}
             {data.title && (
               <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/70 to-transparent">
-                <p className="text-white font-medium">{data.title}</p>
+                <p 
+                  className="font-medium" 
+                  style={{
+                    color: theme?.textColor || theme?.primaryColor || '#ffffff',
+                    fontFamily: theme?.fontFamily === 'serif' ? 'serif' :
+                               theme?.fontFamily === 'mono' ? 'monospace' : 'sans-serif'
+                  }}
+                >
+                  {data.title}
+                </p>
               </div>
             )}
           </div>
