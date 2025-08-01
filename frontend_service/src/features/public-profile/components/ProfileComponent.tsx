@@ -45,13 +45,10 @@ export default function ProfileComponent({
         layout.spacing === 'relaxed' && 'mb-6'
       )}>
         <Avatar className={cn(
-          "border-2 transition-all duration-300",
+          "transition-all duration-300",
           isPreview ? "h-16 w-16" : "h-20 w-20",
           avatarRadiusClass
         )}
-        style={{
-          borderColor: theme.primaryColor,
-        }}
         >
           <AvatarImage src={profile.avatar} />
           <AvatarFallback 

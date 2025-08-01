@@ -65,7 +65,6 @@ function ProfileWallpaper() {
 // Profile content wrapper
 function ProfileContent({ profile, isPreview }: { profile: ProfileWithAgents; isPreview: boolean }) {
   const { layout } = useProfileTheme();
-  const [activeTab, setActiveTab] = useState('chats');
   const [currentAgentId, setCurrentAgentId] = useState<string>();
 
   useEffect(() => {
@@ -73,12 +72,6 @@ function ProfileContent({ profile, isPreview }: { profile: ProfileWithAgents; is
       setCurrentAgentId(profile.agentDetails[0].id);
     }
   }, [profile?.agentDetails, currentAgentId]);
-
-  const handleSendMessage = (message: string) => {
-    if (message.trim() && activeTab === 'links') {
-      setActiveTab('chats');
-    }
-  };
 
   const handleAgentClick = (agentId: string) => {
     setCurrentAgentId(agentId);
@@ -95,7 +88,7 @@ function ProfileContent({ profile, isPreview }: { profile: ProfileWithAgents; is
           <ProfileComponent 
             profile={profile} 
             isPreview={isPreview}
-            showSocialLinks={activeTab === 'links' && layout.socialPosition === 'top'}
+            showSocialLinks={layout.socialPosition === 'top'}
           />
         </div>
         
@@ -103,16 +96,12 @@ function ProfileContent({ profile, isPreview }: { profile: ProfileWithAgents; is
         <div className="profile-animate-in" style={{ animationDelay: '0.1s' }}>
           <PublicContentComponent
             profile={profile}
-            isPreview={isPreview}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            currentAgentId={currentAgentId}
             onAgentClick={handleAgentClick}
           />
         </div>
         
         {/* Bottom social links */}
-        {activeTab === 'links' && layout.socialPosition === 'bottom' && (
+        {layout.socialPosition === 'bottom' && (
           <div className="mt-6 profile-animate-in" style={{ animationDelay: '0.2s' }}>
             <SocialLinks 
               socialLinks={profile.socialLinks || []}
@@ -127,7 +116,7 @@ function ProfileContent({ profile, isPreview }: { profile: ProfileWithAgents; is
       {/* Chat Input */}
       {!isPreview && (
         <div className="w-full z-50 fixed bottom-0 left-0 right-0">
-          <ChatInput onSendMessage={handleSendMessage} />
+          <ChatInput onSendMessage={() => {}} />
         </div>
       )}
     </div>
