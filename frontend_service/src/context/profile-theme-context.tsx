@@ -8,6 +8,7 @@ interface ProfileThemeContextType {
   applyTheme: (design: ProfileDesign) => void;
   resetTheme: () => void;
   isLoading: boolean;
+  getCSSVariables: () => Record<string, string>;
 }
 
 const defaultTheme: ProfileTheme = {
@@ -105,15 +106,15 @@ export function ProfileThemeProvider({
       '0, 0, 0';
   };
 
-  // Apply theme to CSS variables
-  const applyCSSVariables = (theme: ProfileTheme) => {
-    const root = document.documentElement;
+  // Generate CSS variables object for scoped application
+  const generateCSSVariables = (theme: ProfileTheme): Record<string, string> => {
+    const variables: Record<string, string> = {};
     
     // Colors
-    root.style.setProperty('--profile-primary-color', theme.primaryColor);
-    root.style.setProperty('--profile-background-color', theme.backgroundColor);
-    root.style.setProperty('--profile-text-color', theme.textColor || '#111827');
-    root.style.setProperty('--profile-button-text-color', theme.buttonTextColor || '#ffffff');
+    variables['--profile-primary-color'] = theme.primaryColor;
+    variables['--profile-background-color'] = theme.backgroundColor;
+    variables['--profile-text-color'] = theme.textColor || '#111827';
+    variables['--profile-button-text-color'] = theme.buttonTextColor || '#ffffff';
     
     // Border radius mapping
     const radiusMap = {
@@ -121,7 +122,7 @@ export function ProfileThemeProvider({
       'curved': '0.5rem',
       'round': '9999px'
     };
-    root.style.setProperty('--profile-border-radius', radiusMap[theme.borderRadius || 'curved']);
+    variables['--profile-border-radius'] = radiusMap[theme.borderRadius || 'curved'];
     
     // Font family
     const fontMap = {
@@ -129,10 +130,10 @@ export function ProfileThemeProvider({
       'serif': 'Georgia, serif',
       'mono': 'Monaco, monospace'
     };
-    root.style.setProperty('--profile-font-family', fontMap[theme.fontFamily || 'sans']);
+    variables['--profile-font-family'] = fontMap[theme.fontFamily || 'sans'];
     
     // Button styles
-    root.style.setProperty('--profile-button-fill', theme.buttonFill || 'solid');
+    variables['--profile-button-fill'] = theme.buttonFill || 'solid';
     
     // Button shadow mapping
     const shadowMap = {
@@ -140,40 +141,42 @@ export function ProfileThemeProvider({
       'subtle': '0 2px 4px rgba(0, 0, 0, 0.1)',
       'hard': '4px 4px 0 rgba(0, 0, 0, 0.2)'
     };
-    root.style.setProperty('--profile-button-shadow', shadowMap[theme.buttonShadow || 'subtle']);
+    variables['--profile-button-shadow'] = shadowMap[theme.buttonShadow || 'subtle'];
     
     // Wallpaper
     if (theme.wallpaper) {
       const wallpaperStyle = generateWallpaperStyles(theme.wallpaper);
-      root.style.setProperty('--profile-wallpaper', wallpaperStyle);
+      variables['--profile-wallpaper'] = wallpaperStyle;
       
       // Background size for patterns
       if (theme.wallpaper.type === 'pattern') {
-        root.style.setProperty('--profile-wallpaper-size', '20px 20px');
+        variables['--profile-wallpaper-size'] = '20px 20px';
       } else if (theme.wallpaper.type === 'image') {
-        root.style.setProperty('--profile-wallpaper-size', theme.wallpaper.imageSize || 'cover');
-        root.style.setProperty('--profile-wallpaper-position', theme.wallpaper.imagePosition || 'center');
+        variables['--profile-wallpaper-size'] = theme.wallpaper.imageSize || 'cover';
+        variables['--profile-wallpaper-position'] = theme.wallpaper.imagePosition || 'center';
       } else {
-        root.style.setProperty('--profile-wallpaper-size', 'auto');
-        root.style.setProperty('--profile-wallpaper-position', 'center');
+        variables['--profile-wallpaper-size'] = 'auto';
+        variables['--profile-wallpaper-position'] = 'center';
       }
       
       // Blur effect
       if (theme.wallpaper.type === 'blur') {
-        root.style.setProperty('--profile-blur-intensity', `${theme.wallpaper.blurIntensity || 20}px`);
+        variables['--profile-blur-intensity'] = `${theme.wallpaper.blurIntensity || 20}px`;
       } else {
-        root.style.setProperty('--profile-blur-intensity', '0');
+        variables['--profile-blur-intensity'] = '0';
       }
     } else {
-      root.style.setProperty('--profile-wallpaper', theme.backgroundColor);
-      root.style.setProperty('--profile-wallpaper-size', 'auto');
-      root.style.setProperty('--profile-blur-intensity', '0');
+      variables['--profile-wallpaper'] = theme.backgroundColor;
+      variables['--profile-wallpaper-size'] = 'auto';
+      variables['--profile-blur-intensity'] = '0';
     }
+    
+    return variables;
   };
 
-  // Apply layout variables
-  const applyLayoutVariables = (layout: ProfileLayout) => {
-    const root = document.documentElement;
+  // Generate layout CSS variables
+  const generateLayoutVariables = (layout: ProfileLayout): Record<string, string> => {
+    const variables: Record<string, string> = {};
     
     // Content width
     const widthMap = {
@@ -181,7 +184,7 @@ export function ProfileThemeProvider({
       'normal': '36rem',
       'wide': '48rem'
     };
-    root.style.setProperty('--profile-content-width', widthMap[layout.contentWidth || 'normal']);
+    variables['--profile-content-width'] = widthMap[layout.contentWidth || 'normal'];
     
     // Spacing
     const spacingMap = {
@@ -189,8 +192,12 @@ export function ProfileThemeProvider({
       'normal': '1rem',
       'relaxed': '1.5rem'
     };
-    root.style.setProperty('--profile-spacing', spacingMap[layout.spacing || 'normal']);
+    variables['--profile-spacing'] = spacingMap[layout.spacing || 'normal'];
+    
+    return variables;
   };
+
+
 
   // Apply theme when profileDesign changes
   useEffect(() => {
@@ -200,14 +207,10 @@ export function ProfileThemeProvider({
       
       setTheme(newTheme);
       setLayout(newLayout);
-      applyCSSVariables(newTheme);
-      applyLayoutVariables(newLayout);
     } else {
       // Apply default theme
       setTheme(defaultTheme);
       setLayout(defaultLayout);
-      applyCSSVariables(defaultTheme);
-      applyLayoutVariables(defaultLayout);
     }
     setIsLoading(false);
   }, [profileDesign]);
@@ -218,15 +221,11 @@ export function ProfileThemeProvider({
     
     setTheme(newTheme);
     setLayout(newLayout);
-    applyCSSVariables(newTheme);
-    applyLayoutVariables(newLayout);
   };
 
   const resetTheme = () => {
     setTheme(defaultTheme);
     setLayout(defaultLayout);
-    applyCSSVariables(defaultTheme);
-    applyLayoutVariables(defaultLayout);
   };
 
   const value: ProfileThemeContextType = {
@@ -235,6 +234,7 @@ export function ProfileThemeProvider({
     applyTheme,
     resetTheme,
     isLoading,
+    getCSSVariables: () => ({ ...generateCSSVariables(theme), ...generateLayoutVariables(layout) }),
   };
 
   return (

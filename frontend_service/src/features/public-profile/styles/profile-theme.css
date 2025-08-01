@@ -1,77 +1,43 @@
 /* src/features/public-profile/styles/profile-theme.css */
 
-/* CSS Variables para el sistema de themes mejorado */
-:root {
-  /* Colors */
-  --profile-primary-color: #000000;
-  --profile-background-color: #ffffff;
-  --profile-text-color: #111827;
-  --profile-button-text-color: #ffffff;
-  
-  /* Typography */
-  --profile-font-family: system-ui, -apple-system, sans-serif;
-  
-  /* Borders & Shapes */
-  --profile-border-radius: 0.5rem;
-  
-  /* Button Styles */
-  --profile-button-fill: solid;
-  --profile-button-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  
-  /* Wallpaper */
-  --profile-wallpaper: #ffffff;
-  --profile-wallpaper-size: auto;
-  --profile-wallpaper-position: center;
-  --profile-blur-intensity: 0;
-  
-  /* Layout */
-  --profile-content-width: 36rem;
-  --profile-spacing: 1rem;
-}
+/* CSS Variables are now applied locally via ProfileThemeProvider */
+/* No global :root variables needed - all variables are scoped to .profile-container */
 
-/* Base profile container */
+/* Base profile container with wallpaper background */
 .profile-container {
   min-height: 100vh;
   position: relative;
   color: var(--profile-text-color);
   font-family: var(--profile-font-family);
   transition: all 0.3s ease;
-}
-
-/* Wallpaper layer */
-.profile-wallpaper {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: -2;
+  /* Apply wallpaper directly to container */
   background: var(--profile-wallpaper);
   background-size: var(--profile-wallpaper-size);
   background-position: var(--profile-wallpaper-position);
   background-repeat: repeat;
 }
 
-/* Blur overlay for blur wallpaper type */
+/* Blur overlay for blur wallpaper type - now absolute within container */
 .profile-wallpaper-blur {
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: -1;
+  z-index: 0;
   backdrop-filter: blur(var(--profile-blur-intensity));
   -webkit-backdrop-filter: blur(var(--profile-blur-intensity));
+  pointer-events: none;
 }
 
-/* Video wallpaper container */
+/* Video wallpaper container - now absolute within container */
 .profile-video-wallpaper {
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: -2;
+  z-index: -1;
   overflow: hidden;
 }
 
@@ -228,7 +194,7 @@
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  :root {
+  .profile-container {
     --profile-content-width: 100%;
   }
   

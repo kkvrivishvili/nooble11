@@ -9,7 +9,7 @@ import PublicContentComponent from './components/PublicContentComponent'
 import ChatInput from './components/ChatInput'
 import SocialLinks from './components/SocialLinks'
 import { ProfileThemeProvider, useProfileTheme } from '@/context/profile-theme-context';
-// Styles are loaded globally in the app, not here
+import './styles/profile-theme.css';
 
 interface PublicProfileProps {
   username: string;
@@ -17,14 +17,12 @@ interface PublicProfileProps {
   previewDesign?: ProfileDesign;
 }
 
-// Wallpaper component
+// Wallpaper component - now only handles special cases
 function ProfileWallpaper() {
   const { theme } = useProfileTheme();
   
-  if (!theme.wallpaper) return null;
-  
   // Video wallpaper
-  if (theme.wallpaper.type === 'video' && theme.wallpaper.videoUrl) {
+  if (theme.wallpaper?.type === 'video' && theme.wallpaper.videoUrl) {
     return (
       <div className="profile-video-wallpaper">
         <video
@@ -45,26 +43,28 @@ function ProfileWallpaper() {
     );
   }
   
-  // Regular wallpaper
-  return (
-    <>
-      <div className="profile-wallpaper" />
-      {theme.wallpaper.type === 'blur' && (
-        <div className="profile-wallpaper-blur" />
-      )}
-      {theme.wallpaper.type === 'image' && theme.wallpaper.imageOverlay && (
-        <div 
-          className="fixed inset-0 z-[-1]"
-          style={{ backgroundColor: theme.wallpaper.imageOverlay }}
-        />
-      )}
-    </>
-  );
+  // Blur overlay (only for blur wallpaper type)
+  if (theme.wallpaper?.type === 'blur') {
+    return <div className="profile-wallpaper-blur" />;
+  }
+  
+  // Image overlay (only if specified)
+  if (theme.wallpaper?.type === 'image' && theme.wallpaper.imageOverlay) {
+    return (
+      <div 
+        className="absolute inset-0 z-0 pointer-events-none"
+        style={{ backgroundColor: theme.wallpaper.imageOverlay }}
+      />
+    );
+  }
+  
+  // For other wallpaper types (fill, gradient, pattern), the background is applied directly to .profile-container
+  return null;
 }
 
 // Profile content wrapper
 function ProfileContent({ profile, isPreview }: { profile: ProfileWithAgents; isPreview: boolean }) {
-  const { layout } = useProfileTheme();
+  const { layout, getCSSVariables } = useProfileTheme();
   const [currentAgentId, setCurrentAgentId] = useState<string>();
 
   useEffect(() => {
@@ -78,7 +78,7 @@ function ProfileContent({ profile, isPreview }: { profile: ProfileWithAgents; is
   };
 
   return (
-    <div className="profile-container">
+    <div className="profile-container" style={getCSSVariables()}>
       <ProfileWallpaper />
       
       <div className="profile-content pb-24">
