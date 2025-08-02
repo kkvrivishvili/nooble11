@@ -13,150 +13,189 @@ export function PresetGrid({ currentDesign, onSelectPreset }: PresetGridProps) {
     return JSON.stringify(currentDesign) === JSON.stringify(preset);
   };
 
-  const renderLayoutPreview = (preset: ProfileDesign) => {
-    const { layout } = preset;
-    const socialPosition = layout?.socialPosition || 'bottom';
+  const getWallpaperStyle = (theme: ProfileDesign['theme']) => {
+    if (!theme.wallpaper) return { backgroundColor: theme.backgroundColor };
     
-    return (
-      <div className="flex flex-col gap-1">
-        {/* Social links preview (top position) */}
-        {socialPosition === 'top' && (
-          <div className="flex justify-center gap-1 mb-1">
-            <div className="w-2 h-2 rounded-full bg-current opacity-40"></div>
-            <div className="w-2 h-2 rounded-full bg-current opacity-40"></div>
-            <div className="w-2 h-2 rounded-full bg-current opacity-40"></div>
-          </div>
-        )}
+    switch (theme.wallpaper.type) {
+      case 'gradient':
+        if (theme.wallpaper.gradientColors) {
+          const direction = theme.wallpaper.gradientDirection === 'diagonal' ? '135deg' :
+                          theme.wallpaper.gradientDirection === 'up' ? '0deg' :
+                          theme.wallpaper.gradientDirection === 'down' ? '180deg' :
+                          theme.wallpaper.gradientDirection === 'left' ? '270deg' : '90deg';
+          return {
+            background: `linear-gradient(${direction}, ${theme.wallpaper.gradientColors.join(', ')})`,
+          };
+        }
+        break;
+      case 'pattern':
+        const opacity = theme.wallpaper.patternOpacity || 0.3;
+        const hexOpacity = Math.round(opacity * 255).toString(16).padStart(2, '0');
         
-        {/* Content preview - always card style */}
-        <div className="space-y-1">
-          <div className="bg-current bg-opacity-10 rounded p-1 text-center">
-            <div className="text-xs opacity-60">Content</div>
-          </div>
-        </div>
-        
-        {/* Social links preview (bottom position) */}
-        {socialPosition === 'bottom' && (
-          <div className="flex justify-center gap-1 mt-1">
-            <div className="w-2 h-2 rounded-full bg-current opacity-40"></div>
-            <div className="w-2 h-2 rounded-full bg-current opacity-40"></div>
-            <div className="w-2 h-2 rounded-full bg-current opacity-40"></div>
-          </div>
-        )}
-      </div>
-    );
+        if (theme.wallpaper.patternType === 'dots') {
+          return {
+            backgroundColor: theme.backgroundColor,
+            backgroundImage: `radial-gradient(circle, ${theme.wallpaper.patternColor}${hexOpacity} 1px, transparent 1px)`,
+            backgroundSize: '20px 20px',
+          };
+        } else if (theme.wallpaper.patternType === 'grid') {
+          return {
+            backgroundColor: theme.backgroundColor,
+            backgroundImage: `
+              repeating-linear-gradient(0deg, ${theme.wallpaper.patternColor}${hexOpacity}, ${theme.wallpaper.patternColor}${hexOpacity} 1px, transparent 1px, transparent 20px),
+              repeating-linear-gradient(90deg, ${theme.wallpaper.patternColor}${hexOpacity}, ${theme.wallpaper.patternColor}${hexOpacity} 1px, transparent 1px, transparent 20px)
+            `,
+          };
+        } else if (theme.wallpaper.patternType === 'lines') {
+          return {
+            backgroundColor: theme.backgroundColor,
+            backgroundImage: `repeating-linear-gradient(
+              45deg,
+              transparent,
+              transparent 10px,
+              ${theme.wallpaper.patternColor}${hexOpacity} 10px,
+              ${theme.wallpaper.patternColor}${hexOpacity} 11px
+            )`,
+          };
+        } else if (theme.wallpaper.patternType === 'waves') {
+          return {
+            backgroundColor: theme.backgroundColor,
+            backgroundImage: `repeating-radial-gradient(
+              circle at 0 0,
+              transparent 0,
+              ${theme.wallpaper.patternColor}${hexOpacity} 10px,
+              transparent 10px,
+              transparent 20px,
+              ${theme.wallpaper.patternColor}${hexOpacity} 20px,
+              ${theme.wallpaper.patternColor}${hexOpacity} 30px,
+              transparent 30px,
+              transparent 40px
+            )`,
+          };
+        }
+        break;
+      case 'fill':
+        return {
+          backgroundColor: theme.wallpaper.fillColor || theme.backgroundColor,
+        };
+    }
+    
+    return { backgroundColor: theme.backgroundColor };
   };
 
-  const renderPresetPreview = (preset: ProfileDesign) => {
-    const { theme } = preset;
+  const getBorderRadius = (borderRadius?: string) => {
+    switch (borderRadius) {
+      case 'sharp': return '0.25rem';
+      case 'round': return '9999px';
+      case 'curved': 
+      default: return '0.75rem';
+    }
+  };
+
+  const getFontFamily = (font?: string) => {
+    switch (font) {
+      case 'serif': return 'Georgia, serif';
+      case 'mono': return 'Monaco, monospace';
+      case 'sans':
+      default: return 'system-ui, -apple-system, sans-serif';
+    }
+  };
+
+  const renderButtonShape = (theme: ProfileDesign['theme']) => {
+    const borderRadius = getBorderRadius(theme.borderRadius);
+    const isRound = theme.borderRadius === 'round';
     
-    // Get wallpaper background
-    const getWallpaperStyle = () => {
-      if (!theme.wallpaper) return {};
-      
-      switch (theme.wallpaper.type) {
-        case 'gradient':
-          if (theme.wallpaper.gradientColors) {
-            const direction = theme.wallpaper.gradientDirection === 'diagonal' ? '135deg' :
-                            theme.wallpaper.gradientDirection === 'up' ? '0deg' :
-                            theme.wallpaper.gradientDirection === 'down' ? '180deg' :
-                            theme.wallpaper.gradientDirection === 'left' ? '270deg' : '90deg';
-            return {
-              background: `linear-gradient(${direction}, ${theme.wallpaper.gradientColors.join(', ')})`,
-            };
-          }
-          break;
-        case 'pattern':
-          if (theme.wallpaper.patternType === 'dots') {
-            return {
-              backgroundColor: theme.backgroundColor,
-              backgroundImage: `radial-gradient(circle, ${theme.wallpaper.patternColor}40 1px, transparent 1px)`,
-              backgroundSize: '10px 10px',
-            };
-          } else if (theme.wallpaper.patternType === 'grid') {
-            return {
-              backgroundColor: theme.backgroundColor,
-              backgroundImage: `
-                repeating-linear-gradient(0deg, ${theme.wallpaper.patternColor}20, ${theme.wallpaper.patternColor}20 1px, transparent 1px, transparent 10px),
-                repeating-linear-gradient(90deg, ${theme.wallpaper.patternColor}20, ${theme.wallpaper.patternColor}20 1px, transparent 1px, transparent 10px)
-              `,
-            };
-          }
-          break;
-        case 'fill':
-          return {
-            backgroundColor: theme.wallpaper.fillColor || theme.backgroundColor,
-          };
-      }
-      
-      return { backgroundColor: theme.backgroundColor };
+    // Posición y tamaño dinámicos basados en el estilo
+    const shapeStyles = {
+      width: isRound ? '25%' : '30%',
+      height: isRound ? '50%' : '55%',
+      borderRadius: borderRadius,
+      position: 'absolute' as const,
+      bottom: '20%',
+      right: '15%',
     };
+
+    // Estilos según el tipo de relleno
+    if (theme.buttonFill === 'glass') {
+      return (
+        <div
+          style={{
+            ...shapeStyles,
+            backgroundColor: 'rgba(255, 255, 255, 0.15)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            boxShadow: theme.buttonShadow === 'subtle' ? '0 2px 8px rgba(0,0,0,0.1)' : 
+                      theme.buttonShadow === 'hard' ? '4px 4px 0 rgba(0,0,0,0.2)' : 'none',
+          }}
+        />
+      );
+    } else if (theme.buttonFill === 'outline') {
+      return (
+        <div
+          style={{
+            ...shapeStyles,
+            backgroundColor: 'transparent',
+            border: `2px solid ${theme.primaryColor}`,
+            boxShadow: theme.buttonShadow === 'subtle' ? '0 2px 8px rgba(0,0,0,0.1)' : 
+                      theme.buttonShadow === 'hard' ? '4px 4px 0 rgba(0,0,0,0.2)' : 'none',
+          }}
+        />
+      );
+    } else {
+      // Solid fill
+      return (
+        <div
+          style={{
+            ...shapeStyles,
+            backgroundColor: theme.primaryColor,
+            boxShadow: theme.buttonShadow === 'subtle' ? '0 2px 8px rgba(0,0,0,0.1)' : 
+                      theme.buttonShadow === 'hard' ? '4px 4px 0 rgba(0,0,0,0.2)' : 'none',
+          }}
+        />
+      );
+    }
+  };
+
+  const renderPresetPreview = (preset: ProfileDesign, name: string) => {
+    const { theme } = preset;
+    const displayName = name.charAt(0).toUpperCase() + name.slice(1);
     
     return (
-      <div 
-        className="p-3 rounded-md relative overflow-hidden"
-        style={{
-          ...getWallpaperStyle(),
-          color: theme.textColor,
-          fontFamily: theme.fontFamily === 'serif' ? 'serif' :
-                     theme.fontFamily === 'mono' ? 'monospace' : 'sans-serif',
-        }}
-      >
-        {/* Mini avatar */}
-        <div className="flex items-center gap-2 mb-2">
-          <div 
-            className="w-6 h-6 flex items-center justify-center text-xs font-bold"
+      <div className="relative w-full h-full">
+        {/* Background con wallpaper */}
+        <div 
+          className="absolute inset-0 rounded-xl overflow-hidden"
+          style={getWallpaperStyle(theme)}
+        />
+        
+        {/* Texto "Aa" */}
+        <div className="absolute top-1/2 left-1/3 transform -translate-x-1/2 -translate-y-1/2">
+          <span 
             style={{
-              backgroundColor: theme.primaryColor,
-              color: theme.buttonTextColor,
-              borderRadius: theme.borderRadius === 'sharp' ? '0.25rem' :
-                          theme.borderRadius === 'round' ? '9999px' : '0.5rem',
+              fontFamily: getFontFamily(theme.fontFamily),
+              fontSize: '2.5rem',
+              fontWeight: '500',
+              color: theme.textColor || '#000000',
+              letterSpacing: '-0.02em',
             }}
           >
-            JD
-          </div>
-          <div className="text-xs font-medium">John Doe</div>
+            Aa
+          </span>
         </div>
         
-        {/* Sample text */}
-        <p className="text-xs opacity-70 mb-2">
-          Descripción del perfil
-        </p>
+        {/* Forma del botón */}
+        {renderButtonShape(theme)}
         
-        {/* Button preview */}
-        <div 
-          className="px-3 py-1 text-xs text-center"
-          style={{
-            backgroundColor: theme.buttonFill === 'glass' 
-              ? 'rgba(255, 255, 255, 0.1)'
-              : theme.buttonFill === 'outline'
-              ? 'transparent'
-              : theme.primaryColor,
-            color: theme.buttonFill === 'outline'
-              ? theme.primaryColor
-              : theme.buttonTextColor,
-            border: theme.buttonFill === 'outline'
-              ? `1px solid ${theme.primaryColor}`
-              : 'none',
-            borderRadius: theme.borderRadius === 'sharp' ? '0.25rem' :
-                         theme.borderRadius === 'round' ? '9999px' : '0.5rem',
-            backdropFilter: theme.buttonFill === 'glass' ? 'blur(10px)' : 'none',
-            boxShadow: theme.buttonShadow === 'hard' ? '2px 2px 0 rgba(0,0,0,0.2)' :
-                      theme.buttonShadow === 'subtle' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-          }}
-        >
-          Botón de ejemplo
-        </div>
-        
-        {/* Layout preview */}
-        <div className="mt-2">
-          {renderLayoutPreview(preset)}
+        {/* Nombre del preset */}
+        <div className="absolute bottom-0 left-0 right-0 bg-white/90 backdrop-blur-sm px-3 py-2 border-t border-gray-100">
+          <p className="text-sm font-medium text-gray-900">{displayName}</p>
         </div>
       </div>
     );
   };
 
-  // Order presets for better visual organization
+  // Orden de los presets para mejor organización visual
   const presetOrder = [
     'minimal', 'classic', 'modern', 
     'aurora', 'nature', 'pastel',
@@ -179,25 +218,15 @@ export function PresetGrid({ currentDesign, onSelectPreset }: PresetGridProps) {
                 key={key}
                 onClick={() => onSelectPreset(key as keyof typeof designPresets)}
                 className={cn(
-                  "relative p-0 border-2 rounded-lg transition-all hover:shadow-lg overflow-hidden group",
+                  "relative aspect-[16/9] rounded-xl overflow-hidden transition-all",
                   isPresetActive(preset) 
-                    ? "border-blue-500 shadow-lg" 
-                    : "border-gray-200 hover:border-gray-300"
+                    ? "ring-2 ring-blue-500 shadow-lg scale-[0.98]" 
+                    : "ring-1 ring-gray-200 hover:ring-gray-300 hover:shadow-md"
                 )}
               >
-                {renderPresetPreview(preset)}
+                {renderPresetPreview(preset, key)}
                 
-                {/* Preset name */}
-                <div className={cn(
-                  "px-3 py-2 border-t transition-colors",
-                  isPresetActive(preset)
-                    ? "bg-blue-50 border-blue-200"
-                    : "bg-gray-50 border-gray-200 group-hover:bg-gray-100"
-                )}>
-                  <p className="text-sm font-medium capitalize">{key}</p>
-                </div>
-                
-                {/* Active indicator */}
+                {/* Indicador activo */}
                 {isPresetActive(preset) && (
                   <div className="absolute top-2 right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center shadow-md">
                     <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
