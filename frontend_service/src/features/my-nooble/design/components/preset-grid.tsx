@@ -1,6 +1,5 @@
 import { designPresets } from '@/api/design-api';
 import { ProfileDesign } from '@/types/profile';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 interface PresetGridProps {
@@ -203,42 +202,38 @@ export function PresetGrid({ currentDesign, onSelectPreset }: PresetGridProps) {
   ];
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Diseños predefinidos</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {presetOrder.map((key) => {
-            const preset = designPresets[key as keyof typeof designPresets];
-            if (!preset) return null;
-            
-            return (
-              <button
-                key={key}
-                onClick={() => onSelectPreset(key as keyof typeof designPresets)}
-                className={cn(
-                  "relative aspect-[16/9] rounded-xl overflow-hidden transition-all",
-                  isPresetActive(preset) 
-                    ? "ring-2 ring-blue-500 shadow-lg scale-[0.98]" 
-                    : "ring-1 ring-gray-200 hover:ring-gray-300 hover:shadow-md"
-                )}
-              >
-                {renderPresetPreview(preset, key)}
-                
-                {/* Indicador activo */}
-                {isPresetActive(preset) && (
-                  <div className="absolute top-2 right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center shadow-md">
-                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </CardContent>
-    </Card>
+    <div>
+      <h3 className="text-lg font-semibold mb-4">Diseños predefinidos</h3>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        {presetOrder.map((key) => {
+          const preset = designPresets[key as keyof typeof designPresets];
+          if (!preset) return null;
+          
+          return (
+            <button
+              key={key}
+              onClick={() => onSelectPreset(key as keyof typeof designPresets)}
+              className={cn(
+                "relative aspect-[16/9] rounded-xl overflow-hidden transition-all",
+                isPresetActive(preset) 
+                  ? "ring-2 ring-blue-500 shadow-lg scale-[0.98]" 
+                  : "ring-1 ring-gray-200 hover:ring-gray-300 hover:shadow-md"
+              )}
+            >
+              {renderPresetPreview(preset, key)}
+              
+              {/* Indicador activo */}
+              {isPresetActive(preset) && (
+                <div className="absolute top-2 right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center shadow-md">
+                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
