@@ -1,15 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+
 import { Label } from '@/components/ui/label';
 import { useProfile } from '@/context/profile-context';
 import { designPresets } from '@/api/design-api';
 import { ProfileDesign, ProfileWallpaper } from '@/types/profile';
-import { 
-  IconDeviceFloppy, 
-  IconRefresh, 
-  IconCheck,
-} from '@tabler/icons-react';
+
 import { useDesign } from '@/hooks/use-design';
 import { LayoutWithMobile } from '@/components/layout/layout-with-mobile';
 import PublicProfile from '@/features/public-profile';
@@ -32,10 +28,8 @@ export default function DesignPage() {
   const {
     currentDesign,
     isLoading,
-    isSaving,
-    isResetting,
-    updateDesign,
-    resetToDefault
+
+    updateDesign
   } = useDesign();
 
   const [localDesign, setLocalDesign] = useState<ProfileDesign | null>(null);
@@ -46,20 +40,12 @@ export default function DesignPage() {
     }
   }, [currentDesign]);
 
-  const handleSave = () => {
-    if (localDesign) {
-      updateDesign(localDesign);
-    }
-  };
-
   const handlePresetSelect = (presetName: keyof typeof designPresets) => {
     const preset = designPresets[presetName];
     setLocalDesign(preset);
   };
 
-  const handleReset = () => {
-    resetToDefault();
-  };
+
 
   const updateTheme = (updates: Partial<ProfileDesign['theme']>) => {
     if (!localDesign) return;
@@ -90,6 +76,30 @@ export default function DesignPage() {
     JSON.stringify(localDesign) !== JSON.stringify(currentDesign),
     [localDesign, currentDesign]
   );
+
+  // Auto-save logic
+  useEffect(() => {
+    // Don't run on initial load
+    if (!hasLocalChanges || !localDesign) {
+      return;
+    }
+
+    const debounceTimer = setTimeout(() => {
+      updateDesign(localDesign);
+    }, 1500); // Auto-save after 1.5s of inactivity
+
+    // Save when the component unmounts (e.g., user navigates away)
+    const handleBeforeUnload = () => {
+      updateDesign(localDesign);
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      clearTimeout(debounceTimer);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [localDesign, updateDesign, hasLocalChanges]);
 
   const mobilePreviewContent = useMemo(() => {
     if (!profile?.username || !localDesign) return null;
@@ -151,46 +161,7 @@ export default function DesignPage() {
 
   const designContent = (
     <div className="space-y-6">
-      {/* Header con acciones */}
-      <div className="flex items-center justify-end gap-2">
-        <Button
-          variant="outline"
-          onClick={handleReset}
-          disabled={isSaving || isResetting}
-        >
-          {isResetting ? (
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-          ) : (
-            <IconRefresh size={16} className="mr-2" />
-          )}
-          Restablecer
-        </Button>
-        <Button
-          onClick={handleSave}
-          disabled={!hasLocalChanges || isSaving}
-        >
-          {isSaving ? (
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-          ) : (
-            <IconDeviceFloppy size={16} className="mr-2" />
-          )}
-          Guardar cambios
-        </Button>
-      </div>
 
-      {/* Notificación de cambios sin guardar */}
-      {hasLocalChanges && (
-        <Card className="border-orange-200 bg-orange-50">
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-2 text-orange-800">
-              <IconCheck size={16} />
-              <span className="text-sm font-medium">
-                Tienes cambios sin guardar. Guarda para aplicarlos a tu Nooble.
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Presets Grid */}
       <PresetGrid 
@@ -238,7 +209,7 @@ export default function DesignPage() {
             label="Fuente"
             value={localDesign.theme.fontFamily || 'sans'}
             options={fontOptions}
-            onChange={(value) => updateTheme({ fontFamily: value as any })}
+            onChange={(value) => updateTheme({ fontFamily: value as ProfileDesign['theme']['fontFamily'] })}
             columns={3}
           />
         </CardContent>
@@ -254,7 +225,7 @@ export default function DesignPage() {
             label="Relleno"
             value={localDesign.theme.buttonFill || 'solid'}
             options={buttonFillOptions}
-            onChange={(value) => updateTheme({ buttonFill: value as any })}
+            onChange={(value) => updateTheme({ buttonFill: value as ProfileDesign['theme']['buttonFill'] })}
             columns={3}
           />
           
@@ -262,7 +233,7 @@ export default function DesignPage() {
             label="Bordes"
             value={localDesign.theme.borderRadius || 'curved'}
             options={borderRadiusOptions}
-            onChange={(value) => updateTheme({ borderRadius: value as any })}
+            onChange={(value) => updateTheme({ borderRadius: value as ProfileDesign['theme']['borderRadius'] })}
             columns={3}
           />
           
@@ -270,7 +241,7 @@ export default function DesignPage() {
             label="Sombra"
             value={localDesign.theme.buttonShadow || 'subtle'}
             options={shadowOptions}
-            onChange={(value) => updateTheme({ buttonShadow: value as any })}
+            onChange={(value) => updateTheme({ buttonShadow: value as ProfileDesign['theme']['buttonShadow'] })}
             columns={3}
           />
         </CardContent>
