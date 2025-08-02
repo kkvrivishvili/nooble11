@@ -23,10 +23,8 @@ const defaultTheme: ProfileTheme = {
 };
 
 const defaultLayout: ProfileLayout = {
-  linkStyle: 'card',
   socialPosition: 'top',
   contentWidth: 'normal',
-  spacing: 'normal',
 };
 
 const ProfileThemeContext = createContext<ProfileThemeContextType | null>(null);
@@ -60,10 +58,6 @@ export function ProfileThemeProvider({
                          wallpaper.gradientDirection === 'left' ? 'to left' : 'to right';
         return `linear-gradient(${direction}, ${wallpaper.gradientColors.join(', ')})`;
       }
-      
-      case 'blur':
-        // This creates a backdrop blur effect
-        return `rgba(${hexToRgb(wallpaper.blurColor || '#f3f4f6')}, 0.8)`;
       
       case 'pattern':
         return generatePatternBackground(wallpaper);
@@ -159,12 +153,16 @@ export function ProfileThemeProvider({
         variables['--profile-wallpaper-position'] = 'center';
       }
       
-      // Blur effect
-      if (theme.wallpaper.type === 'blur') {
-        variables['--profile-blur-intensity'] = `${theme.wallpaper.blurIntensity || 20}px`;
-      } else {
-        variables['--profile-blur-intensity'] = '0';
+      // Blur effect for image, pattern, and video
+      let blurIntensity = '0';
+      if (theme.wallpaper.type === 'image' && theme.wallpaper.imageBlur) {
+        blurIntensity = `${theme.wallpaper.imageBlurIntensity || 10}px`;
+      } else if (theme.wallpaper.type === 'pattern' && theme.wallpaper.patternBlur) {
+        blurIntensity = `${theme.wallpaper.patternBlurIntensity || 5}px`;
+      } else if (theme.wallpaper.type === 'video' && theme.wallpaper.videoBlur) {
+        blurIntensity = `${theme.wallpaper.videoBlurIntensity || 10}px`;
       }
+      variables['--profile-blur-intensity'] = blurIntensity;
     } else {
       variables['--profile-wallpaper'] = theme.backgroundColor;
       variables['--profile-wallpaper-size'] = 'auto';
@@ -186,18 +184,11 @@ export function ProfileThemeProvider({
     };
     variables['--profile-content-width'] = widthMap[layout.contentWidth || 'normal'];
     
-    // Spacing
-    const spacingMap = {
-      'compact': '0.5rem',
-      'normal': '1rem',
-      'relaxed': '1.5rem'
-    };
-    variables['--profile-spacing'] = spacingMap[layout.spacing || 'normal'];
+    // Always use compact spacing
+    variables['--profile-spacing'] = '0.5rem';
     
     return variables;
   };
-
-
 
   // Apply theme when profileDesign changes
   useEffect(() => {

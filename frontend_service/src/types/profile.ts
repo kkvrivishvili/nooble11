@@ -1,4 +1,4 @@
-// src/types/profile.ts
+// src/types/profile.ts - Updated types
 import React from 'react';
 import { QueryObserverResult } from '@tanstack/react-query';
 import { WidgetType } from './widget';
@@ -113,7 +113,7 @@ export interface ProfileTheme {
 }
 
 export interface ProfileWallpaper {
-  type: 'fill' | 'gradient' | 'blur' | 'pattern' | 'image' | 'video';
+  type: 'fill' | 'gradient' | 'pattern' | 'image' | 'video';
   
   // Fill type
   fillColor?: string;
@@ -123,33 +123,33 @@ export interface ProfileWallpaper {
   gradientDirection?: 'up' | 'down' | 'left' | 'right' | 'diagonal';
   gradientType?: 'linear' | 'radial';
   
-  // Blur type
-  blurIntensity?: number;
-  blurColor?: string;
-  
   // Pattern type
   patternType?: 'dots' | 'lines' | 'grid' | 'waves' | 'circles';
   patternColor?: string;
   patternOpacity?: number;
+  patternBlur?: boolean;
+  patternBlurIntensity?: number;
   
   // Image type
   imageUrl?: string;
   imagePosition?: 'center' | 'top' | 'bottom' | 'left' | 'right';
   imageSize?: 'cover' | 'contain' | 'auto';
   imageOverlay?: string; // rgba color for overlay
+  imageBlur?: boolean;
+  imageBlurIntensity?: number;
   
   // Video type
   videoUrl?: string;
   videoMuted?: boolean;
   videoLoop?: boolean;
   videoOverlay?: string;
+  videoBlur?: boolean;
+  videoBlurIntensity?: number;
 }
 
 export interface ProfileLayout {
-  linkStyle?: 'card' | 'button' | 'minimal';
   socialPosition?: 'top' | 'bottom' | 'hidden';
   contentWidth?: 'narrow' | 'normal' | 'wide';
-  spacing?: 'compact' | 'normal' | 'relaxed';
 }
 
 export interface ProfileDesign {

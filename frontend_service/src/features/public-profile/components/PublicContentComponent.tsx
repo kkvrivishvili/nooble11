@@ -1,4 +1,4 @@
-// src/features/public-profile/components/PublicContentComponent.tsx - Enhanced version
+// src/features/public-profile/components/PublicContentComponent.tsx - Updated with compact spacing
 import { cn } from '@/lib/utils'
 import { ProfileWithAgents, Widget } from '@/types/profile'
 import { PublicWidgetRenderer } from '@/features/public-profile/widgets/public-widget-renderer'
@@ -6,7 +6,7 @@ import { useProfileTheme } from '@/context/profile-theme-context'
 
 interface ActiveWidget {
   widget: Widget;
-  data: Record<string, unknown>; // Mejor tipado que any
+  data: Record<string, unknown>;
 }
 
 interface PublicContentComponentProps {
@@ -106,12 +106,8 @@ export default function PublicContentComponent({
       layout.contentWidth === 'normal' && 'max-w-xl',
       layout.contentWidth === 'wide' && 'max-w-3xl'
     )}>
-      {/* Contenido de Widgets */}
-      <div className={cn(
-        layout.spacing === 'compact' && 'space-y-2',
-        layout.spacing === 'normal' && 'space-y-3',
-        layout.spacing === 'relaxed' && 'space-y-4'
-      )} style={getContainerStyles()}>
+      {/* Contenido de Widgets - Always compact spacing */}
+      <div className="space-y-2" style={getContainerStyles()}>
         {activeWidgets.map(({ widget, data }, index) => (
           <div 
             key={widget.id}

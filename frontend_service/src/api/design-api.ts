@@ -1,4 +1,4 @@
-// src/api/design-api.ts - Updated version without hero and export/import
+// src/api/design-api.ts - Updated version
 import { supabase } from '@/lib/supabase';
 import { ProfileDesign } from '@/types/profile';
 import { PostgrestError, AuthError } from '@supabase/supabase-js';
@@ -18,36 +18,34 @@ const getUserId = async (): Promise<string> => {
   return session.user.id;
 };
 
-// Enhanced design presets
+// Enhanced design presets with better UX and modern aesthetics
 export const designPresets = {
   minimal: {
     theme: {
-      primaryColor: '#374151',
+      primaryColor: '#18181b',
       backgroundColor: '#ffffff',
-      textColor: '#111827',
-      buttonTextColor: '#111827',
+      textColor: '#18181b',
+      buttonTextColor: '#ffffff',
       fontFamily: 'sans' as const,
       borderRadius: 'sharp' as const,
-      buttonFill: 'outline' as const,
+      buttonFill: 'solid' as const,
       buttonShadow: 'none' as const,
       wallpaper: {
         type: 'fill' as const,
-        fillColor: '#f9fafb'
+        fillColor: '#fafafa'
       }
     },
     layout: {
-      linkStyle: 'minimal' as const,
       socialPosition: 'bottom' as const,
       contentWidth: 'narrow' as const,
-      spacing: 'normal' as const,
     }
   },
   
   classic: {
     theme: {
-      primaryColor: '#111827',
+      primaryColor: '#2563eb',
       backgroundColor: '#ffffff',
-      textColor: '#111827',
+      textColor: '#1e293b',
       buttonTextColor: '#ffffff',
       fontFamily: 'serif' as const,
       borderRadius: 'curved' as const,
@@ -55,43 +53,62 @@ export const designPresets = {
       buttonShadow: 'subtle' as const,
       wallpaper: {
         type: 'fill' as const,
-        fillColor: '#ffffff'
+        fillColor: '#f8fafc'
       }
     },
     layout: {
-      linkStyle: 'card' as const,
       socialPosition: 'top' as const,
       contentWidth: 'normal' as const,
-      spacing: 'normal' as const,
     }
   },
   
-  unique: {
+  aurora: {
     theme: {
-      primaryColor: '#7c3aed',
+      primaryColor: '#6366f1',
       backgroundColor: '#faf5ff',
-      textColor: '#581c87',
+      textColor: '#4c1d95',
       buttonTextColor: '#ffffff',
       fontFamily: 'sans' as const,
       borderRadius: 'round' as const,
       buttonFill: 'solid' as const,
-      buttonShadow: 'hard' as const,
+      buttonShadow: 'subtle' as const,
       wallpaper: {
         type: 'gradient' as const,
-        gradientColors: ['#faf5ff', '#e9d5ff', '#c084fc'],
+        gradientColors: ['#ddd6fe', '#c7d2fe', '#a5b4fc', '#818cf8'],
         gradientDirection: 'diagonal' as const,
         gradientType: 'linear' as const
       }
     },
     layout: {
-      linkStyle: 'button' as const,
       socialPosition: 'top' as const,
       contentWidth: 'normal' as const,
-      spacing: 'relaxed' as const,
     }
   },
   
-  zen: {
+  neon: {
+    theme: {
+      primaryColor: '#f97316',
+      backgroundColor: '#18181b',
+      textColor: '#fafafa',
+      buttonTextColor: '#18181b',
+      fontFamily: 'sans' as const,
+      borderRadius: 'sharp' as const,
+      buttonFill: 'solid' as const,
+      buttonShadow: 'hard' as const,
+      wallpaper: {
+        type: 'gradient' as const,
+        gradientColors: ['#1e1b4b', '#312e81', '#4c1d95', '#6d28d9', '#7c3aed'],
+        gradientDirection: 'up' as const,
+        gradientType: 'linear' as const
+      }
+    },
+    layout: {
+      socialPosition: 'bottom' as const,
+      contentWidth: 'normal' as const,
+    }
+  },
+  
+  nature: {
     theme: {
       primaryColor: '#059669',
       backgroundColor: '#ecfdf5',
@@ -102,17 +119,15 @@ export const designPresets = {
       buttonFill: 'glass' as const,
       buttonShadow: 'subtle' as const,
       wallpaper: {
-        type: 'pattern' as const,
-        patternType: 'waves' as const,
-        patternColor: '#059669',
-        patternOpacity: 0.1
+        type: 'gradient' as const,
+        gradientColors: ['#d1fae5', '#a7f3d0', '#6ee7b7', '#34d399'],
+        gradientDirection: 'diagonal' as const,
+        gradientType: 'linear' as const
       }
     },
     layout: {
-      linkStyle: 'card' as const,
       socialPosition: 'hidden' as const,
       contentWidth: 'narrow' as const,
-      spacing: 'relaxed' as const,
     }
   },
   
@@ -127,149 +142,149 @@ export const designPresets = {
       buttonFill: 'solid' as const,
       buttonShadow: 'hard' as const,
       wallpaper: {
-        type: 'blur' as const,
-        blurIntensity: 20,
-        blurColor: '#f3f4f6'
+        type: 'pattern' as const,
+        patternType: 'grid' as const,
+        patternColor: '#e5e7eb',
+        patternOpacity: 0.5
       }
     },
     layout: {
-      linkStyle: 'button' as const,
       socialPosition: 'bottom' as const,
       contentWidth: 'normal' as const,
-      spacing: 'normal' as const,
     }
   },
   
   industrial: {
     theme: {
-      primaryColor: '#525252',
-      backgroundColor: '#f5f5f5',
-      textColor: '#171717',
-      buttonTextColor: '#fafafa',
+      primaryColor: '#475569',
+      backgroundColor: '#f1f5f9',
+      textColor: '#0f172a',
+      buttonTextColor: '#f8fafc',
       fontFamily: 'mono' as const,
       borderRadius: 'sharp' as const,
       buttonFill: 'solid' as const,
       buttonShadow: 'none' as const,
       wallpaper: {
         type: 'pattern' as const,
-        patternType: 'grid' as const,
-        patternColor: '#d4d4d4',
-        patternOpacity: 0.5
+        patternType: 'dots' as const,
+        patternColor: '#94a3b8',
+        patternOpacity: 0.3
       }
     },
     layout: {
-      linkStyle: 'minimal' as const,
       socialPosition: 'top' as const,
       contentWidth: 'wide' as const,
-      spacing: 'compact' as const,
     }
   },
   
-  retro: {
+  luxury: {
     theme: {
-      primaryColor: '#dc2626',
-      backgroundColor: '#fef3c7',
-      textColor: '#7c2d12',
-      buttonTextColor: '#fef3c7',
+      primaryColor: '#d97706',
+      backgroundColor: '#1f2937',
+      textColor: '#f9fafb',
+      buttonTextColor: '#111827',
       fontFamily: 'serif' as const,
-      borderRadius: 'round' as const,
-      buttonFill: 'solid' as const,
-      buttonShadow: 'hard' as const,
-      wallpaper: {
-        type: 'pattern' as const,
-        patternType: 'dots' as const,
-        patternColor: '#f59e0b',
-        patternOpacity: 0.2
-      }
-    },
-    layout: {
-      linkStyle: 'button' as const,
-      socialPosition: 'bottom' as const,
-      contentWidth: 'normal' as const,
-      spacing: 'relaxed' as const,
-    }
-  },
-  
-  subtle: {
-    theme: {
-      primaryColor: '#64748b',
-      backgroundColor: '#f8fafc',
-      textColor: '#334155',
-      buttonTextColor: '#f8fafc',
-      fontFamily: 'sans' as const,
       borderRadius: 'curved' as const,
-      buttonFill: 'glass' as const,
+      buttonFill: 'solid' as const,
       buttonShadow: 'subtle' as const,
       wallpaper: {
-        type: 'fill' as const,
-        fillColor: '#f1f5f9'
-      }
-    },
-    layout: {
-      linkStyle: 'card' as const,
-      socialPosition: 'top' as const,
-      contentWidth: 'normal' as const,
-      spacing: 'normal' as const,
-    }
-  },
-  
-  vibrant: {
-    theme: {
-      primaryColor: '#ec4899',
-      backgroundColor: '#fce7f3',
-      textColor: '#831843',
-      buttonTextColor: '#ffffff',
-      fontFamily: 'sans' as const,
-      borderRadius: 'round' as const,
-      buttonFill: 'solid' as const,
-      buttonShadow: 'hard' as const,
-      wallpaper: {
         type: 'gradient' as const,
-        gradientColors: ['#fbbf24', '#f97316', '#ec4899', '#a855f7'],
+        gradientColors: ['#1f2937', '#374151', '#4b5563', '#374151', '#1f2937'],
         gradientDirection: 'diagonal' as const,
         gradientType: 'linear' as const
       }
     },
     layout: {
-      linkStyle: 'button' as const,
+      socialPosition: 'bottom' as const,
+      contentWidth: 'normal' as const,
+    }
+  },
+  
+  pastel: {
+    theme: {
+      primaryColor: '#ec4899',
+      backgroundColor: '#fef3c7',
+      textColor: '#831843',
+      buttonTextColor: '#ffffff',
+      fontFamily: 'sans' as const,
+      borderRadius: 'round' as const,
+      buttonFill: 'glass' as const,
+      buttonShadow: 'subtle' as const,
+      wallpaper: {
+        type: 'gradient' as const,
+        gradientColors: ['#fef3c7', '#fde68a', '#fbbf24', '#f59e0b'],
+        gradientDirection: 'down' as const,
+        gradientType: 'linear' as const
+      }
+    },
+    layout: {
       socialPosition: 'top' as const,
       contentWidth: 'normal' as const,
-      spacing: 'normal' as const,
     }
   }
 };
 
-// Dynamic gradient presets
+// Enhanced gradient presets with more sophisticated designs
 export const gradientPresets = [
   { 
     name: 'sunset', 
-    colors: ['#fbbf24', '#f97316', '#dc2626'],
+    colors: ['#fde047', '#fb923c', '#f87171', '#c084fc', '#818cf8'],
     direction: 'diagonal' as const
   },
   { 
     name: 'ocean', 
-    colors: ['#0ea5e9', '#3b82f6', '#6366f1'],
+    colors: ['#0891b2', '#0e7490', '#155e75', '#164e63', '#134e4a'],
     direction: 'down' as const
   },
   { 
-    name: 'forest', 
-    colors: ['#84cc16', '#22c55e', '#059669'],
+    name: 'aurora', 
+    colors: ['#c084fc', '#a78bfa', '#818cf8', '#60a5fa', '#34d399'],
     direction: 'diagonal' as const
   },
   { 
+    name: 'forest', 
+    colors: ['#86efac', '#4ade80', '#22c55e', '#16a34a', '#15803d'],
+    direction: 'up' as const
+  },
+  { 
     name: 'lavender', 
-    colors: ['#e9d5ff', '#c084fc', '#9333ea'],
+    colors: ['#f3e8ff', '#e9d5ff', '#d8b4fe', '#c084fc', '#a855f7'],
     direction: 'down' as const
   },
   { 
-    name: 'candy', 
-    colors: ['#fbbf24', '#f97316', '#ec4899', '#a855f7'],
-    direction: 'right' as const
+    name: 'fire', 
+    colors: ['#fef3c7', '#fde047', '#facc15', '#f59e0b', '#dc2626'],
+    direction: 'diagonal' as const
   },
   { 
     name: 'midnight', 
-    colors: ['#1e293b', '#334155', '#475569'],
+    colors: ['#1e293b', '#1e3a8a', '#1e40af', '#2563eb', '#3b82f6'],
     direction: 'up' as const
+  },
+  { 
+    name: 'cotton candy', 
+    colors: ['#fce7f3', '#fbcfe8', '#f9a8d4', '#f472b6', '#ec4899'],
+    direction: 'right' as const
+  },
+  { 
+    name: 'vintage', 
+    colors: ['#fef3c7', '#fed7aa', '#fdba74', '#fb923c', '#f97316'],
+    direction: 'diagonal' as const
+  },
+  { 
+    name: 'mystic', 
+    colors: ['#581c87', '#6b21a8', '#7c3aed', '#8b5cf6', '#a78bfa'],
+    direction: 'left' as const
+  },
+  { 
+    name: 'rose gold', 
+    colors: ['#fda4af', '#fb7185', '#f43f5e', '#e11d48', '#be123c'],
+    direction: 'diagonal' as const
+  },
+  { 
+    name: 'northern lights', 
+    colors: ['#065f46', '#047857', '#059669', '#10b981', '#34d399', '#6ee7b7'],
+    direction: 'right' as const
   }
 ];
 
@@ -305,7 +320,7 @@ export const designApi = {
         ...designPresets.classic.layout,
         ...design.layout
       },
-      version: design.version || 1
+      version: design.version || 3 // Updated version
     };
   },
 
@@ -326,7 +341,7 @@ export const designApi = {
         ...currentDesign.layout,
         ...(design.layout || {})
       },
-      version: 2 // Mark as new version
+      version: 3 // Mark as new version
     };
     
     // Update the profile with new design and updatedAt timestamp

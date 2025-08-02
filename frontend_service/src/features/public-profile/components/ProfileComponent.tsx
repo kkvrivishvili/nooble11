@@ -1,4 +1,4 @@
-// src/features/public-profile/components/ProfileComponent.tsx - Enhanced version
+// src/features/public-profile/components/ProfileComponent.tsx - Updated without spacing
 import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Profile } from '@/types/profile'
@@ -22,8 +22,6 @@ export default function ProfileComponent({
   const avatarRadiusClass = theme.borderRadius === 'sharp' ? 'rounded-md' :
                            theme.borderRadius === 'round' ? 'rounded-full' : 'rounded-xl';
 
-  // Social links are now handled by the consolidated SocialLinks component
-
   return (
     <div 
       className={cn(
@@ -39,10 +37,8 @@ export default function ProfileComponent({
     >
       {/* Avatar y Nombre */}
       <div className={cn(
-        "flex items-center gap-4",
-        layout.spacing === 'compact' && 'mb-3',
-        layout.spacing === 'normal' && 'mb-4',
-        layout.spacing === 'relaxed' && 'mb-6'
+        "flex items-center gap-4 mb-3", // Always compact spacing
+        isPreview && "scale-95"
       )}>
         <Avatar className={cn(
           "transition-all duration-300",
@@ -78,11 +74,8 @@ export default function ProfileComponent({
       
       {/* Descripción */}
       <p className={cn(
-        "transition-all duration-300",
-        isPreview && "text-sm",
-        layout.spacing === 'compact' && 'mb-4',
-        layout.spacing === 'normal' && 'mb-6',
-        layout.spacing === 'relaxed' && 'mb-8'
+        "transition-all duration-300 mb-4", // Always compact spacing
+        isPreview && "text-sm"
       )}
       style={{ 
         color: theme.textColor || theme.primaryColor,

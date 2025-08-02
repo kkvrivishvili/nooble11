@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { debounce } from 'lodash';
 
 interface ColorPickerProps {
-  label: string;
   value: string;
   onChange: (color: string) => void;
   className?: string;
 }
 
-export function ColorPicker({ label, value, onChange, className }: ColorPickerProps) {
+export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
   const [localValue, setLocalValue] = useState(value);
 
   useEffect(() => {
@@ -75,28 +73,25 @@ export function ColorPicker({ label, value, onChange, className }: ColorPickerPr
   };
 
   return (
-    <div className={cn("flex items-center justify-between", className)}>
-      <Label>{label}</Label>
-      <div className="flex items-center gap-2">
-        <Input
-          type="color"
-          value={localValue}
-          onChange={(e) => handleColorChange(e.target.value)}
-          className="w-12 h-10 p-1 cursor-pointer"
-        />
-        <Input
-          value={localValue}
-          onChange={(e) => {
-            const value = e.target.value;
-            setLocalValue(value);
-            if (isValidColor(value)) {
-              debouncedOnChange(value);
-            }
-          }}
-          className="w-32 font-mono text-sm"
-          placeholder="#000000 | rgb() | red"
-        />
-      </div>
+    <div className={cn("flex items-center gap-2", className)}>
+      <Input
+        type="color"
+        value={localValue}
+        onChange={(e) => handleColorChange(e.target.value)}
+        className="w-12 h-10 p-1 cursor-pointer"
+      />
+      <Input
+        value={localValue}
+        onChange={(e) => {
+          const value = e.target.value;
+          setLocalValue(value);
+          if (isValidColor(value)) {
+            debouncedOnChange(value);
+          }
+        }}
+        className="w-32 font-mono text-sm"
+        placeholder="#000000"
+      />
     </div>
   );
 }

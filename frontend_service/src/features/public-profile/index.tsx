@@ -1,4 +1,4 @@
-// src/features/public-profile/index.tsx - Enhanced version with wallpaper
+// src/features/public-profile/index.tsx - Updated with proper blur handling
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query';
@@ -17,7 +17,7 @@ interface PublicProfileProps {
   previewDesign?: ProfileDesign;
 }
 
-// Wallpaper component - now only handles special cases
+// Wallpaper component - handles video and blur overlays
 function ProfileWallpaper() {
   const { theme } = useProfileTheme();
   
@@ -30,6 +30,9 @@ function ProfileWallpaper() {
           loop={theme.wallpaper.videoLoop}
           muted={theme.wallpaper.videoMuted}
           playsInline
+          style={{
+            filter: theme.wallpaper.videoBlur ? `blur(${theme.wallpaper.videoBlurIntensity || 10}px)` : 'none'
+          }}
         >
           <source src={theme.wallpaper.videoUrl} type="video/mp4" />
         </video>
@@ -43,22 +46,7 @@ function ProfileWallpaper() {
     );
   }
   
-  // Blur overlay (only for blur wallpaper type)
-  if (theme.wallpaper?.type === 'blur') {
-    return <div className="profile-wallpaper-blur" />;
-  }
-  
-  // Image overlay (only if specified)
-  if (theme.wallpaper?.type === 'image' && theme.wallpaper.imageOverlay) {
-    return (
-      <div 
-        className="absolute inset-0 z-0 pointer-events-none"
-        style={{ backgroundColor: theme.wallpaper.imageOverlay }}
-      />
-    );
-  }
-  
-  // For other wallpaper types (fill, gradient, pattern), the background is applied directly to .profile-container
+  // For other wallpaper types, blur is handled via CSS
   return null;
 }
 
@@ -92,7 +80,7 @@ function ProfileContent({ profile, isPreview }: { profile: ProfileWithAgents; is
           />
         </div>
         
-        {/* Content Tabs */}
+        {/* Content */}
         <div className="profile-animate-in" style={{ animationDelay: '0.1s' }}>
           <PublicContentComponent
             profile={profile}
@@ -108,6 +96,7 @@ function ProfileContent({ profile, isPreview }: { profile: ProfileWithAgents; is
               isPreview={isPreview}
               position="bottom"
               iconSize={20}
+              className="justify-center"
             />
           </div>
         )}
@@ -168,7 +157,7 @@ export default function PublicProfile({ username, isPreview = false, previewDesi
   return (
     <div className={cn(
       "min-h-screen relative transition-all duration-300",
-      isPreview && "rounded-lg overflow-hidden"
+      isPreview && "rounded-lg overflow-hidden max-h-[600px]" // Added max-height for preview
     )}>
       {/* Wrap everything in ProfileThemeProvider with the appropriate design */}
       <ProfileThemeProvider profileDesign={designToUse}>

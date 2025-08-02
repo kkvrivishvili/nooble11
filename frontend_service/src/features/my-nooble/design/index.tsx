@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { usePageContext } from '@/context/page-context';
+import { Label } from '@/components/ui/label';
 import { useProfile } from '@/context/profile-context';
 import { designPresets } from '@/api/design-api';
 import { ProfileDesign, ProfileWallpaper } from '@/types/profile';
@@ -28,7 +28,6 @@ import {
 } from '@tabler/icons-react';
 
 export default function DesignPage() {
-  const { setTitle } = usePageContext();
   const { profile } = useProfile();
   const {
     currentDesign,
@@ -40,10 +39,6 @@ export default function DesignPage() {
   } = useDesign();
 
   const [localDesign, setLocalDesign] = useState<ProfileDesign | null>(null);
-
-  useEffect(() => {
-    setTitle('Diseño');
-  }, [setTitle]);
 
   useEffect(() => {
     if (currentDesign) {
@@ -99,7 +94,11 @@ export default function DesignPage() {
   const mobilePreviewContent = useMemo(() => {
     if (!profile?.username || !localDesign) return null;
     
-    return <PublicProfile username={profile.username} isPreview={true} previewDesign={localDesign} />;
+    return (
+      <div className="h-full overflow-y-auto">
+        <PublicProfile username={profile.username} isPreview={true} previewDesign={localDesign} />
+      </div>
+    );
   }, [profile?.username, localDesign]);
 
   if (isLoading || !localDesign) {
@@ -153,38 +152,30 @@ export default function DesignPage() {
   const designContent = (
     <div className="space-y-6">
       {/* Header con acciones */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Diseño</h1>
-          <p className="text-muted-foreground">
-            Personaliza la apariencia de tu Nooble
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={handleReset}
-            disabled={isSaving || isResetting}
-          >
-            {isResetting ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-            ) : (
-              <IconRefresh size={16} className="mr-2" />
-            )}
-            Restablecer
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={!hasLocalChanges || isSaving}
-          >
-            {isSaving ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-            ) : (
-              <IconDeviceFloppy size={16} className="mr-2" />
-            )}
-            Guardar cambios
-          </Button>
-        </div>
+      <div className="flex items-center justify-end gap-2">
+        <Button
+          variant="outline"
+          onClick={handleReset}
+          disabled={isSaving || isResetting}
+        >
+          {isResetting ? (
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+          ) : (
+            <IconRefresh size={16} className="mr-2" />
+          )}
+          Restablecer
+        </Button>
+        <Button
+          onClick={handleSave}
+          disabled={!hasLocalChanges || isSaving}
+        >
+          {isSaving ? (
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+          ) : (
+            <IconDeviceFloppy size={16} className="mr-2" />
+          )}
+          Guardar cambios
+        </Button>
       </div>
 
       {/* Notificación de cambios sin guardar */}
@@ -207,32 +198,33 @@ export default function DesignPage() {
         onSelectPreset={handlePresetSelect}
       />
 
-      {/* Colors Section */}
+      {/* Colors Section - Sin color de fondo */}
       <Card>
         <CardHeader>
           <CardTitle>Colores</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <ColorPicker
-            label="Color primario"
-            value={localDesign.theme.primaryColor}
-            onChange={(color) => updateTheme({ primaryColor: color })}
-          />
-          <ColorPicker
-            label="Color de fondo"
-            value={localDesign.theme.backgroundColor || '#ffffff'}
-            onChange={(color) => updateTheme({ backgroundColor: color })}
-          />
-          <ColorPicker
-            label="Color de texto"
-            value={localDesign.theme.textColor || '#111827'}
-            onChange={(color) => updateTheme({ textColor: color })}
-          />
-          <ColorPicker
-            label="Color de texto en botones"
-            value={localDesign.theme.buttonTextColor || '#ffffff'}
-            onChange={(color) => updateTheme({ buttonTextColor: color })}
-          />
+          <div className="flex items-center justify-between">
+            <Label>Color primario</Label>
+            <ColorPicker
+              value={localDesign.theme.primaryColor}
+              onChange={(color) => updateTheme({ primaryColor: color })}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label>Color de texto</Label>
+            <ColorPicker
+              value={localDesign.theme.textColor || '#111827'}
+              onChange={(color) => updateTheme({ textColor: color })}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label>Color de texto en botones</Label>
+            <ColorPicker
+              value={localDesign.theme.buttonTextColor || '#ffffff'}
+              onChange={(color) => updateTheme({ buttonTextColor: color })}
+            />
+          </div>
         </CardContent>
       </Card>
 
