@@ -1,11 +1,13 @@
-// src/api/profile-api.ts
+// src/api/profile-api.ts - REFACTORED VERSION
+// This version removes all agent-related responsibilities
+// Agent operations should now use agents-api.ts instead
+
 import { supabase } from '@/lib/supabase';
 import { 
   Profile, 
   ProfileWithAgents, 
   ProfileUpdatePayload, 
   ProfileLink,
-  Agent,
   Widget,
   WidgetAgents,
   WidgetGallery
@@ -14,6 +16,7 @@ import {
 class ProfileAPI {
   /**
    * Get the current user's profile with all related data
+   * Note: Agent details are fetched but not managed here
    */
   async getMyProfile(): Promise<ProfileWithAgents | null> {
     const { data: { user } } = await supabase.auth.getUser();
@@ -36,9 +39,9 @@ class ProfileAPI {
       ? widgets.slice().sort((a, b) => a.position - b.position) 
       : [];
 
-    // Get agents details
+    // Get agents details (READ-ONLY - use agents-api for modifications)
     const agentIds = (profile.agents || []) as string[];
-    let agentDetails: Agent[] = [];
+    let agentDetails = [];
     
     if (agentIds.length > 0) {
       const { data: agents, error: agentsError } = await supabase
@@ -75,47 +78,47 @@ class ProfileAPI {
       separatorWidgets,
       titleWidgets
     ] = await Promise.all([
-      // Link widgets - RLS policies will filter by authenticated user
+      // Link widgets
       widgetIdsByType.link?.length > 0
         ? supabase.from('widgetLinks').select('*').in('id', widgetIdsByType.link)
         : Promise.resolve({ data: [] }),
       
-      // Agent widgets - RLS policies will filter by authenticated user
+      // Agent widgets
       widgetIdsByType.agents?.length > 0
         ? supabase.from('widgetAgents').select('*').in('id', widgetIdsByType.agents)
         : Promise.resolve({ data: [] }),
       
-      // Gallery widgets - RLS policies will filter by authenticated user
+      // Gallery widgets
       widgetIdsByType.gallery?.length > 0
         ? supabase.from('widgetGallery').select('*').in('id', widgetIdsByType.gallery)
         : Promise.resolve({ data: [] }),
       
-      // YouTube widgets - RLS policies will filter by authenticated user
+      // YouTube widgets
       widgetIdsByType.youtube?.length > 0
         ? supabase.from('widgetYoutube').select('*').in('id', widgetIdsByType.youtube)
         : Promise.resolve({ data: [] }),
       
-      // Maps widgets - RLS policies will filter by authenticated user
+      // Maps widgets
       widgetIdsByType.maps?.length > 0
         ? supabase.from('widgetMaps').select('*').in('id', widgetIdsByType.maps)
         : Promise.resolve({ data: [] }),
       
-      // Spotify widgets - RLS policies will filter by authenticated user
+      // Spotify widgets
       widgetIdsByType.spotify?.length > 0
         ? supabase.from('widgetSpotify').select('*').in('id', widgetIdsByType.spotify)
         : Promise.resolve({ data: [] }),
       
-      // Calendar widgets - RLS policies will filter by authenticated user
+      // Calendar widgets
       widgetIdsByType.calendar?.length > 0
         ? supabase.from('widgetCalendar').select('*').in('id', widgetIdsByType.calendar)
         : Promise.resolve({ data: [] }),
       
-      // Separator widgets - RLS policies will filter by authenticated user
+      // Separator widgets
       widgetIdsByType.separator?.length > 0
         ? supabase.from('widgetSeparator').select('*').in('id', widgetIdsByType.separator)
         : Promise.resolve({ data: [] }),
       
-      // Title widgets - RLS policies will filter by authenticated user
+      // Title widgets
       widgetIdsByType.title?.length > 0
         ? supabase.from('widgetTitle').select('*').in('id', widgetIdsByType.title)
         : Promise.resolve({ data: [] })
@@ -154,141 +157,35 @@ class ProfileAPI {
 
   /**
    * Get a profile by username (public view)
+   * Note: This method is kept for backward compatibility, but public-profile-api.ts should be used instead
+   * @deprecated Use publicProfileApi.getPublicProfile() instead
    */
   async getProfileByUsername(username: string): Promise<ProfileWithAgents | null> {
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('username', username)
-      .eq('isPublic', true)
-      .single();
-
-    if (profileError || !profile) {
-      return null;
-    }
-
-    // Ensure widgets are sorted by position
-    const widgets = (profile.widgets || []) as Widget[];
-    const sortedWidgets = widgets.length > 0 
-      ? widgets.slice().sort((a, b) => a.position - b.position) 
-      : [];
-
-    // Get public agents
-    const agentIds = (profile.agents || []) as string[];
-    let agentDetails: Agent[] = [];
+    console.warn('⚠️ profileApi.getProfileByUsername() is deprecated. Use publicProfileApi.getPublicProfile() instead.');
     
-    if (agentIds.length > 0) {
-      const { data: agents } = await supabase
-        .from('agents_with_prompt')
-        .select('*')
-        .in('id', agentIds)
-        .eq('isPublic', true)
-        .eq('isActive', true);
-
-      if (agents) {
-        agentDetails = agents;
-      }
-    }
-
-    // Get active widgets only
-    const activeWidgets = sortedWidgets.filter((w: Widget) => w.isActive);
-    
-    // Separate widget IDs by type
-    const widgetIdsByType = activeWidgets.reduce((acc, widget) => {
-      if (!acc[widget.type]) {
-        acc[widget.type] = [];
-      }
-      acc[widget.type].push(widget.id);
-      return acc;
-    }, {} as Record<string, string[]>);
-
-    // Fetch all widget data in parallel - RLS policies handle access control
-    const [
-      linkWidgets,
-      agentWidgets,
-      galleryWidgets,
-      youtubeWidgets,
-      mapsWidgets,
-      spotifyWidgets,
-      calendarWidgets,
-      separatorWidgets,
-      titleWidgets
-    ] = await Promise.all([
-      widgetIdsByType.link?.length > 0
-        ? supabase.from('widgetLinks').select('*').in('id', widgetIdsByType.link).eq('profileId', profile.id)
-        : Promise.resolve({ data: [] }),
-      widgetIdsByType.agents?.length > 0
-        ? supabase.from('widgetAgents').select('*').in('id', widgetIdsByType.agents).eq('profileId', profile.id)
-        : Promise.resolve({ data: [] }),
-      widgetIdsByType.gallery?.length > 0
-        ? supabase.from('widgetGallery').select('*').in('id', widgetIdsByType.gallery).eq('profileId', profile.id)
-        : Promise.resolve({ data: [] }),
-      widgetIdsByType.youtube?.length > 0
-        ? supabase.from('widgetYoutube').select('*').in('id', widgetIdsByType.youtube).eq('profileId', profile.id)
-        : Promise.resolve({ data: [] }),
-      widgetIdsByType.maps?.length > 0
-        ? supabase.from('widgetMaps').select('*').in('id', widgetIdsByType.maps).eq('profileId', profile.id)
-        : Promise.resolve({ data: [] }),
-      widgetIdsByType.spotify?.length > 0
-        ? supabase.from('widgetSpotify').select('*').in('id', widgetIdsByType.spotify).eq('profileId', profile.id)
-        : Promise.resolve({ data: [] }),
-      widgetIdsByType.calendar?.length > 0
-        ? supabase.from('widgetCalendar').select('*').in('id', widgetIdsByType.calendar).eq('profileId', profile.id)
-        : Promise.resolve({ data: [] }),
-      widgetIdsByType.separator?.length > 0
-        ? supabase.from('widgetSeparator').select('*').in('id', widgetIdsByType.separator).eq('profileId', profile.id)
-        : Promise.resolve({ data: [] }),
-      widgetIdsByType.title?.length > 0
-        ? supabase.from('widgetTitle').select('*').in('id', widgetIdsByType.title).eq('profileId', profile.id)
-        : Promise.resolve({ data: [] })
-    ]);
-
-    // Sort widget data according to widget order
-    const sortWidgetData = <T extends { id: string }>(
-      widgetData: T[] | null,
-      widgetIds: string[]
-    ): T[] => {
-      if (!widgetData || !widgetIds) return [];
-      const dataMap = new Map(widgetData.map(item => [item.id, item]));
-      return widgetIds
-        .map(id => dataMap.get(id))
-        .filter((item): item is T => item !== undefined);
-    };
-
-    // Filter agent widgets to only show public agents
-    const filteredAgentWidgets = agentWidgets.data?.map(widget => ({
-      ...widget,
-      agentIds: (widget.agentIds || []).filter((agentId: string) =>
-        agentDetails.some(agent => agent.id === agentId)
-      )
-    })) || [];
-
-    return {
-      ...profile,
-      widgets: sortedWidgets,
-      agentDetails,
-      linkWidgets: sortWidgetData(linkWidgets.data, widgetIdsByType.link || []),
-      agentWidgets: sortWidgetData(filteredAgentWidgets, widgetIdsByType.agents || []),
-      galleryWidgets: sortWidgetData(galleryWidgets.data, widgetIdsByType.gallery || []),
-      youtubeWidgets: sortWidgetData(youtubeWidgets.data, widgetIdsByType.youtube || []),
-      mapsWidgets: sortWidgetData(mapsWidgets.data, widgetIdsByType.maps || []),
-      spotifyWidgets: sortWidgetData(spotifyWidgets.data, widgetIdsByType.spotify || []),
-      calendarWidgets: sortWidgetData(calendarWidgets.data, widgetIdsByType.calendar || []),
-      separatorWidgets: sortWidgetData(separatorWidgets.data, widgetIdsByType.separator || []),
-      titleWidgets: sortWidgetData(titleWidgets.data, widgetIdsByType.title || [])
-    };
+    // Import and use the dedicated public profile API
+    const { publicProfileApi } = await import('./public-profile-api');
+    return publicProfileApi.getPublicProfile(username);
   }
 
   /**
-   * Update profile basic info
+   * Update profile basic info (NO AGENT OPERATIONS)
    */
   async updateProfile(payload: ProfileUpdatePayload): Promise<Profile> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('No authenticated user');
 
+    // Validate payload - ensure no agent operations are attempted here
+    if ('agents' in payload) {
+      throw new Error('❌ Agent operations not allowed in profile-api. Use agents-api instead.');
+    }
+
     const { data, error } = await supabase
       .from('profiles')
-      .update(payload)
+      .update({
+        ...payload,
+        updatedAt: new Date().toISOString()
+      })
       .eq('id', user.id)
       .select()
       .single();
@@ -301,15 +198,26 @@ class ProfileAPI {
    * Check if a username is available
    */
   async isUsernameAvailable(username: string): Promise<boolean> {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('username', username)
-      .maybeSingle();
+    try {
+      // Use the database function for consistency
+      const { data, error } = await supabase
+        .rpc('check_username_availability', { desired_username: username });
 
-    if (error) throw error;
-    return !data;
+      if (error) {
+        console.error('Error checking username availability:', error);
+        return false;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error in isUsernameAvailable:', error);
+      return false;
+    }
   }
+
+  // ============================================
+  // WIDGET MANAGEMENT METHODS
+  // ============================================
 
   /**
    * Create a new link widget
@@ -367,7 +275,10 @@ class ProfileAPI {
 
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({ widgets: reorderedWidgets })
+      .update({ 
+        widgets: reorderedWidgets,
+        updatedAt: new Date().toISOString()
+      })
       .eq('id', profileId);
 
     if (updateError) throw updateError;
@@ -388,91 +299,41 @@ class ProfileAPI {
     if (error) throw error;
   }
 
+  // ============================================
+  // REMOVED AGENT METHODS - USE agents-api.ts INSTEAD
+  // ============================================
+  
   /**
-   * Create a new agent from template
+   * @deprecated Use agentsApi.createAgentFromTemplate() instead
    */
-  async createAgentFromTemplate(templateId: string, name?: string): Promise<Agent> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('No authenticated user');
-
-    const { data: agentId, error } = await supabase
-      .rpc('copy_agent_from_template', {
-        p_user_id: user.id,
-        p_template_id: templateId,
-        p_agent_name: name
-      });
-
-    if (error) throw error;
-
-    // Fetch the created agent
-    const { data: agent, error: fetchError } = await supabase
-      .from('agents_with_prompt')
-      .select('*')
-      .eq('id', agentId)
-      .single();
-
-    if (fetchError) throw fetchError;
-    return agent;
+  async createAgentFromTemplate(): Promise<never> {
+    throw new Error('❌ createAgentFromTemplate() moved to agents-api. Use agentsApi.createAgentFromTemplate() instead.');
   }
 
   /**
-   * Update an agent
+   * @deprecated Use agentsApi.updateAgent() instead
    */
-  async updateAgent(agentId: string, data: Partial<Agent>): Promise<void> {
-    const { error } = await supabase
-      .from('agents')
-      .update(data)
-      .eq('id', agentId);
-
-    if (error) throw error;
+  async updateAgent(): Promise<never> {
+    throw new Error('❌ updateAgent() moved to agents-api. Use agentsApi.updateAgent() instead.');
   }
 
   /**
-   * Delete an agent
+   * @deprecated Use agentsApi.deleteAgent() instead
    */
-  async deleteAgent(profileId: string, agentId: string): Promise<void> {
-    // Remove from profile.agents array
-    const { data: profile, error: fetchError } = await supabase
-      .from('profiles')
-      .select('agents')
-      .eq('id', profileId)
-      .single();
-
-    if (fetchError) throw fetchError;
-
-    const updatedAgents = (profile.agents || []).filter(
-      (id: string) => id !== agentId
-    );
-
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ agents: updatedAgents })
-      .eq('id', profileId);
-
-    if (updateError) throw updateError;
-
-    // Delete the agent (will cascade delete conversations, etc.)
-    const { error: deleteError } = await supabase
-      .from('agents')
-      .delete()
-      .eq('id', agentId);
-
-    if (deleteError) throw deleteError;
+  async deleteAgent(): Promise<never> {
+    throw new Error('❌ deleteAgent() moved to agents-api. Use agentsApi.deleteAgent() instead.');
   }
 
   /**
-   * Get available agent templates
+   * @deprecated Use agentsApi.getAgentTemplates() instead
    */
-  async getAgentTemplates() {
-    const { data, error } = await supabase
-      .from('agentTemplates')
-      .select('*')
-      .eq('isActive', true)
-      .order('name');
-
-    if (error) throw error;
-    return data;
+  async getAgentTemplates(): Promise<never> {
+    throw new Error('❌ getAgentTemplates() moved to agents-api. Use agentsApi.getAgentTemplates() instead.');
   }
+
+  // ============================================
+  // WIDGET CREATION METHODS (All types)
+  // ============================================
 
   /**
    * Create a new agents widget
@@ -569,6 +430,10 @@ class ProfileAPI {
 
     if (error) throw error;
   }
+
+  // ... (All other widget methods remain the same)
+  // YouTube, Maps, Spotify, Calendar, Separator, Title widgets
+  // (Keeping them as they are widget-related, not agent-related)
 
   /**
    * Create a new YouTube widget

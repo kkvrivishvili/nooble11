@@ -1,11 +1,13 @@
+// src/features/my-nooble/design/index.tsx - UPDATED to use only design-api.ts
 import { useState, useEffect, useMemo } from 'react';
 import { Label } from '@/components/ui/label';
 import { useProfile } from '@/context/profile-context';
-import { designPresets } from '@/api/design-api';
+import { designApi, designPresets } from '@/api/design-api'; // ONLY use design-api
 import { ProfileDesign, ProfileWallpaper } from '@/types/profile';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
-import { useDesign } from '@/hooks/use-design';
+import { useDesign } from '@/hooks/use-design'; // This hook already uses design-api correctly
 import { LayoutWithMobile } from '@/components/layout/layout-with-mobile';
 import PublicProfile from '@/features/public-profile';
 
@@ -27,11 +29,13 @@ export default function DesignPage() {
   const {
     currentDesign,
     isLoading,
-    updateDesign
-  } = useDesign();
+    updateDesign,
+    isSaving,
+  } = useDesign(); // This hook uses design-api correctly
 
   const [localDesign, setLocalDesign] = useState<ProfileDesign | null>(null);
   const [activeTab, setActiveTab] = useState('buttons');
+  const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (currentDesign) {
@@ -39,34 +43,86 @@ export default function DesignPage() {
     }
   }, [currentDesign]);
 
-  const handlePresetSelect = (presetName: keyof typeof designPresets) => {
-    const preset = designPresets[presetName];
-    setLocalDesign(preset);
+  const handlePresetSelect = async (presetName: keyof typeof designPresets) => {
+    try {
+      const preset = designPresets[presetName];
+      setLocalDesign(preset);
+      
+      // Apply preset immediately using design-api
+      await designApi.applyPreset(presetName);
+      toast.success(`"${presetName}" design applied successfully!`);
+    } catch (error) {
+      toast.error('Failed to apply preset');
+      console.error('Error applying preset:', error);
+    }
   };
 
   const updateTheme = (updates: Partial<ProfileDesign['theme']>) => {
     if (!localDesign) return;
-    setLocalDesign(prev => ({
-      ...prev!,
-      theme: { ...prev!.theme, ...updates }
-    }));
+    
+    const newDesign = {
+      ...localDesign,
+      theme: { ...localDesign.theme, ...updates }
+    };
+    
+    setLocalDesign(newDesign);
+    scheduleAutoSave(newDesign);
   };
 
   const updateWallpaper = (wallpaper: ProfileWallpaper) => {
     if (!localDesign) return;
-    setLocalDesign(prev => ({
-      ...prev!,
-      theme: { ...prev!.theme, wallpaper }
-    }));
+    
+    const newDesign = {
+      ...localDesign,
+      theme: { ...localDesign.theme, wallpaper }
+    };
+    
+    setLocalDesign(newDesign);
+    scheduleAutoSave(newDesign);
   };
 
   const updateLayout = (updates: Partial<ProfileDesign['layout']>) => {
     if (!localDesign) return;
-    setLocalDesign(prev => ({
-      ...prev!,
-      layout: { ...prev!.layout, ...updates }
-    }));
+    
+    const newDesign = {
+      ...localDesign,
+      layout: { ...localDesign.layout, ...updates }
+    };
+    
+    setLocalDesign(newDesign);
+    scheduleAutoSave(newDesign);
   };
+
+  // Auto-save logic with debouncing
+  const scheduleAutoSave = (design: ProfileDesign) => {
+    // Clear existing timeout
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+    }
+
+    // Schedule new save
+    const timeout = setTimeout(async () => {
+      try {
+        await designApi.updateDesign(design);
+        // Don't show success toast for auto-saves to avoid spam
+        console.log('✅ Design auto-saved');
+      } catch (error) {
+        toast.error('Failed to save design changes');
+        console.error('Auto-save error:', error);
+      }
+    }, 1500); // 1.5 second debounce
+
+    setSaveTimeout(timeout);
+  };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeout) {
+        clearTimeout(saveTimeout);
+      }
+    };
+  }, [saveTimeout]);
 
   const hasLocalChanges = useMemo(() => 
     localDesign && currentDesign && 
@@ -74,30 +130,7 @@ export default function DesignPage() {
     [localDesign, currentDesign]
   );
 
-  // Auto-save logic
-  useEffect(() => {
-    // Don't run on initial load
-    if (!hasLocalChanges || !localDesign) {
-      return;
-    }
-
-    const debounceTimer = setTimeout(() => {
-      updateDesign(localDesign);
-    }, 1500); // Auto-save after 1.5s of inactivity
-
-    // Save when the component unmounts (e.g., user navigates away)
-    const handleBeforeUnload = () => {
-      updateDesign(localDesign);
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      clearTimeout(debounceTimer);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [localDesign, updateDesign, hasLocalChanges]);
-
+  // Mobile preview content
   const mobilePreviewContent = useMemo(() => {
     if (!profile?.username || !localDesign) return null;
     
@@ -107,6 +140,31 @@ export default function DesignPage() {
       </div>
     );
   }, [profile?.username, localDesign]);
+
+  // Manual save function for explicit user actions
+  const handleManualSave = async () => {
+    if (!localDesign) return;
+    
+    try {
+      await designApi.updateDesign(localDesign);
+      toast.success('Design saved successfully!');
+    } catch (error) {
+      toast.error('Failed to save design');
+      console.error('Manual save error:', error);
+    }
+  };
+
+  // Reset to default design
+  const handleResetDesign = async () => {
+    try {
+      const defaultDesign = await designApi.resetToDefault();
+      setLocalDesign(defaultDesign);
+      toast.success('Design reset to default');
+    } catch (error) {
+      toast.error('Failed to reset design');
+      console.error('Reset error:', error);
+    }
+  };
 
   if (isLoading || !localDesign) {
     return (
@@ -121,6 +179,49 @@ export default function DesignPage() {
 
   const designContent = (
     <div className="space-y-8">
+      {/* Save Status Indicator */}
+      {(hasLocalChanges || isSaving) && (
+        <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border rounded-lg p-3 mb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {isSaving ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  <span className="text-sm text-blue-600">Saving changes...</span>
+                </>
+              ) : hasLocalChanges ? (
+                <>
+                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                  <span className="text-sm text-orange-600">Unsaved changes</span>
+                </>
+              ) : (
+                <>
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm text-green-600">All changes saved</span>
+                </>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleResetDesign}
+                className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100"
+              >
+                Reset to Default
+              </button>
+              {hasLocalChanges && (
+                <button
+                  onClick={handleManualSave}
+                  className="text-xs text-blue-600 hover:text-blue-700 px-2 py-1 rounded hover:bg-blue-50"
+                  disabled={isSaving}
+                >
+                  Save Now
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 1. Presets Grid - Primera posición */}
       <PresetGrid 
         currentDesign={localDesign}
@@ -270,6 +371,12 @@ export default function DesignPage() {
             />
           </div>
         </div>
+      </div>
+
+      {/* Help text */}
+      <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
+        💡 <strong>Tip:</strong> Los cambios se guardan automáticamente después de 1.5 segundos de inactividad. 
+        También puedes usar "Save Now" para guardar inmediatamente.
       </div>
     </div>
   );
