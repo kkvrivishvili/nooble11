@@ -1,9 +1,9 @@
 -- Nooble8 Seed Data
--- Version: 4.0 - camelCase
--- Description: Initial agent templates with camelCase convention
+-- Version: 5.0 - Snake Case
+-- Description: Initial agent templates with snake_case convention
 
 -- Insert agent templates
-INSERT INTO public."agentTemplates" (name, category, description, icon, "systemPromptTemplate") VALUES
+INSERT INTO public.agent_templates (name, category, description, icon, system_prompt_template) VALUES
 (
   'Receptor',
   'customer_service',

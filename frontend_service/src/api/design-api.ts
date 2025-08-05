@@ -1,4 +1,4 @@
-// src/api/design-api.ts - Updated version
+// src/api/design-api.ts - FIXED SNAKE_CASE VERSION
 import { supabase } from '@/lib/supabase';
 import { ProfileDesign } from '@/types/profile';
 import { PostgrestError, AuthError } from '@supabase/supabase-js';
@@ -344,12 +344,12 @@ export const designApi = {
       version: 3 // Mark as new version
     };
     
-    // Update the profile with new design and updatedAt timestamp
+    // Update the profile with new design and updated_at timestamp
     const { error } = await supabase
       .from('profiles')
       .update({
         design: newDesign,
-        updatedAt: new Date().toISOString()
+        updated_at: new Date().toISOString()
       })
       .eq('id', userId);
 

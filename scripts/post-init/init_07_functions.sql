@@ -1,6 +1,6 @@
 -- Nooble8 Functions and Triggers
--- Version: 4.2 - camelCase with proper permissions
--- Description: Helper functions and automation with camelCase convention
+-- Version: 5.0 - Snake Case with proper permissions
+-- Description: Helper functions and automation with snake_case convention
 
 -- Function: Generate deterministic conversation ID
 CREATE OR REPLACE FUNCTION generate_conversation_id(
@@ -43,74 +43,74 @@ BEGIN
       'id', v_widget_id,
       'type', p_widget_type,
       'position', v_position,
-      'isActive', true
+      'is_active', true
     )
   ),
-  "updatedAt" = now()
+  updated_at = now()
   WHERE id = p_profile_id;
   
   -- Insert widget data into appropriate table
   CASE p_widget_type
     WHEN 'gallery' THEN
-      INSERT INTO "widgetGallery" (id, "profileId", title, products, "showPrice", "showDescription", columns)
+      INSERT INTO widget_gallery (id, profile_id, title, products, show_price, show_description, columns)
       VALUES (v_widget_id, p_profile_id, 
               p_widget_data->>'title', 
               COALESCE(p_widget_data->'products', '[]'::jsonb),
-              COALESCE((p_widget_data->>'showPrice')::boolean, true),
-              COALESCE((p_widget_data->>'showDescription')::boolean, true),
+              COALESCE((p_widget_data->>'show_price')::boolean, true),
+              COALESCE((p_widget_data->>'show_description')::boolean, true),
               COALESCE((p_widget_data->>'columns')::integer, 3));
     WHEN 'agents' THEN
-      INSERT INTO "widgetAgents" (id, "profileId", title, "agentIds", "displayStyle")
+      INSERT INTO widget_agents (id, profile_id, title, agent_ids, display_style)
       VALUES (v_widget_id, p_profile_id,
               COALESCE(p_widget_data->>'title', 'Chat con nuestros agentes'),
-              COALESCE(p_widget_data->'agentIds', '[]'::jsonb),
-              COALESCE(p_widget_data->>'displayStyle', 'card'));
+              COALESCE(p_widget_data->'agent_ids', '[]'::jsonb),
+              COALESCE(p_widget_data->>'display_style', 'card'));
     WHEN 'youtube' THEN
-      INSERT INTO "widgetYoutube" (id, "profileId", "videoUrl", title, autoplay, "showControls")
+      INSERT INTO widget_youtube (id, profile_id, video_url, title, autoplay, show_controls)
       VALUES (v_widget_id, p_profile_id,
-              p_widget_data->>'videoUrl',
+              p_widget_data->>'video_url',
               p_widget_data->>'title',
               COALESCE((p_widget_data->>'autoplay')::boolean, false),
-              COALESCE((p_widget_data->>'showControls')::boolean, true));
+              COALESCE((p_widget_data->>'show_controls')::boolean, true));
     WHEN 'maps' THEN
-      INSERT INTO "widgetMaps" (id, "profileId", address, latitude, longitude, "zoomLevel", "mapStyle")
+      INSERT INTO widget_maps (id, profile_id, address, latitude, longitude, zoom_level, map_style)
       VALUES (v_widget_id, p_profile_id,
               p_widget_data->>'address',
               (p_widget_data->>'latitude')::decimal,
               (p_widget_data->>'longitude')::decimal,
-              COALESCE((p_widget_data->>'zoomLevel')::integer, 15),
-              COALESCE(p_widget_data->>'mapStyle', 'roadmap'));
+              COALESCE((p_widget_data->>'zoom_level')::integer, 15),
+              COALESCE(p_widget_data->>'map_style', 'roadmap'));
     WHEN 'spotify' THEN
-      INSERT INTO "widgetSpotify" (id, "profileId", "spotifyUrl", "embedType", height, theme)
+      INSERT INTO widget_spotify (id, profile_id, spotify_url, embed_type, height, theme)
       VALUES (v_widget_id, p_profile_id, 
-              p_widget_data->>'spotifyUrl',
-              COALESCE(p_widget_data->>'embedType', 'playlist'),
+              p_widget_data->>'spotify_url',
+              COALESCE(p_widget_data->>'embed_type', 'playlist'),
               COALESCE((p_widget_data->>'height')::integer, 380),
               COALESCE(p_widget_data->>'theme', 'dark'));
     WHEN 'calendar' THEN
-      INSERT INTO "widgetCalendar" (id, "profileId", "calendlyUrl", title, "hideEventDetails", "hideCookieBanner")
+      INSERT INTO widget_calendar (id, profile_id, calendly_url, title, hide_event_details, hide_cookie_banner)
       VALUES (v_widget_id, p_profile_id,
-              p_widget_data->>'calendlyUrl',
+              p_widget_data->>'calendly_url',
               COALESCE(p_widget_data->>'title', 'Schedule a meeting'),
-              COALESCE((p_widget_data->>'hideEventDetails')::boolean, false),
-              COALESCE((p_widget_data->>'hideCookieBanner')::boolean, true));
+              COALESCE((p_widget_data->>'hide_event_details')::boolean, false),
+              COALESCE((p_widget_data->>'hide_cookie_banner')::boolean, true));
     WHEN 'separator' THEN
-      INSERT INTO "widgetSeparator" (id, "profileId", style, thickness, color, "marginTop", "marginBottom")
+      INSERT INTO widget_separator (id, profile_id, style, thickness, color, margin_top, margin_bottom)
       VALUES (v_widget_id, p_profile_id,
               COALESCE(p_widget_data->>'style', 'solid'),
               COALESCE((p_widget_data->>'thickness')::integer, 1),
               COALESCE(p_widget_data->>'color', '#cccccc'),
-              COALESCE((p_widget_data->>'marginTop')::integer, 20),
-              COALESCE((p_widget_data->>'marginBottom')::integer, 20));
+              COALESCE((p_widget_data->>'margin_top')::integer, 20),
+              COALESCE((p_widget_data->>'margin_bottom')::integer, 20));
     WHEN 'title' THEN
-      INSERT INTO "widgetTitle" (id, "profileId", text, "fontSize", "textAlign", "fontWeight")
+      INSERT INTO widget_title (id, profile_id, text, font_size, text_align, font_weight)
       VALUES (v_widget_id, p_profile_id,
               p_widget_data->>'text',
-              COALESCE(p_widget_data->>'fontSize', 'xl'),
-              COALESCE(p_widget_data->>'textAlign', 'center'),
-              COALESCE(p_widget_data->>'fontWeight', 'bold'));
+              COALESCE(p_widget_data->>'font_size', 'xl'),
+              COALESCE(p_widget_data->>'text_align', 'center'),
+              COALESCE(p_widget_data->>'font_weight', 'bold'));
     WHEN 'link' THEN
-      INSERT INTO "widgetLinks" (id, "profileId", title, url, description, icon)
+      INSERT INTO widget_links (id, profile_id, title, url, description, icon)
       VALUES (v_widget_id, p_profile_id,
               p_widget_data->>'title',
               p_widget_data->>'url',
@@ -157,7 +157,7 @@ BEGIN
   -- Update profile
   UPDATE profiles
   SET widgets = v_new_widgets,
-      "updatedAt" = now()
+      updated_at = now()
   WHERE id = p_profile_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -174,8 +174,8 @@ DECLARE
 BEGIN
   -- Get template
   SELECT * INTO v_template
-  FROM "agentTemplates"
-  WHERE id = p_template_id AND "isActive" = true;
+  FROM agent_templates
+  WHERE id = p_template_id AND is_active = true;
   
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Template not found or inactive';
@@ -183,15 +183,15 @@ BEGIN
   
   -- Create agent
   INSERT INTO agents (
-    "userId",
-    "templateId",
+    user_id,
+    template_id,
     name,
     description,
     icon,
-    "systemPromptOverride",
-    "queryConfig",
-    "ragConfig",
-    "executionConfig"
+    system_prompt_override,
+    query_config,
+    rag_config,
+    execution_config
   ) VALUES (
     p_user_id,
     p_template_id,
@@ -199,30 +199,30 @@ BEGIN
     v_template.description,
     v_template.icon,
     NULL, -- No override initially
-    v_template."defaultQueryConfig",
-    v_template."defaultRagConfig",
-    v_template."defaultExecutionConfig"
+    v_template.default_query_config,
+    v_template.default_rag_config,
+    v_template.default_execution_config
   ) RETURNING id INTO v_agent_id;
   
   -- Add agent ID to user's profile
   UPDATE profiles
   SET agents = agents || to_jsonb(v_agent_id::text),
-      "updatedAt" = now()
+      updated_at = now()
   WHERE id = p_user_id;
   
   RETURN v_agent_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Function: Simplified handle_new_user (without links column)
+-- Function: Simplified handle_new_user
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
-  INSERT INTO public.profiles (id, username, "displayName", description, avatar, "socialLinks", agents, widgets)
+  INSERT INTO public.profiles (id, username, display_name, description, avatar, social_links, agents, widgets)
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'username', 'user_' || substring(NEW.id::text, 1, 8)),
-    COALESCE(NEW.raw_user_meta_data->>'displayName', NEW.email),
+    COALESCE(NEW.raw_user_meta_data->>'display_name', NEW.email),
     'Bienvenido a mi Nooble',
     COALESCE(NEW.raw_user_meta_data->>'avatar', ''),
     '[]'::jsonb,
@@ -234,8 +234,8 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Re-create trigger after updating function
-DROP TRIGGER IF EXISTS "onAuthUserCreated" ON auth.users;
-CREATE TRIGGER "onAuthUserCreated"
+DROP TRIGGER IF EXISTS "on_auth_user_created" ON auth.users;
+CREATE TRIGGER "on_auth_user_created"
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 

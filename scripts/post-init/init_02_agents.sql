@@ -1,63 +1,63 @@
 -- Nooble8 Agents Schema
--- Version: 4.0 - camelCase
--- Description: Agent templates and user agents with camelCase convention
+-- Version: 5.0 - Snake Case
+-- Description: Agent templates and user agents with snake_case convention
 
--- Step 1: Create agentTemplates table
-CREATE TABLE public."agentTemplates" (
+-- Step 1: Create agent_templates table
+CREATE TABLE public.agent_templates (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL UNIQUE,
   category text NOT NULL,
   description text,
   icon text DEFAULT '🤖',
-  "systemPromptTemplate" text NOT NULL,
-  "defaultQueryConfig" jsonb DEFAULT '{
+  system_prompt_template text NOT NULL,
+  default_query_config jsonb DEFAULT '{
     "model": "llama-3.3-70b-versatile",
     "temperature": 0.7,
-    "maxTokens": 4096,
-    "topP": 0.9,
-    "frequencyPenalty": 0.0,
-    "presencePenalty": 0.0,
+    "max_tokens": 4096,
+    "top_p": 0.9,
+    "frequency_penalty": 0.0,
+    "presence_penalty": 0.0,
     "stream": true
   }'::jsonb,
-  "defaultRagConfig" jsonb DEFAULT '{
-    "embeddingModel": "text-embedding-3-small",
-    "embeddingDimensions": 1536,
-    "chunkSize": 512,
-    "chunkOverlap": 50,
-    "topK": 10,
-    "similarityThreshold": 0.7,
-    "hybridSearch": false,
+  default_rag_config jsonb DEFAULT '{
+    "embedding_model": "text-embedding-3-small",
+    "embedding_dimensions": 1536,
+    "chunk_size": 512,
+    "chunk_overlap": 50,
+    "top_k": 10,
+    "similarity_threshold": 0.7,
+    "hybrid_search": false,
     "rerank": false
   }'::jsonb,
-  "defaultExecutionConfig" jsonb DEFAULT '{
-    "historyEnabled": true,
-    "historyWindow": 10,
-    "historyTtl": 3600,
-    "maxIterations": 5,
-    "timeoutSeconds": 30
+  default_execution_config jsonb DEFAULT '{
+    "history_enabled": true,
+    "history_window": 10,
+    "history_ttl": 3600,
+    "max_iterations": 5,
+    "timeout_seconds": 30
   }'::jsonb,
-  "isActive" boolean DEFAULT true,
-  "createdAt" timestamptz DEFAULT now(),
-  "updatedAt" timestamptz DEFAULT now()
+  is_active boolean DEFAULT true,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
 );
 
 -- Step 2: Create agents table
 CREATE TABLE public.agents (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  "userId" uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  "templateId" uuid REFERENCES public."agentTemplates"(id),
+  user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  template_id uuid REFERENCES public.agent_templates(id),
   name text NOT NULL,
   description text,
   icon text DEFAULT '🤖',
-  "systemPromptOverride" text, -- User's additional prompt
-  "queryConfig" jsonb NOT NULL,
-  "ragConfig" jsonb NOT NULL,
-  "executionConfig" jsonb NOT NULL,
-  "isActive" boolean DEFAULT true,
-  "isPublic" boolean DEFAULT true, -- Can be accessed by visitors
-  "createdAt" timestamptz DEFAULT now(),
-  "updatedAt" timestamptz DEFAULT now(),
-  CONSTRAINT unique_agent_name_per_user UNIQUE("userId", name)
+  system_prompt_override text, -- User's additional prompt
+  query_config jsonb NOT NULL,
+  rag_config jsonb NOT NULL,
+  execution_config jsonb NOT NULL,
+  is_active boolean DEFAULT true,
+  is_public boolean DEFAULT true, -- Can be accessed by visitors
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  CONSTRAINT unique_agent_name_per_user UNIQUE(user_id, name)
 );
 
 -- Step 3: Create a function to get the full system prompt
@@ -68,13 +68,13 @@ DECLARE
   v_override_prompt text;
 BEGIN
   SELECT 
-    at."systemPromptTemplate",
-    a."systemPromptOverride"
+    at.system_prompt_template,
+    a.system_prompt_override
   INTO 
     v_template_prompt,
     v_override_prompt
   FROM agents a
-  LEFT JOIN "agentTemplates" at ON a."templateId" = at.id
+  LEFT JOIN agent_templates at ON a.template_id = at.id
   WHERE a.id = agent_id;
   
   RETURN COALESCE(v_template_prompt, '') || 
@@ -90,18 +90,18 @@ $$ LANGUAGE plpgsql STABLE;
 CREATE OR REPLACE VIEW agents_with_prompt AS
 SELECT 
   a.*,
-  get_agent_system_prompt(a.id) as "systemPrompt"
+  get_agent_system_prompt(a.id) as system_prompt
 FROM agents a;
 
 -- Step 5: Create indexes
-CREATE INDEX idx_agents_user_id ON public.agents("userId");
-CREATE INDEX idx_agents_template_id ON public.agents("templateId");
-CREATE INDEX idx_agents_is_public ON public.agents("isPublic") WHERE "isPublic" = true;
-CREATE INDEX idx_agents_is_active ON public.agents("isActive") WHERE "isActive" = true;
+CREATE INDEX idx_agents_user_id ON public.agents(user_id);
+CREATE INDEX idx_agents_template_id ON public.agents(template_id);
+CREATE INDEX idx_agents_is_public ON public.agents(is_public) WHERE is_public = true;
+CREATE INDEX idx_agents_is_active ON public.agents(is_active) WHERE is_active = true;
 
--- Step 6: Add triggers for updatedAt
+-- Step 6: Add triggers for updated_at
 CREATE TRIGGER update_agent_templates_updated_at 
-  BEFORE UPDATE ON public."agentTemplates"
+  BEFORE UPDATE ON public.agent_templates
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_agents_updated_at 
@@ -109,8 +109,8 @@ CREATE TRIGGER update_agents_updated_at
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Step 7: Grant permissions
-GRANT SELECT ON public."agentTemplates" TO anon;
-GRANT SELECT ON public."agentTemplates" TO authenticated;
+GRANT SELECT ON public.agent_templates TO anon;
+GRANT SELECT ON public.agent_templates TO authenticated;
 
 GRANT ALL ON public.agents TO authenticated;
 GRANT SELECT ON public.agents TO anon;
@@ -119,35 +119,35 @@ GRANT SELECT ON agents_with_prompt TO authenticated;
 GRANT SELECT ON agents_with_prompt TO anon;
 
 -- Step 8: Enable RLS
-ALTER TABLE public."agentTemplates" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.agent_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.agents ENABLE ROW LEVEL SECURITY;
 
--- Step 9: RLS Policies for agentTemplates (read-only for everyone)
-CREATE POLICY "Agent templates are viewable by everyone" ON public."agentTemplates"
+-- Step 9: RLS Policies for agent_templates (read-only for everyone)
+CREATE POLICY "Agent templates are viewable by everyone" ON public.agent_templates
   FOR SELECT TO anon, authenticated
   USING (true);
 
 -- Step 10: RLS Policies for agents
 CREATE POLICY "Users can view their own agents" ON public.agents
   FOR SELECT TO authenticated
-  USING (auth.uid() = "userId");
+  USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can view public agents" ON public.agents
   FOR SELECT TO anon, authenticated
-  USING ("isPublic" = true);
+  USING (is_public = true);
 
 CREATE POLICY "Users can insert their own agents" ON public.agents
   FOR INSERT TO authenticated
-  WITH CHECK (auth.uid() = "userId");
+  WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users can update their own agents" ON public.agents
   FOR UPDATE TO authenticated
-  USING (auth.uid() = "userId")
-  WITH CHECK (auth.uid() = "userId");
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users can delete their own agents" ON public.agents
   FOR DELETE TO authenticated
-  USING (auth.uid() = "userId");
+  USING (auth.uid() = user_id);
 
 -- Step 11: Function to copy agent from template
 CREATE OR REPLACE FUNCTION copy_agent_from_template(
@@ -162,8 +162,8 @@ DECLARE
 BEGIN
   -- Get template
   SELECT * INTO v_template
-  FROM "agentTemplates"
-  WHERE id = p_template_id AND "isActive" = true;
+  FROM agent_templates
+  WHERE id = p_template_id AND is_active = true;
   
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Template not found or inactive';
@@ -171,17 +171,17 @@ BEGIN
   
   -- Insert new agent
   INSERT INTO agents (
-    "userId",
-    "templateId",
+    user_id,
+    template_id,
     name,
     description,
     icon,
-    "systemPromptOverride",
-    "queryConfig",
-    "ragConfig",
-    "executionConfig",
-    "isActive",
-    "isPublic"
+    system_prompt_override,
+    query_config,
+    rag_config,
+    execution_config,
+    is_active,
+    is_public
   ) VALUES (
     p_user_id,
     p_template_id,
@@ -189,9 +189,9 @@ BEGIN
     v_template.description,
     v_template.icon,
     NULL, -- No override initially
-    v_template."defaultQueryConfig",
-    v_template."defaultRagConfig",
-    v_template."defaultExecutionConfig",
+    v_template.default_query_config,
+    v_template.default_rag_config,
+    v_template.default_execution_config,
     true,
     true
   ) RETURNING id INTO v_new_agent_id;

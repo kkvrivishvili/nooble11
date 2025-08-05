@@ -1,6 +1,6 @@
 -- Nooble8 Core Schema
--- Version: 4.2 - Complete Reset + camelCase
--- Description: DROPS ALL DATA and recreates from scratch
+-- Version: 5.0 - Snake Case
+-- Description: DROPS ALL DATA and recreates from scratch with snake_case convention
 
 -- ============================================
 -- DANGER: THIS WILL DELETE ALL DATA
@@ -25,42 +25,42 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW."updatedAt" = now();
+    NEW.updated_at = now();
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
--- Step 1: Create profiles table with camelCase
+-- Step 1: Create profiles table with snake_case
 CREATE TABLE IF NOT EXISTS public.profiles (
   id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   username text UNIQUE NOT NULL,
-  "displayName" text NOT NULL,
+  display_name text NOT NULL,
   description text DEFAULT '',
   avatar text DEFAULT '',
-  "socialLinks" jsonb DEFAULT '[]'::jsonb,
+  social_links jsonb DEFAULT '[]'::jsonb,
   agents jsonb DEFAULT '[]'::jsonb, -- Array of agent UUIDs
-  widgets jsonb DEFAULT '[]'::jsonb, -- Ordered array of widgets with minimal info: [{id, type, position, isActive}]
+  widgets jsonb DEFAULT '[]'::jsonb, -- Ordered array of widgets with minimal info: [{id, type, position, is_active}]
   design jsonb DEFAULT '{
     "theme": {
-      "primaryColor": "#000000",
-      "backgroundColor": "#ffffff",
-      "borderRadius": "lg",
-      "fontFamily": "sans"
+      "primary_color": "#000000",
+      "background_color": "#ffffff",
+      "border_radius": "lg",
+      "font_family": "sans"
     },
     "layout": {
-      "linkStyle": "card",
-      "socialPosition": "top"
+      "link_style": "card",
+      "social_position": "top"
     }
   }'::jsonb,
-  "isPublic" boolean DEFAULT true,
-  "createdAt" timestamptz DEFAULT now(),
-  "updatedAt" timestamptz DEFAULT now(),
+  is_public boolean DEFAULT true,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
   version integer DEFAULT 1
 );
 
 -- Create indexes
 CREATE INDEX idx_profiles_username ON public.profiles(username);
-CREATE INDEX idx_profiles_is_public ON public.profiles("isPublic");
+CREATE INDEX idx_profiles_is_public ON public.profiles(is_public);
 CREATE INDEX idx_profiles_widgets ON public.profiles USING gin(widgets);
 
 -- Enable RLS
@@ -68,7 +68,7 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 -- Create basic RLS policies for profiles
 CREATE POLICY "Public profiles are viewable by everyone" ON public.profiles
-  FOR SELECT USING ("isPublic" = true);
+  FOR SELECT USING (is_public = true);
 
 CREATE POLICY "Users can view their own profile" ON public.profiles
   FOR SELECT USING (auth.uid() = id);
@@ -87,7 +87,7 @@ EXCEPTION
 END $$;
 
 -- Step 3: Update profiles comment
-COMMENT ON COLUMN public.profiles.widgets IS 'Ordered array of widgets with minimal info: [{id, type, position, isActive}]';
+COMMENT ON COLUMN public.profiles.widgets IS 'Ordered array of widgets with minimal info: [{id, type, position, is_active}]';
 COMMENT ON COLUMN public.profiles.agents IS 'Array of agent UUIDs owned by this profile';
 
 -- Step 4: Simplified validation functions (non-blocking)
@@ -123,7 +123,7 @@ CREATE TRIGGER validate_profile_agents_trigger
   BEFORE INSERT OR UPDATE ON public.profiles
   FOR EACH ROW EXECUTE FUNCTION validate_profile_agents();
 
--- Step 7: Apply the updatedAt trigger for profiles
+-- Step 7: Apply the updated_at trigger for profiles
 CREATE TRIGGER update_profiles_updated_at 
   BEFORE UPDATE ON public.profiles
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -132,11 +132,11 @@ CREATE TRIGGER update_profiles_updated_at
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
-  INSERT INTO public.profiles (id, username, "displayName", description, avatar, "socialLinks", agents, widgets)
+  INSERT INTO public.profiles (id, username, display_name, description, avatar, social_links, agents, widgets)
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'username', 'user_' || substring(NEW.id::text, 1, 8)),
-    COALESCE(NEW.raw_user_meta_data->>'displayName', NEW.email),
+    COALESCE(NEW.raw_user_meta_data->>'display_name', NEW.email),
     'Bienvenido a mi Nooble',
     COALESCE(NEW.raw_user_meta_data->>'avatar', ''),
     '[]'::jsonb,
@@ -148,7 +148,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Step 9: Create trigger for new users
-CREATE TRIGGER "onAuthUserCreated"
+CREATE TRIGGER "on_auth_user_created"
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 

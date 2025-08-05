@@ -1,3 +1,4 @@
+// src/api/public-profile-api.tsx - FIXED SNAKE_CASE VERSION
 import { supabase } from '@/lib/supabase';
 import { 
   Profile, 
@@ -38,8 +39,8 @@ class PublicProfileAPI {
       : [];
     
     // console.log('🎯 All widgets from profile:', widgets);
-    // console.log('🎯 Active widgets:', widgets.filter(w => w.isActive));
-    // console.log('🎯 Widget types:', widgets.map(w => ({ id: w.id, type: w.type, isActive: w.isActive })));
+    // console.log('🎯 Active widgets:', widgets.filter(w => w.is_active));
+    // console.log('🎯 Widget types:', widgets.map(w => ({ id: w.id, type: w.type, is_active: w.is_active })));
 
     // Get agents details
     const agentIds = (profile.agents || []) as string[];
@@ -47,7 +48,7 @@ class PublicProfileAPI {
     
     if (agentIds.length > 0) {
       const { data: agents, error: agentsError } = await supabase
-        .from('agents_with_prompt') // Using the view to get systemPrompt
+        .from('agents_with_prompt') // Using the view to get system_prompt
         .select('*')
         .in('id', agentIds);
 
@@ -58,7 +59,7 @@ class PublicProfileAPI {
 
     // Get link widgets
     const linkWidgetIds = sortedWidgets
-      .filter(w => w.type === 'link' && w.isActive)
+      .filter(w => w.type === 'link' && w.is_active)
       .map(w => w.id);
     
     console.log('Link widget IDs:', linkWidgetIds);
@@ -66,7 +67,7 @@ class PublicProfileAPI {
     let linkWidgets: ProfileLink[] = [];
     if (linkWidgetIds.length > 0) {
       const { data: links, error: linksError } = await supabase
-        .from('widgetLinks')
+        .from('widget_links')
         .select('*')
         .in('id', linkWidgetIds);
       
@@ -82,7 +83,7 @@ class PublicProfileAPI {
 
     // Get agent widgets
     const agentWidgetIds = sortedWidgets
-      .filter(w => w.type === 'agents' && w.isActive)
+      .filter(w => w.type === 'agents' && w.is_active)
       .map(w => w.id);
     
     console.log('Agent widget IDs:', agentWidgetIds);
@@ -90,7 +91,7 @@ class PublicProfileAPI {
     let agentWidgets: WidgetAgents[] = [];
     if (agentWidgetIds.length > 0) {
       const { data: agentWidgetsData, error: agentWidgetsError } = await supabase
-        .from('widgetAgents')
+        .from('widget_agents')
         .select('*')
         .in('id', agentWidgetIds);
       
@@ -106,7 +107,7 @@ class PublicProfileAPI {
 
     // Get separator widgets
     const separatorWidgetIds = sortedWidgets
-      .filter(w => w.type === 'separator' && w.isActive)
+      .filter(w => w.type === 'separator' && w.is_active)
       .map(w => w.id);
     
     console.log('Separator widget IDs:', separatorWidgetIds);
@@ -114,7 +115,7 @@ class PublicProfileAPI {
     let separatorWidgets: any[] = [];
     if (separatorWidgetIds.length > 0) {
       const { data: separatorWidgetsData, error: separatorWidgetsError } = await supabase
-        .from('widgetSeparator')
+        .from('widget_separator')
         .select('*')
         .in('id', separatorWidgetIds);
       
@@ -130,7 +131,7 @@ class PublicProfileAPI {
 
     // Get title widgets
     const titleWidgetIds = sortedWidgets
-      .filter(w => w.type === 'title' && w.isActive)
+      .filter(w => w.type === 'title' && w.is_active)
       .map(w => w.id);
     
     console.log('Title widget IDs:', titleWidgetIds);
@@ -138,7 +139,7 @@ class PublicProfileAPI {
     let titleWidgets: any[] = [];
     if (titleWidgetIds.length > 0) {
       const { data: titleWidgetsData, error: titleWidgetsError } = await supabase
-        .from('widgetTitle')
+        .from('widget_title')
         .select('*')
         .in('id', titleWidgetIds);
       
@@ -154,7 +155,7 @@ class PublicProfileAPI {
 
     // Get gallery widgets
     const galleryWidgetIds = sortedWidgets
-      .filter(w => w.type === 'gallery' && w.isActive)
+      .filter(w => w.type === 'gallery' && w.is_active)
       .map(w => w.id);
     
     console.log('Gallery widget IDs:', galleryWidgetIds);
@@ -162,7 +163,7 @@ class PublicProfileAPI {
     let galleryWidgets: WidgetGallery[] = [];
     if (galleryWidgetIds.length > 0) {
       const { data: galleryWidgetsData, error: galleryWidgetsError } = await supabase
-        .from('widgetGallery')
+        .from('widget_gallery')
         .select('*')
         .in('id', galleryWidgetIds);
       
@@ -178,7 +179,7 @@ class PublicProfileAPI {
 
     // Get YouTube widgets
     const youtubeWidgetIds = sortedWidgets
-      .filter(w => w.type === 'youtube' && w.isActive)
+      .filter(w => w.type === 'youtube' && w.is_active)
       .map(w => w.id);
     
     console.log('YouTube widget IDs:', youtubeWidgetIds);
@@ -186,7 +187,7 @@ class PublicProfileAPI {
     let youtubeWidgets: any[] = [];
     if (youtubeWidgetIds.length > 0) {
       const { data: youtubeWidgetsData, error: youtubeWidgetsError } = await supabase
-        .from('widgetYoutube')
+        .from('widget_youtube')
         .select('*')
         .in('id', youtubeWidgetIds);
       
@@ -202,7 +203,7 @@ class PublicProfileAPI {
 
     // Get Maps widgets
     const mapsWidgetIds = sortedWidgets
-      .filter(w => w.type === 'maps' && w.isActive)
+      .filter(w => w.type === 'maps' && w.is_active)
       .map(w => w.id);
     
     console.log('Maps widget IDs:', mapsWidgetIds);
@@ -210,7 +211,7 @@ class PublicProfileAPI {
     let mapsWidgets: any[] = [];
     if (mapsWidgetIds.length > 0) {
       const { data: mapsWidgetsData, error: mapsWidgetsError } = await supabase
-        .from('widgetMaps')
+        .from('widget_maps')
         .select('*')
         .in('id', mapsWidgetIds);
       
@@ -226,7 +227,7 @@ class PublicProfileAPI {
 
     // Get Spotify widgets
     const spotifyWidgetIds = sortedWidgets
-      .filter(w => w.type === 'spotify' && w.isActive)
+      .filter(w => w.type === 'spotify' && w.is_active)
       .map(w => w.id);
     
     console.log('Spotify widget IDs:', spotifyWidgetIds);
@@ -234,7 +235,7 @@ class PublicProfileAPI {
     let spotifyWidgets: any[] = [];
     if (spotifyWidgetIds.length > 0) {
       const { data: spotifyWidgetsData, error: spotifyWidgetsError } = await supabase
-        .from('widgetSpotify')
+        .from('widget_spotify')
         .select('*')
         .in('id', spotifyWidgetIds);
       
@@ -250,7 +251,7 @@ class PublicProfileAPI {
 
     // Get Calendar widgets
     const calendarWidgetIds = sortedWidgets
-      .filter(w => w.type === 'calendar' && w.isActive)
+      .filter(w => w.type === 'calendar' && w.is_active)
       .map(w => w.id);
     
     console.log('Calendar widget IDs:', calendarWidgetIds);
@@ -258,7 +259,7 @@ class PublicProfileAPI {
     let calendarWidgets: any[] = [];
     if (calendarWidgetIds.length > 0) {
       const { data: calendarWidgetsData, error: calendarWidgetsError } = await supabase
-        .from('widgetCalendar')
+        .from('widget_calendar')
         .select('*')
         .in('id', calendarWidgetIds);
       

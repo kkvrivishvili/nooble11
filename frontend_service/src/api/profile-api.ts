@@ -1,6 +1,5 @@
-// src/api/profile-api.ts - REFACTORED VERSION
-// This version removes all agent-related responsibilities
-// Agent operations should now use agents-api.ts instead
+// src/api/profile-api.ts - FIXED SNAKE_CASE VERSION
+// This version uses correct snake_case table names
 
 import { supabase } from '@/lib/supabase';
 import { 
@@ -45,7 +44,7 @@ class ProfileAPI {
     
     if (agentIds.length > 0) {
       const { data: agents, error: agentsError } = await supabase
-        .from('agents_with_prompt') // Using the view to get systemPrompt
+        .from('agents_with_prompt') // Using the view to get system_prompt
         .select('*')
         .in('id', agentIds);
 
@@ -55,7 +54,7 @@ class ProfileAPI {
     }
 
     // Get all widget data based on active widgets
-    const activeWidgets = sortedWidgets.filter((w: Widget) => w.isActive);
+    const activeWidgets = sortedWidgets.filter((w: Widget) => w.is_active);
     
     // Separate widget IDs by type
     const widgetIdsByType = activeWidgets.reduce((acc, widget) => {
@@ -80,47 +79,47 @@ class ProfileAPI {
     ] = await Promise.all([
       // Link widgets
       widgetIdsByType.link?.length > 0
-        ? supabase.from('widgetLinks').select('*').in('id', widgetIdsByType.link)
+        ? supabase.from('widget_links').select('*').in('id', widgetIdsByType.link)
         : Promise.resolve({ data: [] }),
       
       // Agent widgets
       widgetIdsByType.agents?.length > 0
-        ? supabase.from('widgetAgents').select('*').in('id', widgetIdsByType.agents)
+        ? supabase.from('widget_agents').select('*').in('id', widgetIdsByType.agents)
         : Promise.resolve({ data: [] }),
       
       // Gallery widgets
       widgetIdsByType.gallery?.length > 0
-        ? supabase.from('widgetGallery').select('*').in('id', widgetIdsByType.gallery)
+        ? supabase.from('widget_gallery').select('*').in('id', widgetIdsByType.gallery)
         : Promise.resolve({ data: [] }),
       
       // YouTube widgets
       widgetIdsByType.youtube?.length > 0
-        ? supabase.from('widgetYoutube').select('*').in('id', widgetIdsByType.youtube)
+        ? supabase.from('widget_youtube').select('*').in('id', widgetIdsByType.youtube)
         : Promise.resolve({ data: [] }),
       
       // Maps widgets
       widgetIdsByType.maps?.length > 0
-        ? supabase.from('widgetMaps').select('*').in('id', widgetIdsByType.maps)
+        ? supabase.from('widget_maps').select('*').in('id', widgetIdsByType.maps)
         : Promise.resolve({ data: [] }),
       
       // Spotify widgets
       widgetIdsByType.spotify?.length > 0
-        ? supabase.from('widgetSpotify').select('*').in('id', widgetIdsByType.spotify)
+        ? supabase.from('widget_spotify').select('*').in('id', widgetIdsByType.spotify)
         : Promise.resolve({ data: [] }),
       
       // Calendar widgets
       widgetIdsByType.calendar?.length > 0
-        ? supabase.from('widgetCalendar').select('*').in('id', widgetIdsByType.calendar)
+        ? supabase.from('widget_calendar').select('*').in('id', widgetIdsByType.calendar)
         : Promise.resolve({ data: [] }),
       
       // Separator widgets
       widgetIdsByType.separator?.length > 0
-        ? supabase.from('widgetSeparator').select('*').in('id', widgetIdsByType.separator)
+        ? supabase.from('widget_separator').select('*').in('id', widgetIdsByType.separator)
         : Promise.resolve({ data: [] }),
       
       // Title widgets
       widgetIdsByType.title?.length > 0
-        ? supabase.from('widgetTitle').select('*').in('id', widgetIdsByType.title)
+        ? supabase.from('widget_title').select('*').in('id', widgetIdsByType.title)
         : Promise.resolve({ data: [] })
     ]);
 
@@ -184,7 +183,7 @@ class ProfileAPI {
       .from('profiles')
       .update({
         ...payload,
-        updatedAt: new Date().toISOString()
+        updated_at: new Date().toISOString()
       })
       .eq('id', user.id)
       .select()
@@ -222,7 +221,7 @@ class ProfileAPI {
   /**
    * Create a new link widget
    */
-  async createLinkWidget(profileId: string, link: Omit<ProfileLink, 'id' | 'createdAt'>): Promise<string> {
+  async createLinkWidget(profileId: string, link: Omit<ProfileLink, 'id' | 'created_at'>): Promise<string> {
     const { data: widgetId, error } = await supabase
       .rpc('create_widget', {
         p_profile_id: profileId,
@@ -244,7 +243,7 @@ class ProfileAPI {
    */
   async updateLinkWidget(widgetId: string, data: Partial<ProfileLink>): Promise<void> {
     const { error } = await supabase
-      .from('widgetLinks')
+      .from('widget_links')
       .update(data)
       .eq('id', widgetId);
 
@@ -277,7 +276,7 @@ class ProfileAPI {
       .from('profiles')
       .update({ 
         widgets: reorderedWidgets,
-        updatedAt: new Date().toISOString()
+        updated_at: new Date().toISOString()
       })
       .eq('id', profileId);
 
@@ -340,8 +339,8 @@ class ProfileAPI {
    */
   async createAgentsWidget(profileId: string, agentsData: {
     title: string;
-    agentIds: string[];
-    displayStyle: 'card' | 'list' | 'bubble';
+    agent_ids: string[];
+    display_style: 'card' | 'list' | 'bubble';
   }): Promise<string> {
     const { data: widgetId, error } = await supabase
       .rpc('create_widget', {
@@ -349,8 +348,8 @@ class ProfileAPI {
         p_widget_type: 'agents',
         p_widget_data: {
           title: agentsData.title,
-          agentIds: agentsData.agentIds,
-          displayStyle: agentsData.displayStyle
+          agent_ids: agentsData.agent_ids,
+          display_style: agentsData.display_style
         }
       });
 
@@ -363,16 +362,16 @@ class ProfileAPI {
    */
   async updateAgentsWidget(widgetId: string, data: {
     title?: string;
-    agentIds?: string[];
-    displayStyle?: 'card' | 'list' | 'bubble';
+    agent_ids?: string[];
+    display_style?: 'card' | 'list' | 'bubble';
   }): Promise<void> {
     const updateData: Record<string, unknown> = {};
     if (data.title !== undefined) updateData.title = data.title;
-    if (data.agentIds !== undefined) updateData.agentIds = data.agentIds;
-    if (data.displayStyle !== undefined) updateData.displayStyle = data.displayStyle;
+    if (data.agent_ids !== undefined) updateData.agent_ids = data.agent_ids;
+    if (data.display_style !== undefined) updateData.display_style = data.display_style;
 
     const { error } = await supabase
-      .from('widgetAgents')
+      .from('widget_agents')
       .update(updateData)
       .eq('id', widgetId);
 
@@ -385,8 +384,8 @@ class ProfileAPI {
   async createGalleryWidget(profileId: string, gallery: {
     title?: string;
     products: string[];
-    showPrice?: boolean;
-    showDescription?: boolean;
+    show_price?: boolean;
+    show_description?: boolean;
     columns?: number;
   }): Promise<string> {
     const { data: widgetId, error } = await supabase
@@ -396,8 +395,8 @@ class ProfileAPI {
         p_widget_data: {
           title: gallery.title || '',
           products: gallery.products || [],
-          showPrice: gallery.showPrice ?? true,
-          showDescription: gallery.showDescription ?? true,
+          show_price: gallery.show_price ?? true,
+          show_description: gallery.show_description ?? true,
           columns: gallery.columns || 3
         }
       });
@@ -412,47 +411,43 @@ class ProfileAPI {
   async updateGalleryWidget(widgetId: string, data: {
     title?: string;
     products?: string[];
-    showPrice?: boolean;
-    showDescription?: boolean;
+    show_price?: boolean;
+    show_description?: boolean;
     columns?: number;
   }): Promise<void> {
     const updateData: Record<string, unknown> = {};
     if (data.title !== undefined) updateData.title = data.title;
     if (data.products !== undefined) updateData.products = data.products;
-    if (data.showPrice !== undefined) updateData.showPrice = data.showPrice;
-    if (data.showDescription !== undefined) updateData.showDescription = data.showDescription;
+    if (data.show_price !== undefined) updateData.show_price = data.show_price;
+    if (data.show_description !== undefined) updateData.show_description = data.show_description;
     if (data.columns !== undefined) updateData.columns = data.columns;
 
     const { error } = await supabase
-      .from('widgetGallery')
+      .from('widget_gallery')
       .update(updateData)
       .eq('id', widgetId);
 
     if (error) throw error;
   }
 
-  // ... (All other widget methods remain the same)
-  // YouTube, Maps, Spotify, Calendar, Separator, Title widgets
-  // (Keeping them as they are widget-related, not agent-related)
-
   /**
    * Create a new YouTube widget
    */
   async createYouTubeWidget(profileId: string, youtube: {
-    videoUrl: string;
+    video_url: string;
     title?: string;
     autoplay?: boolean;
-    showControls?: boolean;
+    show_controls?: boolean;
   }): Promise<string> {
     const { data: widgetId, error } = await supabase
       .rpc('create_widget', {
         p_profile_id: profileId,
         p_widget_type: 'youtube',
         p_widget_data: {
-          videoUrl: youtube.videoUrl,
+          video_url: youtube.video_url,
           title: youtube.title || '',
           autoplay: youtube.autoplay ?? false,
-          showControls: youtube.showControls ?? true
+          show_controls: youtube.show_controls ?? true
         }
       });
 
@@ -464,13 +459,13 @@ class ProfileAPI {
    * Update a YouTube widget
    */
   async updateYouTubeWidget(widgetId: string, data: {
-    videoUrl?: string;
+    video_url?: string;
     title?: string;
     autoplay?: boolean;
-    showControls?: boolean;
+    show_controls?: boolean;
   }): Promise<void> {
     const { error } = await supabase
-      .from('widgetYoutube')
+      .from('widget_youtube')
       .update(data)
       .eq('id', widgetId);
 
@@ -484,8 +479,8 @@ class ProfileAPI {
     address: string;
     latitude?: number;
     longitude?: number;
-    zoomLevel?: number;
-    mapStyle?: string;
+    zoom_level?: number;
+    map_style?: string;
   }): Promise<string> {
     const { data: widgetId, error } = await supabase
       .rpc('create_widget', {
@@ -495,8 +490,8 @@ class ProfileAPI {
           address: maps.address,
           latitude: maps.latitude,
           longitude: maps.longitude,
-          zoomLevel: maps.zoomLevel || 15,
-          mapStyle: maps.mapStyle || 'roadmap'
+          zoom_level: maps.zoom_level || 15,
+          map_style: maps.map_style || 'roadmap'
         }
       });
 
@@ -511,11 +506,11 @@ class ProfileAPI {
     address?: string;
     latitude?: number;
     longitude?: number;
-    zoomLevel?: number;
-    mapStyle?: string;
+    zoom_level?: number;
+    map_style?: string;
   }): Promise<void> {
     const { error } = await supabase
-      .from('widgetMaps')
+      .from('widget_maps')
       .update(data)
       .eq('id', widgetId);
 
@@ -526,8 +521,8 @@ class ProfileAPI {
    * Create a new Spotify widget
    */
   async createSpotifyWidget(profileId: string, spotify: {
-    spotifyUrl: string;
-    embedType?: 'track' | 'playlist' | 'album' | 'artist';
+    spotify_url: string;
+    embed_type?: 'track' | 'playlist' | 'album' | 'artist';
     height?: number;
     theme?: 'dark' | 'light';
   }): Promise<string> {
@@ -536,8 +531,8 @@ class ProfileAPI {
         p_profile_id: profileId,
         p_widget_type: 'spotify',
         p_widget_data: {
-          spotifyUrl: spotify.spotifyUrl,
-          embedType: spotify.embedType || 'playlist',
+          spotify_url: spotify.spotify_url,
+          embed_type: spotify.embed_type || 'playlist',
           height: spotify.height || 380,
           theme: spotify.theme || 'dark'
         }
@@ -551,13 +546,13 @@ class ProfileAPI {
    * Update a Spotify widget
    */
   async updateSpotifyWidget(widgetId: string, data: {
-    spotifyUrl?: string;
-    embedType?: 'track' | 'playlist' | 'album' | 'artist';
+    spotify_url?: string;
+    embed_type?: 'track' | 'playlist' | 'album' | 'artist';
     height?: number;
     theme?: 'dark' | 'light';
   }): Promise<void> {
     const { error } = await supabase
-      .from('widgetSpotify')
+      .from('widget_spotify')
       .update(data)
       .eq('id', widgetId);
 
@@ -568,20 +563,20 @@ class ProfileAPI {
    * Create a new Calendar widget
    */
   async createCalendarWidget(profileId: string, calendar: {
-    calendlyUrl: string;
+    calendly_url: string;
     title?: string;
-    hideEventDetails?: boolean;
-    hideCookieBanner?: boolean;
+    hide_event_details?: boolean;
+    hide_cookie_banner?: boolean;
   }): Promise<string> {
     const { data: widgetId, error } = await supabase
       .rpc('create_widget', {
         p_profile_id: profileId,
         p_widget_type: 'calendar',
         p_widget_data: {
-          calendlyUrl: calendar.calendlyUrl,
+          calendly_url: calendar.calendly_url,
           title: calendar.title || 'Schedule a meeting',
-          hideEventDetails: calendar.hideEventDetails ?? false,
-          hideCookieBanner: calendar.hideCookieBanner ?? true
+          hide_event_details: calendar.hide_event_details ?? false,
+          hide_cookie_banner: calendar.hide_cookie_banner ?? true
         }
       });
 
@@ -593,13 +588,13 @@ class ProfileAPI {
    * Update a Calendar widget
    */
   async updateCalendarWidget(widgetId: string, data: {
-    calendlyUrl?: string;
+    calendly_url?: string;
     title?: string;
-    hideEventDetails?: boolean;
-    hideCookieBanner?: boolean;
+    hide_event_details?: boolean;
+    hide_cookie_banner?: boolean;
   }): Promise<void> {
     const { error } = await supabase
-      .from('widgetCalendar')
+      .from('widget_calendar')
       .update(data)
       .eq('id', widgetId);
 
@@ -613,8 +608,8 @@ class ProfileAPI {
     style?: 'solid' | 'dashed' | 'dotted';
     thickness?: number;
     color?: string;
-    marginTop?: number;
-    marginBottom?: number;
+    margin_top?: number;
+    margin_bottom?: number;
   }): Promise<string> {
     const { data: widgetId, error } = await supabase
       .rpc('create_widget', {
@@ -624,8 +619,8 @@ class ProfileAPI {
           style: separator.style || 'solid',
           thickness: separator.thickness || 1,
           color: separator.color || '#cccccc',
-          marginTop: separator.marginTop || 20,
-          marginBottom: separator.marginBottom || 20
+          margin_top: separator.margin_top || 20,
+          margin_bottom: separator.margin_bottom || 20
         }
       });
 
@@ -640,11 +635,11 @@ class ProfileAPI {
     style?: 'solid' | 'dashed' | 'dotted';
     thickness?: number;
     color?: string;
-    marginTop?: number;
-    marginBottom?: number;
+    margin_top?: number;
+    margin_bottom?: number;
   }): Promise<void> {
     const { error } = await supabase
-      .from('widgetSeparator')
+      .from('widget_separator')
       .update(data)
       .eq('id', widgetId);
 
@@ -656,9 +651,9 @@ class ProfileAPI {
    */
   async createTitleWidget(profileId: string, title: {
     text: string;
-    fontSize?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
-    textAlign?: 'left' | 'center' | 'right';
-    fontWeight?: 'normal' | 'medium' | 'semibold' | 'bold';
+    font_size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
+    text_align?: 'left' | 'center' | 'right';
+    font_weight?: 'normal' | 'medium' | 'semibold' | 'bold';
   }): Promise<string> {
     const { data: widgetId, error } = await supabase
       .rpc('create_widget', {
@@ -666,9 +661,9 @@ class ProfileAPI {
         p_widget_type: 'title',
         p_widget_data: {
           text: title.text,
-          fontSize: title.fontSize || 'xl',
-          textAlign: title.textAlign || 'center',
-          fontWeight: title.fontWeight || 'bold'
+          font_size: title.font_size || 'xl',
+          text_align: title.text_align || 'center',
+          font_weight: title.font_weight || 'bold'
         }
       });
 
@@ -681,12 +676,12 @@ class ProfileAPI {
    */
   async updateTitleWidget(widgetId: string, data: {
     text?: string;
-    fontSize?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
-    textAlign?: 'left' | 'center' | 'right';
-    fontWeight?: 'normal' | 'medium' | 'semibold' | 'bold';
+    font_size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
+    text_align?: 'left' | 'center' | 'right';
+    font_weight?: 'normal' | 'medium' | 'semibold' | 'bold';
   }): Promise<void> {
     const { error } = await supabase
-      .from('widgetTitle')
+      .from('widget_title')
       .update(data)
       .eq('id', widgetId);
 
@@ -719,22 +714,22 @@ class ProfileAPI {
 
     // Sync all widget types - RLS policies will handle filtering
     const widgetTables = [
-      { table: 'widgetLinks', type: 'link' },
-      { table: 'widgetAgents', type: 'agents' },
-      { table: 'widgetGallery', type: 'gallery' },
-      { table: 'widgetYoutube', type: 'youtube' },
-      { table: 'widgetMaps', type: 'maps' },
-      { table: 'widgetSpotify', type: 'spotify' },
-      { table: 'widgetCalendar', type: 'calendar' },
-      { table: 'widgetSeparator', type: 'separator' },
-      { table: 'widgetTitle', type: 'title' }
+      { table: 'widget_links', type: 'link' },
+      { table: 'widget_agents', type: 'agents' },
+      { table: 'widget_gallery', type: 'gallery' },
+      { table: 'widget_youtube', type: 'youtube' },
+      { table: 'widget_maps', type: 'maps' },
+      { table: 'widget_spotify', type: 'spotify' },
+      { table: 'widget_calendar', type: 'calendar' },
+      { table: 'widget_separator', type: 'separator' },
+      { table: 'widget_title', type: 'title' }
     ];
 
     for (const { table, type } of widgetTables) {
       const { data: widgets } = await supabase
         .from(table)
-        .select('id, createdAt')
-        .order('createdAt', { ascending: true });
+        .select('id, created_at')
+        .order('created_at', { ascending: true });
 
       if (widgets && widgets.length > 0) {
         for (const widget of widgets) {
@@ -742,7 +737,7 @@ class ProfileAPI {
             id: widget.id,
             type: type,
             position: position++,
-            isActive: true
+            is_active: true
           });
         }
       }
@@ -754,7 +749,7 @@ class ProfileAPI {
         .from('profiles')
         .update({ 
           widgets: widgetEntries,
-          updatedAt: new Date().toISOString()
+          updated_at: new Date().toISOString()
         })
         .eq('id', profileId);
 

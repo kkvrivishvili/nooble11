@@ -24,9 +24,9 @@ class AgentsAPI {
    */
   async getAgentTemplates(): Promise<AgentTemplate[]> {
     const { data, error } = await supabase
-      .from('agentTemplates')
+      .from('agent_templates')
       .select('*')
-      .eq('isActive', true)
+      .eq('is_active', true)
       .order('name');
 
     handleApiError(error, 'getAgentTemplates');
@@ -40,11 +40,11 @@ class AgentsAPI {
     const userId = await getUserId();
     
     const { data, error } = await supabase
-      .from('agents_with_prompt') // Using the view to get systemPrompt
+      .from('agents_with_prompt') // Using the view to get system_prompt
       .select('*')
-      .eq('userId', userId)
-      .eq('isActive', true)
-      .order('createdAt', { ascending: false });
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
 
     handleApiError(error, 'getUserAgents');
     return data || [];
@@ -57,9 +57,9 @@ class AgentsAPI {
     const { data, error } = await supabase
       .from('agents_with_prompt')
       .select('*')
-      .eq('userId', profileId)
-      .eq('isActive', true)
-      .eq('isPublic', true)
+      .eq('user_id', profileId)
+      .eq('is_active', true)
+      .eq('is_public', true)
       .order('name');
 
     handleApiError(error, 'getPublicAgentsByProfile');
@@ -127,46 +127,46 @@ class AgentsAPI {
     const defaultQueryConfig = {
       model: "llama-3.3-70b-versatile",
       temperature: 0.7,
-      maxTokens: 4096,
-      topP: 0.9,
-      frequencyPenalty: 0.0,
-      presencePenalty: 0.0,
+      max_tokens: 4096,
+      top_p: 0.9,
+      frequency_penalty: 0.0,
+      presence_penalty: 0.0,
       stream: true
     };
 
     const defaultRagConfig = {
-      embeddingModel: "text-embedding-3-small",
-      embeddingDimensions: 1536,
-      chunkSize: 512,
-      chunkOverlap: 50,
-      topK: 10,
-      similarityThreshold: 0.7,
-      hybridSearch: false,
+      embedding_model: "text-embedding-3-small",
+      embedding_dimensions: 1536,
+      chunk_size: 512,
+      chunk_overlap: 50,
+      top_k: 10,
+      similarity_threshold: 0.7,
+      hybrid_search: false,
       rerank: false
     };
 
     const defaultExecutionConfig = {
-      historyEnabled: true,
-      historyWindow: 10,
-      historyTtl: 3600,
-      maxIterations: 5,
-      timeoutSeconds: 30
+      history_enabled: true,
+      history_window: 10,
+      history_ttl: 3600,
+      max_iterations: 5,
+      timeout_seconds: 30
     };
 
     const { data, error } = await supabase
       .from('agents')
       .insert({
-        userId,
-        templateId: null, // Custom agent
+        user_id: userId,
+        template_id: null, // Custom agent
         name: agentData.name,
         description: agentData.description,
         icon: agentData.icon || '🤖',
-        systemPromptOverride: agentData.systemPrompt,
-        queryConfig: defaultQueryConfig,
-        ragConfig: defaultRagConfig,
-        executionConfig: defaultExecutionConfig,
-        isPublic: agentData.isPublic ?? true,
-        isActive: true
+        system_prompt_override: agentData.systemPrompt,
+        query_config: defaultQueryConfig,
+        rag_config: defaultRagConfig,
+        execution_config: defaultExecutionConfig,
+        is_public: agentData.isPublic ?? true,
+        is_active: true
       })
       .select()
       .single();
@@ -184,13 +184,13 @@ class AgentsAPI {
    */
   async updateAgent(
     agentId: string, 
-    updates: Partial<Pick<Agent, 'name' | 'description' | 'icon' | 'systemPromptOverride' | 'isPublic' | 'isActive'>>
+    updates: Partial<Pick<Agent, 'name' | 'description' | 'icon' | 'system_prompt_override' | 'is_public' | 'is_active'>>
   ): Promise<Agent> {
     const userId = await getUserId();
 
     // Verify ownership
     const agent = await this.getAgentById(agentId);
-    if (!agent || agent.userId !== userId) {
+    if (!agent || agent.user_id !== userId) {
       throw new Error('Agent not found or access denied');
     }
 
@@ -198,7 +198,7 @@ class AgentsAPI {
       .from('agents')
       .update(updates)
       .eq('id', agentId)
-      .eq('userId', userId) // Double check ownership
+      .eq('user_id', userId) // Double check ownership
       .select()
       .single();
 
@@ -214,7 +214,7 @@ class AgentsAPI {
 
     // Verify ownership
     const agent = await this.getAgentById(agentId);
-    if (!agent || agent.userId !== userId) {
+    if (!agent || agent.user_id !== userId) {
       throw new Error('Agent not found or access denied');
     }
 
@@ -226,7 +226,7 @@ class AgentsAPI {
       .from('agents')
       .delete()
       .eq('id', agentId)
-      .eq('userId', userId); // Double check ownership
+      .eq('user_id', userId); // Double check ownership
 
     handleApiError(error, 'deleteAgent');
   }
@@ -240,7 +240,7 @@ class AgentsAPI {
       throw new Error('Agent not found');
     }
 
-    return this.updateAgent(agentId, { isPublic: !agent.isPublic });
+    return this.updateAgent(agentId, { is_public: !agent.is_public });
   }
 
   /**
@@ -250,7 +250,7 @@ class AgentsAPI {
     const userId = await getUserId();
     const originalAgent = await this.getAgentById(agentId);
     
-    if (!originalAgent || originalAgent.userId !== userId) {
+    if (!originalAgent || originalAgent.user_id !== userId) {
       throw new Error('Agent not found or access denied');
     }
 
@@ -259,17 +259,17 @@ class AgentsAPI {
     const { data, error } = await supabase
       .from('agents')
       .insert({
-        userId,
-        templateId: originalAgent.templateId,
+        user_id: userId,
+        template_id: originalAgent.template_id,
         name: duplicatedName,
         description: originalAgent.description,
         icon: originalAgent.icon,
-        systemPromptOverride: originalAgent.systemPromptOverride,
-        queryConfig: originalAgent.queryConfig,
-        ragConfig: originalAgent.ragConfig,
-        executionConfig: originalAgent.executionConfig,
-        isPublic: originalAgent.isPublic,
-        isActive: true
+        system_prompt_override: originalAgent.system_prompt_override,
+        query_config: originalAgent.query_config,
+        rag_config: originalAgent.rag_config,
+        execution_config: originalAgent.execution_config,
+        is_public: originalAgent.is_public,
+        is_active: true
       })
       .select()
       .single();
@@ -286,28 +286,28 @@ class AgentsAPI {
    * Update agent configuration (query, RAG, execution)
    */
   async updateAgentConfig(agentId: string, config: {
-    queryConfig?: Agent['queryConfig'];
-    ragConfig?: Agent['ragConfig'];
-    executionConfig?: Agent['executionConfig'];
+    query_config?: Agent['query_config'];
+    rag_config?: Agent['rag_config'];
+    execution_config?: Agent['execution_config'];
   }): Promise<Agent> {
     const userId = await getUserId();
 
     // Verify ownership
     const agent = await this.getAgentById(agentId);
-    if (!agent || agent.userId !== userId) {
+    if (!agent || agent.user_id !== userId) {
       throw new Error('Agent not found or access denied');
     }
 
     const updates: any = {};
-    if (config.queryConfig) updates.queryConfig = config.queryConfig;
-    if (config.ragConfig) updates.ragConfig = config.ragConfig;
-    if (config.executionConfig) updates.executionConfig = config.executionConfig;
+    if (config.query_config) updates.query_config = config.query_config;
+    if (config.rag_config) updates.rag_config = config.rag_config;
+    if (config.execution_config) updates.execution_config = config.execution_config;
 
     const { data, error } = await supabase
       .from('agents')
       .update(updates)
       .eq('id', agentId)
-      .eq('userId', userId)
+      .eq('user_id', userId)
       .select()
       .single();
 
@@ -337,7 +337,7 @@ class AgentsAPI {
         .from('profiles')
         .update({ 
           agents: updatedAgents,
-          updatedAt: new Date().toISOString()
+          updated_at: new Date().toISOString()
         })
         .eq('id', userId);
 
@@ -366,7 +366,7 @@ class AgentsAPI {
       .from('profiles')
       .update({ 
         agents: updatedAgents,
-        updatedAt: new Date().toISOString()
+        updated_at: new Date().toISOString()
       })
       .eq('id', userId);
 
@@ -385,7 +385,7 @@ class AgentsAPI {
 
     // Verify ownership
     const agent = await this.getAgentById(agentId);
-    if (!agent || agent.userId !== userId) {
+    if (!agent || agent.user_id !== userId) {
       throw new Error('Agent not found or access denied');
     }
 
@@ -393,25 +393,25 @@ class AgentsAPI {
     const { count: conversationCount, error: convError } = await supabase
       .from('conversations')
       .select('*', { count: 'exact', head: true })
-      .eq('agentId', agentId);
+      .eq('agent_id', agentId);
 
     // Get message count and last used
     const { data: messageStats, error: msgError } = await supabase
       .from('messages')
-      .select('createdAt')
-      .in('conversationId', 
+      .select('created_at')
+      .in('conversation_id', 
         supabase
           .from('conversations')
           .select('id')
-          .eq('agentId', agentId)
+          .eq('agent_id', agentId)
       )
-      .order('createdAt', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(1);
 
     return {
       totalConversations: conversationCount || 0,
       totalMessages: messageStats?.length || 0,
-      lastUsed: messageStats?.[0]?.createdAt
+      lastUsed: messageStats?.[0]?.created_at
     };
   }
 }
