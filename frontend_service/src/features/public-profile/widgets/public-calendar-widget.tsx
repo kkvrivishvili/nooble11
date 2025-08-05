@@ -6,51 +6,51 @@ import { getBorderRadius, getShadowStyle, getFontFamily } from '@/features/publi
 
 interface PublicCalendarWidgetProps extends PublicWidgetProps {
   data: {
-    calendlyUrl: string;
+    calendly_url: string;
     title: string;
-    hideEventDetails: boolean;
-    hideCookieBanner: boolean;
+    hide_event_details: boolean;
+    hide_cookie_banner: boolean;
   };
 }
 
 export function PublicCalendarWidget({ data, theme, className }: PublicCalendarWidgetProps) {
   const handleCalendlyClick = () => {
-    window.open(data.calendlyUrl, '_blank', 'noopener,noreferrer');
+    window.open(data.calendly_url, '_blank', 'noopener,noreferrer');
   };
 
   // Extract username from Calendly URL for display
   const getCalendlyUsername = () => {
-    const match = data.calendlyUrl.match(/calendly\.com\/([^/?]+)/);
+    const match = data.calendly_url.match(/calendly\.com\/([^/?]+)/);
     return match ? match[1] : 'usuario';
   };
 
   const containerStyles = {
     borderRadius: theme ? getBorderRadius(theme) : '1rem',
-    borderColor: theme?.primaryColor || '#e5e7eb',
-    backgroundColor: theme?.buttonFill === 'glass'
+    borderColor: theme?.primary_color || '#e5e7eb',
+    backgroundColor: theme?.button_fill === 'glass'
       ? 'rgba(255, 255, 255, 0.05)'
-      : `${theme?.primaryColor || '#f3f4f6'}05`,
-    backdropFilter: theme?.buttonFill === 'glass' ? 'blur(10px)' : 'none',
-    WebkitBackdropFilter: theme?.buttonFill === 'glass' ? 'blur(10px)' : 'none',
-    fontFamily: theme ? getFontFamily(theme.fontFamily) : 'sans-serif',
+      : `${theme?.primary_color || '#f3f4f6'}05`,
+    backdropFilter: theme?.button_fill === 'glass' ? 'blur(10px)' : 'none',
+    WebkitBackdropFilter: theme?.button_fill === 'glass' ? 'blur(10px)' : 'none',
+    fontFamily: theme ? getFontFamily(theme.font_family) : 'sans-serif',
   };
 
   const buttonStyles = {
-    backgroundColor: theme?.buttonFill === 'glass'
+    backgroundColor: theme?.button_fill === 'glass'
       ? 'rgba(255, 255, 255, 0.1)'
-      : theme?.buttonFill === 'outline'
+      : theme?.button_fill === 'outline'
       ? 'transparent'
-      : theme?.primaryColor || '#3b82f6',
-    color: theme?.buttonFill === 'outline'
-      ? theme?.primaryColor || '#3b82f6'
-      : theme?.buttonTextColor || '#ffffff',
-    border: theme?.buttonFill === 'outline'
-      ? `2px solid ${theme?.primaryColor || '#3b82f6'}`
+      : theme?.primary_color || '#3b82f6',
+    color: theme?.button_fill === 'outline'
+      ? theme?.primary_color || '#3b82f6'
+      : theme?.button_text_color || '#ffffff',
+    border: theme?.button_fill === 'outline'
+      ? `2px solid ${theme?.primary_color || '#3b82f6'}`
       : 'none',
     borderRadius: theme ? getBorderRadius(theme) : '9999px',
     boxShadow: theme ? getShadowStyle(theme) : 'none',
-    backdropFilter: theme?.buttonFill === 'glass' ? 'blur(10px)' : 'none',
-    WebkitBackdropFilter: theme?.buttonFill === 'glass' ? 'blur(10px)' : 'none',
+    backdropFilter: theme?.button_fill === 'glass' ? 'blur(10px)' : 'none',
+    WebkitBackdropFilter: theme?.button_fill === 'glass' ? 'blur(10px)' : 'none',
   };
 
   return (
@@ -64,12 +64,12 @@ export function PublicCalendarWidget({ data, theme, className }: PublicCalendarW
           <div 
             className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-3"
             style={{ 
-              backgroundColor: `${theme?.primaryColor || '#3b82f6'}20`,
-              borderRadius: theme?.borderRadius === 'sharp' ? '0.5rem' :
-                           theme?.borderRadius === 'round' ? '9999px' : '1rem',
+              backgroundColor: `${theme?.primary_color || '#3b82f6'}20`,
+              borderRadius: theme?.border_radius === 'sharp' ? '0.5rem' :
+                           theme?.border_radius === 'round' ? '9999px' : '1rem',
             }}
           >
-            <IconCalendar size={32} style={{ color: theme?.primaryColor || '#3b82f6' }} />
+            <IconCalendar size={32} style={{ color: theme?.primary_color || '#3b82f6' }} />
           </div>
           
           <BaseWidget.Text
@@ -97,7 +97,7 @@ export function PublicCalendarWidget({ data, theme, className }: PublicCalendarW
           <div className="flex items-center gap-2">
             <div 
               className="w-2 h-2 rounded-full" 
-              style={{ backgroundColor: theme?.primaryColor }}
+              style={{ backgroundColor: theme?.primary_color }}
             ></div>
             <BaseWidget.Text theme={theme} variant="primary" style={{ opacity: 0.8 }}>
               Selecciona fecha y hora disponible
@@ -106,7 +106,7 @@ export function PublicCalendarWidget({ data, theme, className }: PublicCalendarW
           <div className="flex items-center gap-2">
             <div 
               className="w-2 h-2 rounded-full" 
-              style={{ backgroundColor: theme?.primaryColor }}
+              style={{ backgroundColor: theme?.primary_color }}
             ></div>
             <BaseWidget.Text theme={theme} variant="primary" style={{ opacity: 0.8 }}>
               Confirmación automática por email
@@ -115,7 +115,7 @@ export function PublicCalendarWidget({ data, theme, className }: PublicCalendarW
           <div className="flex items-center gap-2">
             <div 
               className="w-2 h-2 rounded-full" 
-              style={{ backgroundColor: theme?.primaryColor }}
+              style={{ backgroundColor: theme?.primary_color }}
             ></div>
             <BaseWidget.Text theme={theme} variant="primary" style={{ opacity: 0.8 }}>
               Enlace de videollamada incluido
@@ -129,17 +129,17 @@ export function PublicCalendarWidget({ data, theme, className }: PublicCalendarW
           className="w-full py-4 px-6 font-semibold transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-3"
           style={buttonStyles}
           onMouseEnter={(e) => {
-            if (theme?.buttonFill === 'outline') {
-              e.currentTarget.style.backgroundColor = theme?.primaryColor || '#3b82f6';
-              e.currentTarget.style.color = theme?.buttonTextColor || '#ffffff';
-            } else if (theme?.buttonFill !== 'glass') {
+            if (theme?.button_fill === 'outline') {
+              e.currentTarget.style.backgroundColor = theme?.primary_color || '#3b82f6';
+              e.currentTarget.style.color = theme?.button_text_color || '#ffffff';
+            } else if (theme?.button_fill !== 'glass') {
               e.currentTarget.style.transform = 'scale(1.05)';
             }
           }}
           onMouseLeave={(e) => {
-            if (theme?.buttonFill === 'outline') {
+            if (theme?.button_fill === 'outline') {
               e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = theme?.primaryColor || '#3b82f6';
+              e.currentTarget.style.color = theme?.primary_color || '#3b82f6';
             }
             e.currentTarget.style.transform = '';
           }}

@@ -88,7 +88,7 @@ export default function ProfileComponent({
       {/* Social Links */}
       {showSocialLinks && (
         <SocialLinks 
-          socialLinks={profile.social_links || []}
+          social_links={profile.social_links || []}
           isPreview={isPreview}
           position="top"
           iconSize={20}

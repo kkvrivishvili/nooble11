@@ -3,7 +3,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { Label } from '@/components/ui/label';
 import { useProfile } from '@/context/profile-context';
 import { designApi, designPresets } from '@/api/design-api'; // ONLY use design-api
-import { ProfileDesign, ProfileWallpaper } from '@/types/profile';
+import { ProfileDesign, ProfileWallpaper, ProfileLayout } from '@/types/profile';
+
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -29,7 +30,7 @@ export default function DesignPage() {
   const {
     currentDesign,
     isLoading,
-    updateDesign,
+    updateDesign: _updateDesign,
     isSaving,
   } = useDesign(); // This hook uses design-api correctly
 
@@ -46,15 +47,64 @@ export default function DesignPage() {
   const handlePresetSelect = async (presetName: keyof typeof designPresets) => {
     try {
       const preset = designPresets[presetName];
-      setLocalDesign(preset);
+      setLocalDesign(camelToSnakeDesign(preset));
       
       // Apply preset immediately using design-api
       await designApi.applyPreset(presetName);
       toast.success(`"${presetName}" design applied successfully!`);
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to apply preset');
-      console.error('Error applying preset:', error);
     }
+  };
+
+  // Ensure presets (which may be camelCase) are normalized to snake_case
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const camelToSnakeDesign = (design: any): ProfileDesign => {
+    const theme = design?.theme ?? {};
+    const wp = theme?.wallpaper ?? {};
+    const layout = design?.layout ?? {};
+    const normalized: ProfileDesign = {
+      theme: {
+        primary_color: theme.primary_color ?? theme.primaryColor,
+        background_color: theme.background_color ?? theme.backgroundColor,
+        text_color: theme.text_color ?? theme.textColor,
+        button_text_color: theme.button_text_color ?? theme.buttonTextColor,
+        font_family: theme.font_family ?? theme.fontFamily,
+        font_size: theme.font_size ?? theme.fontSize,
+        border_radius: theme.border_radius ?? theme.borderRadius,
+        button_fill: theme.button_fill ?? theme.buttonFill,
+        button_shadow: theme.button_shadow ?? theme.buttonShadow,
+        wallpaper: wp && Object.keys(wp).length ? {
+          type: wp.type,
+          fill_color: wp.fill_color ?? wp.fillColor,
+          gradient_colors: wp.gradient_colors ?? wp.gradientColors,
+          gradient_direction: wp.gradient_direction ?? wp.gradientDirection,
+          gradient_type: wp.gradient_type ?? wp.gradientType,
+          pattern_type: wp.pattern_type ?? wp.patternType,
+          pattern_color: wp.pattern_color ?? wp.patternColor,
+          pattern_opacity: wp.pattern_opacity ?? wp.patternOpacity,
+          pattern_blur: wp.pattern_blur ?? wp.patternBlur,
+          pattern_blur_intensity: wp.pattern_blur_intensity ?? wp.patternBlurIntensity,
+          image_url: wp.image_url ?? wp.imageUrl,
+          image_position: wp.image_position ?? wp.imagePosition,
+          image_size: wp.image_size ?? wp.imageSize,
+          image_overlay: wp.image_overlay ?? wp.imageOverlay,
+          image_blur: wp.image_blur ?? wp.imageBlur,
+          image_blur_intensity: wp.image_blur_intensity ?? wp.imageBlurIntensity,
+          video_url: wp.video_url ?? wp.videoUrl,
+          video_muted: wp.video_muted ?? wp.videoMuted,
+          video_loop: wp.video_loop ?? wp.videoLoop,
+          video_overlay: wp.video_overlay ?? wp.videoOverlay,
+          video_blur: wp.video_blur ?? wp.videoBlur,
+          video_blur_intensity: wp.video_blur_intensity ?? wp.videoBlurIntensity,
+        } : undefined,
+      },
+      layout: {
+        social_position: layout.social_position ?? layout.socialPosition,
+        content_width: layout.content_width ?? layout.contentWidth,
+      }
+    };
+    return normalized;
   };
 
   const updateTheme = (updates: Partial<ProfileDesign['theme']>) => {
@@ -105,10 +155,9 @@ export default function DesignPage() {
       try {
         await designApi.updateDesign(design);
         // Don't show success toast for auto-saves to avoid spam
-        console.log('✅ Design auto-saved');
-      } catch (error) {
+        // auto-saved
+      } catch (_error) {
         toast.error('Failed to save design changes');
-        console.error('Auto-save error:', error);
       }
     }, 1500); // 1.5 second debounce
 
@@ -148,9 +197,8 @@ export default function DesignPage() {
     try {
       await designApi.updateDesign(localDesign);
       toast.success('Design saved successfully!');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to save design');
-      console.error('Manual save error:', error);
     }
   };
 
@@ -160,9 +208,8 @@ export default function DesignPage() {
       const defaultDesign = await designApi.resetToDefault();
       setLocalDesign(defaultDesign);
       toast.success('Design reset to default');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to reset design');
-      console.error('Reset error:', error);
     }
   };
 
@@ -269,37 +316,37 @@ export default function DesignPage() {
             <div className="space-y-6">
               <StyleSelector
                 label="Relleno"
-                value={localDesign.theme.buttonFill || 'solid'}
+                value={localDesign.theme.button_fill || 'solid'}
                 options={[
                   { value: 'solid', label: 'Sólido', icon: <IconSquare size={24} fill="currentColor" /> },
                   { value: 'glass', label: 'Cristal', icon: <IconSquare size={24} className="opacity-50" /> },
                   { value: 'outline', label: 'Contorno', icon: <IconSquare size={24} /> },
                 ]}
-                onChange={(value) => updateTheme({ buttonFill: value as ProfileDesign['theme']['buttonFill'] })}
+                onChange={(value) => updateTheme({ button_fill: value as ProfileDesign['theme']['button_fill'] })}
                 columns={3}
               />
               
               <StyleSelector
                 label="Bordes"
-                value={localDesign.theme.borderRadius || 'curved'}
+                value={localDesign.theme.border_radius || 'curved'}
                 options={[
                   { value: 'sharp', label: 'Recto', icon: <IconSquare size={24} /> },
                   { value: 'curved', label: 'Curvo', icon: <IconSquareRoundedFilled size={24} /> },
                   { value: 'round', label: 'Redondo', icon: <IconCircle size={24} /> },
                 ]}
-                onChange={(value) => updateTheme({ borderRadius: value as ProfileDesign['theme']['borderRadius'] })}
+                onChange={(value) => updateTheme({ border_radius: value as ProfileDesign['theme']['border_radius'] })}
                 columns={3}
               />
               
               <StyleSelector
                 label="Sombra"
-                value={localDesign.theme.buttonShadow || 'subtle'}
+                value={localDesign.theme.button_shadow || 'subtle'}
                 options={[
                   { value: 'none', label: 'Sin sombra', icon: <IconShadow size={24} className="opacity-30" /> },
                   { value: 'subtle', label: 'Sutil', icon: <IconShadow size={24} className="opacity-60" /> },
                   { value: 'hard', label: 'Dura', icon: <IconShadow size={24} /> },
                 ]}
-                onChange={(value) => updateTheme({ buttonShadow: value as ProfileDesign['theme']['buttonShadow'] })}
+                onChange={(value) => updateTheme({ button_shadow: value as ProfileDesign['theme']['button_shadow'] })}
                 columns={3}
               />
             </div>
@@ -309,7 +356,7 @@ export default function DesignPage() {
             <div className="space-y-6">
               <StyleSelector
                 label="Fuente"
-                value={localDesign.theme.fontFamily || 'sans'}
+                value={localDesign.theme.font_family || 'sans'}
                 options={[
                   { 
                     value: 'sans', 
@@ -327,7 +374,7 @@ export default function DesignPage() {
                     preview: <span style={{ fontFamily: 'monospace' }}>Aa Bb Cc</span>
                   },
                 ]}
-                onChange={(value) => updateTheme({ fontFamily: value as ProfileDesign['theme']['fontFamily'] })}
+                onChange={(value) => updateTheme({ font_family: value as ProfileDesign['theme']['font_family'] })}
                 columns={3}
               />
             </div>
@@ -335,7 +382,7 @@ export default function DesignPage() {
 
           {activeTab === 'layout' && (
             <LayoutControls
-              layout={localDesign.layout}
+              layout={(localDesign.layout ?? {}) as ProfileLayout}
               onChange={updateLayout}
             />
           )}
@@ -350,24 +397,24 @@ export default function DesignPage() {
           <div className="flex items-center justify-between">
             <Label>Color primario</Label>
             <ColorPicker
-              value={localDesign.theme.primaryColor}
-              onChange={(color) => updateTheme({ primaryColor: color })}
+              value={localDesign.theme.primary_color}
+              onChange={(color) => updateTheme({ primary_color: color })}
             />
           </div>
           
           <div className="flex items-center justify-between">
             <Label>Color de texto</Label>
             <ColorPicker
-              value={localDesign.theme.textColor || '#111827'}
-              onChange={(color) => updateTheme({ textColor: color })}
+              value={localDesign.theme.text_color || '#111827'}
+              onChange={(color) => updateTheme({ text_color: color })}
             />
           </div>
           
           <div className="flex items-center justify-between">
             <Label>Color de texto en botones</Label>
             <ColorPicker
-              value={localDesign.theme.buttonTextColor || '#ffffff'}
-              onChange={(color) => updateTheme({ buttonTextColor: color })}
+              value={localDesign.theme.button_text_color || '#ffffff'}
+              onChange={(color) => updateTheme({ button_text_color: color })}
             />
           </div>
         </div>

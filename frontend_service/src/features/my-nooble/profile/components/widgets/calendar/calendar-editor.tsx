@@ -12,22 +12,22 @@ export function CalendarEditor({
   data: initialData,
   onSave,
   onCancel,
-  isLoading = false,
+  is_loading = false,
 }: WidgetEditorProps<CalendarWidgetData>) {
   const [formData, setFormData] = useState<CalendarWidgetData>({
-    calendlyUrl: initialData?.calendlyUrl || '',
+    calendly_url: initialData?.calendly_url || '',
     title: initialData?.title || 'Agenda una reunión',
-    hideEventDetails: initialData?.hideEventDetails ?? false,
-    hideCookieBanner: initialData?.hideCookieBanner ?? true,
+    hide_event_details: initialData?.hide_event_details ?? false,
+    hide_cookie_banner: initialData?.hide_cookie_banner ?? true,
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isSaving, setIsSaving] = useState(false);
+  const [is_saving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
     const validation = validateCalendarData(formData);
     
-    if (!validation.isValid) {
+    if (!validation.is_valid) {
       setErrors(validation.errors);
       return;
     }
@@ -50,8 +50,8 @@ export function CalendarEditor({
       icon={IconCalendar}
       onSave={handleSave}
       onCancel={onCancel}
-      isLoading={isLoading}
-      isSaving={isSaving}
+      is_loading={is_loading}
+      is_saving={is_saving}
       error={errors.general}
     >
       {/* Calendly URL input */}
@@ -62,22 +62,22 @@ export function CalendarEditor({
         <Input
           type="url"
           placeholder="https://calendly.com/tu-usuario"
-          value={formData.calendlyUrl}
+          value={formData.calendly_url}
           onChange={(e) => {
-            setFormData({ ...formData, calendlyUrl: e.target.value });
-            if (errors.calendlyUrl) {
+            setFormData({ ...formData, calendly_url: e.target.value });
+            if (errors.calendly_url) {
               const newErrors = { ...errors };
-              delete newErrors.calendlyUrl;
+              delete newErrors.calendly_url;
               setErrors(newErrors);
             }
           }}
-          className={errors.calendlyUrl ? 'border-red-300' : ''}
-          disabled={isSaving || isLoading}
+          className={errors.calendly_url ? 'border-red-300' : ''}
+          disabled={is_saving || is_loading}
         />
-        {errors.calendlyUrl && (
+        {errors.calendly_url && (
           <p className="text-xs text-red-500 flex items-center gap-1">
             <IconAlertCircle size={12} />
-            {errors.calendlyUrl}
+            {errors.calendly_url}
           </p>
         )}
         <p className="text-xs text-gray-500">
@@ -102,7 +102,7 @@ export function CalendarEditor({
             }
           }}
           className={errors.title ? 'border-red-300' : ''}
-          disabled={isSaving || isLoading}
+          disabled={is_saving || is_loading}
           maxLength={100}
         />
         <div className="flex justify-between">
@@ -131,11 +131,11 @@ export function CalendarEditor({
           </div>
           <Switch
             id="hide-details"
-            checked={formData.hideEventDetails}
+            checked={formData.hide_event_details}
             onCheckedChange={(checked) => 
-              setFormData({ ...formData, hideEventDetails: checked })
+              setFormData({ ...formData, hide_event_details: checked })
             }
-            disabled={isSaving || isLoading}
+            disabled={is_saving || is_loading}
           />
         </div>
         
@@ -150,11 +150,11 @@ export function CalendarEditor({
           </div>
           <Switch
             id="hide-cookie"
-            checked={formData.hideCookieBanner}
+            checked={formData.hide_cookie_banner}
             onCheckedChange={(checked) => 
-              setFormData({ ...formData, hideCookieBanner: checked })
+              setFormData({ ...formData, hide_cookie_banner: checked })
             }
-            disabled={isSaving || isLoading}
+            disabled={is_saving || is_loading}
           />
         </div>
       </div>
