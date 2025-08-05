@@ -9,6 +9,9 @@ import {
   IconRectangleVertical,
 } from '@tabler/icons-react';
 
+type SocialPosition = 'top' | 'bottom' | 'hidden';
+type ContentWidth = 'narrow' | 'normal' | 'wide';
+
 interface LayoutControlsProps {
   layout: ProfileLayout;
   onChange: (updates: Partial<ProfileLayout>) => void;
@@ -31,17 +34,17 @@ export function LayoutControls({ layout, onChange }: LayoutControlsProps) {
     <div className="space-y-6">
       <StyleSelector
         label="Posición de redes sociales"
-        value={layout.socialPosition || 'top'}
+        value={layout.social_position || 'top'}
         options={socialPositionOptions}
-        onChange={(value) => onChange({ socialPosition: value as any })}
+        onChange={(value) => onChange({ social_position: value as SocialPosition })}
         columns={3}
       />
 
       <StyleSelector
         label="Ancho del contenido"
-        value={layout.contentWidth || 'normal'}
+        value={layout.content_width || 'normal'}
         options={contentWidthOptions}
-        onChange={(value) => onChange({ contentWidth: value as any })}
+        onChange={(value) => onChange({ content_width: value as ContentWidth })}
         columns={3}
       />
     </div>

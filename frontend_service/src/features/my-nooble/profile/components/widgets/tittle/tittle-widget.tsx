@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 export function TitleWidget({
   widget,
   data,
-  isEditing,
+  is_editing,
   onEdit,
   onDelete,
 }: WidgetComponentProps<TitleWidgetData>) {
@@ -37,15 +37,15 @@ export function TitleWidget({
     };
     
     return cn(
-      sizeClasses[data.fontSize],
-      weightClasses[data.fontWeight],
-      alignClasses[data.textAlign],
+      sizeClasses[data.font_size],
+      weightClasses[data.font_weight],
+      alignClasses[data.text_align],
       'text-gray-900 dark:text-gray-100'
     );
   };
 
   return (
-    <SortableWidget widget={widget} isDraggingDisabled={isEditing}>
+    <SortableWidget widget={widget} isDraggingDisabled={is_editing}>
       <div className="widget-header">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           {/* Icon */}
@@ -61,7 +61,7 @@ export function TitleWidget({
         <WidgetActions
           onEdit={onEdit}
           onDelete={onDelete}
-          disabled={isEditing}
+          disabled={is_editing}
           className="flex items-center gap-1"
         />
       </div>

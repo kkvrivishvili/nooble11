@@ -14,22 +14,22 @@ export function TitleEditor({
   data: initialData,
   onSave,
   onCancel,
-  isLoading = false,
+  is_loading = false,
 }: WidgetEditorProps<TitleWidgetData>) {
   const [formData, setFormData] = useState<TitleWidgetData>({
     text: initialData?.text || '',
-    fontSize: initialData?.fontSize || 'xl',
-    textAlign: initialData?.textAlign || 'center',
-    fontWeight: initialData?.fontWeight || 'bold',
+    font_size: initialData?.font_size || 'xl',
+    text_align: initialData?.text_align || 'center',
+    font_weight: initialData?.font_weight || 'bold',
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isSaving, setIsSaving] = useState(false);
+  const [is_saving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
     const validation = validateTitleData(formData);
     
-    if (!validation.isValid) {
+    if (!validation.is_valid) {
       setErrors(validation.errors);
       return;
     }
@@ -71,9 +71,9 @@ export function TitleEditor({
     };
     
     return cn(
-      sizeClasses[formData.fontSize],
-      weightClasses[formData.fontWeight],
-      alignClasses[formData.textAlign],
+      sizeClasses[formData.font_size],
+      weightClasses[formData.font_weight],
+      alignClasses[formData.text_align],
       'text-gray-900 dark:text-gray-100'
     );
   };
@@ -84,8 +84,8 @@ export function TitleEditor({
       icon={IconLetterT}
       onSave={handleSave}
       onCancel={onCancel}
-      isLoading={isLoading}
-      isSaving={isSaving}
+      is_loading={is_loading}
+      is_saving={is_saving}
       error={errors.general}
     >
       {/* Text input */}
@@ -105,7 +105,7 @@ export function TitleEditor({
             }
           }}
           className={errors.text ? 'border-red-300' : ''}
-          disabled={isSaving || isLoading}
+          disabled={is_saving || is_loading}
           maxLength={200}
         />
         <div className="flex justify-between">
@@ -127,9 +127,9 @@ export function TitleEditor({
           Tamaño de fuente
         </label>
         <Select
-          value={formData.fontSize}
+          value={formData.font_size}
           onValueChange={(value: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl') => 
-            setFormData({ ...formData, fontSize: value })
+            setFormData({ ...formData, font_size: value })
           }
         >
           <SelectTrigger>
@@ -150,9 +150,9 @@ export function TitleEditor({
       <div className="space-y-2">
         <Label className="text-sm font-medium">Alineación</Label>
         <RadioGroup
-          value={formData.textAlign}
+          value={formData.text_align}
           onValueChange={(value: 'left' | 'center' | 'right') => 
-            setFormData({ ...formData, textAlign: value })
+            setFormData({ ...formData, text_align: value })
           }
         >
           <div className="flex items-center space-x-2">
@@ -182,9 +182,9 @@ export function TitleEditor({
           Peso de fuente
         </label>
         <Select
-          value={formData.fontWeight}
+          value={formData.font_weight}
           onValueChange={(value: 'normal' | 'medium' | 'semibold' | 'bold') => 
-            setFormData({ ...formData, fontWeight: value })
+            setFormData({ ...formData, font_weight: value })
           }
         >
           <SelectTrigger>
