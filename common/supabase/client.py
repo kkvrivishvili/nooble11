@@ -206,17 +206,35 @@ class SupabaseClient:
         Returns:
             UserInfo o None si el token es inválido
         """
+        self.logger.info(f"Starting JWT verification with URL: {self.url}")
+        self.logger.debug(f"Token (first 20 chars): {token[:20]}...")
+        
         try:
+            # Test basic connectivity first
+            import requests
+            try:
+                test_url = f"{self.url}/auth/v1/user"
+                self.logger.info(f"Testing connectivity to: {test_url}")
+                test_response = requests.get(test_url, timeout=5)
+                self.logger.info(f"Connectivity test status: {test_response.status_code}")
+            except Exception as conn_e:
+                self.logger.error(f"Connectivity test failed: {conn_e}")
+            
             # Verify token with Supabase
+            self.logger.info("Attempting JWT verification with Supabase client")
             response = await asyncio.to_thread(
                 lambda: self.client.auth.get_user(token)
             )
             
+            self.logger.info(f"Supabase response received: {type(response)}")
+            
             if not response.user:
-                self.logger.warning("Invalid JWT token")
+                self.logger.warning("Invalid JWT token - no user in response")
                 return None
             
             user = response.user
+            self.logger.info(f"User found: {user.id}, email: {user.email}")
+            
             user_info = UserInfo(
                 id=uuid.UUID(user.id),
                 email=user.email,
@@ -226,14 +244,16 @@ class SupabaseClient:
                 updated_at=datetime.fromisoformat(user.updated_at.replace('Z', '+00:00')) if user.updated_at else None
             )
             
-            self.logger.debug(f"JWT verified for user {user.id}")
+            self.logger.info(f"JWT verified successfully for user {user.id}")
             return user_info
             
         except AuthError as e:
-            self.logger.warning(f"JWT verification failed: {str(e)}")
+            self.logger.error(f"JWT AuthError - Code: {getattr(e, 'code', 'unknown')}, Message: {str(e)}")
             return None
         except Exception as e:
-            self.logger.error(f"Error verifying JWT: {str(e)}")
+            self.logger.error(f"JWT verification exception - Type: {type(e).__name__}, Message: {str(e)}")
+            import traceback
+            self.logger.error(f"Full traceback: {traceback.format_exc()}")
             return None
     
     async def check_tenant_membership(self, user_id: str, tenant_id: str) -> bool:

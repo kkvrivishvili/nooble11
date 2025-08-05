@@ -630,8 +630,10 @@ services:
     ports:
       - "8002:8002"
     environment:
+      # Logging
+      - LOG_LEVEL=DEBUG
       # Supabase configuration
-      - SUPABASE_URL=http://kong:8000
+      - SUPABASE_URL=http://supabase-kong:8000
       - SUPABASE_ANON_KEY=${ANON_KEY}
       - SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
       - JWT_SECRET=${JWT_SECRET}
@@ -741,6 +743,9 @@ services:
       timeout: 10s
       retries: 5
 networks:
+  default:
+    name: nooble-network
+    external: true
   nooble-network:
     driver: bridge
     name: nooble-network
