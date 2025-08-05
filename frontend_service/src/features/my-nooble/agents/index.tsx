@@ -41,11 +41,11 @@ export default function AgentsPage() {
     };
   }, [setTitle, setSubPages, location.pathname]);
 
-    // Redirigir a team por defecto si estamos en /my-nooble/agents
-    if (location.pathname === '/my-nooble/agents' || location.pathname.endsWith('/')) {
-      return <Navigate to="/my-nooble/agents/team" replace />
-    }
-    
-    // Renderizar contenido de la sub-página actual
-    return null; // El Outlet del layout manejará la sub-página
+  // Redirigir a team por defecto si estamos en /my-nooble/agents
+  if (location.pathname === '/my-nooble/agents' || location.pathname.endsWith('/')) {
+    return <Navigate to="/my-nooble/agents/team" replace />
   }
+  
+  // Renderizar contenido de la sub-página actual
+  return null; // El Outlet del layout manejará la sub-página
+}

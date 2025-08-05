@@ -70,27 +70,6 @@ export interface AgentTemplate {
   updatedAt: string;
 }
 
-export interface Agent {
-  id: string;
-  userId: string;
-  templateId: string | null;
-  name: string;
-  description: string | null;
-  icon: string;
-  systemPromptOverride: string | null;
-  queryConfig: AgentTemplate['defaultQueryConfig'];
-  ragConfig: AgentTemplate['defaultRagConfig'];
-  executionConfig: AgentTemplate['defaultExecutionConfig'];
-  isActive: boolean;
-  isPublic: boolean;
-  createdAt: string;
-  updatedAt: string;
-  // Computed field from view or function
-  systemPrompt?: string;
-  // Template reference (if needed)
-  template?: AgentTemplate;
-}
-
 // Enhanced Design types
 export interface ProfileTheme {
   // Colors
@@ -338,4 +317,61 @@ export interface LinkTypeConfig {
   icon: string | IconComponent;
   urlPattern?: RegExp;
   placeholder: string;
+}
+
+// Agregar estos tipos si no existen
+export interface Agent {
+  id: string;
+  userId: string;
+  templateId?: string;
+  name: string;
+  description?: string;
+  icon: string;
+  systemPrompt?: string;
+  systemPromptOverride?: string;
+  queryConfig: {
+    model: string;
+    temperature: number;
+    maxTokens: number;
+    topP: number;
+    frequencyPenalty: number;
+    presencePenalty: number;
+    stream: boolean;
+  };
+  ragConfig: {
+    embeddingModel: string;
+    embeddingDimensions: number;
+    chunkSize: number;
+    chunkOverlap: number;
+    topK: number;
+    similarityThreshold: number;
+    hybridSearch: boolean;
+    rerank: boolean;
+  };
+  executionConfig: {
+    historyEnabled: boolean;
+    historyWindow: number;
+    historyTtl: number;
+    maxIterations: number;
+    timeoutSeconds: number;
+  };
+  isActive: boolean;
+  isPublic: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AgentTemplate {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  icon: string;
+  systemPromptTemplate: string;
+  defaultQueryConfig: Agent['queryConfig'];
+  defaultRagConfig: Agent['ragConfig'];
+  defaultExecutionConfig: Agent['executionConfig'];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }

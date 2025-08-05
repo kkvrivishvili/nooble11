@@ -1,6 +1,6 @@
 // src/features/my-nooble/agents/agents/components/agents-management.tsx
-import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -25,7 +25,7 @@ import {
 import { 
   IconPlus, 
   IconSearch, 
-  IconMoreVertical,
+  IconDotsVertical,
   IconEdit,
   IconCopy,
   IconTrash,
@@ -36,10 +36,10 @@ import {
 } from '@tabler/icons-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { agentsApi } from '@/api/agents-api';
-import { Agent, AgentTemplate } from '@/types/profile';
+import { Agent } from '@/types/profile';
 import { toast } from 'sonner';
 import { CreateAgentDialog } from './create-agent-dialog';
-import { EditAgentDialog } from './edit-agent-dialog';
+import { EditAgentDialog } from './edit-agent-dialog.tsx';
 
 export function AgentsManagement() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -249,7 +249,7 @@ export function AgentsManagement() {
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <IconMoreVertical size={16} />
+                          <IconDotsVertical size={16} />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">

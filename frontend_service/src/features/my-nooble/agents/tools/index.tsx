@@ -1,7 +1,7 @@
 import { useEffect, useCallback } from 'react';
 import { useLocation } from '@tanstack/react-router';
 import { usePageContext } from '@/context/page-context';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ToolsManagement } from './components/tools-management';
 
 export default function AgentsToolsPage() {
   const { setSubPages } = usePageContext();
@@ -36,24 +36,10 @@ export default function AgentsToolsPage() {
 
   useEffect(() => {
     updateSubPages();
-
     return () => {
       setSubPages([]);
     };
   }, [updateSubPages, setSubPages]);
 
-  return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Agent Tools</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">
-            Configure and manage tools available to your agents.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
-  );
+  return <ToolsManagement />;
 }

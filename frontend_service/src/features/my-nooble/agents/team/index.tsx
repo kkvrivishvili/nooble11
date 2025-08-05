@@ -1,9 +1,9 @@
 import { useEffect, useCallback } from 'react';
 import { useLocation } from '@tanstack/react-router';
 import { usePageContext } from '@/context/page-context';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { TeamManagement } from './components/team-management';
 
-export default function AgentsPage() {
+export default function AgentsTeamPage() {
   const { setSubPages } = usePageContext();
   const location = useLocation();
 
@@ -36,23 +36,10 @@ export default function AgentsPage() {
 
   useEffect(() => {
     updateSubPages();
-
     return () => {
       setSubPages([]);
     };
   }, [updateSubPages, setSubPages]);
-  return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Team Management</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">
-            Manage your team members and their permissions here.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
-  );
+
+  return <TeamManagement />;
 }

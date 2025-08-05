@@ -108,6 +108,94 @@ CREATE TRIGGER update_agents_updated_at
   BEFORE UPDATE ON public.agents
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Step 7: Grant permissions on the view (for RLS)
+-- Step 7: Grant permissions
+GRANT SELECT ON public."agentTemplates" TO anon;
+GRANT SELECT ON public."agentTemplates" TO authenticated;
+
+GRANT ALL ON public.agents TO authenticated;
+GRANT SELECT ON public.agents TO anon;
+
 GRANT SELECT ON agents_with_prompt TO authenticated;
 GRANT SELECT ON agents_with_prompt TO anon;
+
+-- Step 8: Enable RLS
+ALTER TABLE public."agentTemplates" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.agents ENABLE ROW LEVEL SECURITY;
+
+-- Step 9: RLS Policies for agentTemplates (read-only for everyone)
+CREATE POLICY "Agent templates are viewable by everyone" ON public."agentTemplates"
+  FOR SELECT TO anon, authenticated
+  USING (true);
+
+-- Step 10: RLS Policies for agents
+CREATE POLICY "Users can view their own agents" ON public.agents
+  FOR SELECT TO authenticated
+  USING (auth.uid() = "userId");
+
+CREATE POLICY "Users can view public agents" ON public.agents
+  FOR SELECT TO anon, authenticated
+  USING ("isPublic" = true);
+
+CREATE POLICY "Users can insert their own agents" ON public.agents
+  FOR INSERT TO authenticated
+  WITH CHECK (auth.uid() = "userId");
+
+CREATE POLICY "Users can update their own agents" ON public.agents
+  FOR UPDATE TO authenticated
+  USING (auth.uid() = "userId")
+  WITH CHECK (auth.uid() = "userId");
+
+CREATE POLICY "Users can delete their own agents" ON public.agents
+  FOR DELETE TO authenticated
+  USING (auth.uid() = "userId");
+
+-- Step 11: Function to copy agent from template
+CREATE OR REPLACE FUNCTION copy_agent_from_template(
+  p_user_id uuid,
+  p_template_id uuid,
+  p_agent_name text DEFAULT NULL
+)
+RETURNS uuid AS $$
+DECLARE
+  v_new_agent_id uuid;
+  v_template RECORD;
+BEGIN
+  -- Get template
+  SELECT * INTO v_template
+  FROM "agentTemplates"
+  WHERE id = p_template_id AND "isActive" = true;
+  
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Template not found or inactive';
+  END IF;
+  
+  -- Insert new agent
+  INSERT INTO agents (
+    "userId",
+    "templateId",
+    name,
+    description,
+    icon,
+    "systemPromptOverride",
+    "queryConfig",
+    "ragConfig",
+    "executionConfig",
+    "isActive",
+    "isPublic"
+  ) VALUES (
+    p_user_id,
+    p_template_id,
+    COALESCE(p_agent_name, v_template.name),
+    v_template.description,
+    v_template.icon,
+    NULL, -- No override initially
+    v_template."defaultQueryConfig",
+    v_template."defaultRagConfig",
+    v_template."defaultExecutionConfig",
+    true,
+    true
+  ) RETURNING id INTO v_new_agent_id;
+  
+  RETURN v_new_agent_id;
+END;
+$$ LANGUAGE plpgsql;

@@ -58,11 +58,89 @@ class SupabaseClient:
         if service_key:
             self.admin_client = create_client(url, service_key)
         
-
-        
         self.logger.info("Supabase client initialized")
     
-
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10)
+    )
+    async def get_agent_config(self, agent_id: str) -> Optional[AgentConfig]:
+        """
+        Obtiene la configuración completa de un agente.
+        Transforma de camelCase a snake_case.
+        
+        Args:
+            agent_id: ID del agente
+            
+        Returns:
+            AgentConfig o None si no se encuentra
+        """
+        try:
+            response = await asyncio.to_thread(
+                lambda: self.client.table('agents_with_prompt')
+                .select('*')
+                .eq('id', agent_id)
+                .single()
+                .execute()
+            )
+            
+            if not response.data:
+                self.logger.warning(f"Agent not found: {agent_id}")
+                return None
+            
+            # Transformar datos de camelCase a snake_case
+            agent_data = self._transform_agent_data(response.data)
+            
+            # Crear AgentConfig
+            agent_config = AgentConfig(
+                agent_id=uuid.UUID(agent_data['id']),
+                agent_name=agent_data['name'],
+                tenant_id=uuid.UUID(agent_data['user_id']),  # Usar userId como tenant_id
+                execution_config=agent_data['execution_config'],
+                query_config=agent_data['query_config'],
+                rag_config=agent_data['rag_config'],
+                created_at=datetime.fromisoformat(agent_data['created_at'].replace('Z', '+00:00')),
+                updated_at=datetime.fromisoformat(agent_data['updated_at'].replace('Z', '+00:00'))
+            )
+            
+            # Agregar system_prompt a query_config si existe
+            if 'system_prompt' in agent_data:
+                agent_config.query_config.system_prompt_template = agent_data['system_prompt']
+            
+            self.logger.debug(f"Agent config loaded for {agent_id}")
+            return agent_config
+            
+        except Exception as e:
+            self.logger.error(f"Error getting agent config for {agent_id}: {str(e)}")
+            raise SupabaseError(f"Failed to get agent config: {str(e)}")
+    
+    def _transform_agent_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Transforma datos de agente de camelCase a snake_case.
+        
+        Args:
+            data: Datos del agente en camelCase
+            
+        Returns:
+            Dict con datos en snake_case
+        """
+        return {
+            'id': data.get('id'),
+            'user_id': data.get('userId'),
+            'template_id': data.get('templateId'),
+            'name': data.get('name'),
+            'description': data.get('description'),
+            'icon': data.get('icon'),
+            'system_prompt': data.get('systemPrompt'),  # De la vista
+            'system_prompt_override': data.get('systemPromptOverride'),
+            'query_config': data.get('queryConfig', {}),
+            'rag_config': data.get('ragConfig', {}),
+            'execution_config': data.get('executionConfig', {}),
+            'is_active': data.get('isActive', True),
+            'is_public': data.get('isPublic', True),
+            'created_at': data.get('createdAt'),
+            'updated_at': data.get('updatedAt')
+        }
     
     @retry(
         stop=stop_after_attempt(3),
@@ -99,6 +177,7 @@ class SupabaseClient:
         except Exception as e:
             self.logger.error(f"Error getting tenant info for {tenant_id}: {str(e)}")
             raise SupabaseError(f"Failed to get tenant info: {str(e)}")
+    
     
     # Authentication Methods
     async def verify_jwt_token(self, token: str) -> Optional[UserInfo]:

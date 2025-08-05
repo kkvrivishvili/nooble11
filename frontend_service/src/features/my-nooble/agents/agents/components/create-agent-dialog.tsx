@@ -37,7 +37,7 @@ const createAgentSchema = z.object({
   description: z.string().optional(),
   icon: z.string().min(1, 'Please select an icon'),
   systemPrompt: z.string().min(10, 'System prompt must be at least 10 characters'),
-  isPublic: z.boolean().default(true),
+  isPublic: z.boolean(),
 });
 
 type CreateAgentFormData = z.infer<typeof createAgentSchema>;

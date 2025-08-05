@@ -10,6 +10,7 @@ from common.handlers.base_handler import BaseHandler
 from common.models.config_models import ExecutionConfig, QueryConfig, RAGConfig
 from common.clients.redis.cache_manager import CacheManager
 from common.supabase.client import SupabaseClient
+from common.supabase.models import AgentConfig
 
 from ..config.settings import OrchestratorSettings
 
@@ -32,19 +33,19 @@ class ConfigHandler(BaseHandler):
         self.supabase_client = supabase_client
         
         # Cache manager para configuraciones
-        self.cache_manager = CacheManager[Dict[str, Any]](
+        self.cache_manager = CacheManager[AgentConfig](
             redis_conn=direct_redis_conn,
-            state_model=dict,
+            state_model=AgentConfig,
             app_settings=app_settings,
             default_ttl=app_settings.config_cache_ttl
         )
         
         # Cache local en memoria (nivel 1)
-        self._local_cache: Dict[str, Tuple[Dict[str, Any], float]] = {}
+        self._local_cache: Dict[str, Tuple[AgentConfig, float]] = {}
     
     async def get_agent_configs(
         self,
-        tenant_id: uuid.UUID,
+        tenant_id: uuid.UUID,  # En realidad será el user_id del agente
         agent_id: uuid.UUID,
         session_id: uuid.UUID,
         task_id: uuid.UUID
@@ -53,7 +54,7 @@ class ConfigHandler(BaseHandler):
         Obtiene las configuraciones del agente con cache de dos niveles.
         
         Args:
-            tenant_id: ID del tenant
+            tenant_id: ID del tenant (user_id del dueño del agente)
             agent_id: ID del agente
             session_id: ID de la sesión
             task_id: ID de la tarea
@@ -61,38 +62,38 @@ class ConfigHandler(BaseHandler):
         Returns:
             Tupla con las tres configuraciones
         """
-        cache_key = f"{tenant_id}:{agent_id}"
+        cache_key = f"{agent_id}"  # Simplificado, solo usar agent_id
         
         try:
             # 1. Verificar cache local
             if cache_key in self._local_cache:
-                cached_data, _ = self._local_cache[cache_key]
+                agent_config, _ = self._local_cache[cache_key]
                 self._logger.debug(f"Config obtenida de cache local: {cache_key}")
-                return self._parse_configs(cached_data)
+                return self._extract_configs(agent_config)
             
             # 2. Verificar cache Redis
-            cached_data = await self.cache_manager.get(
+            cached_config = await self.cache_manager.get(
                 cache_type="agent_config",
-                context=[str(tenant_id), str(agent_id)]
+                context=[str(agent_id)]
             )
             
-            if cached_data:
-                self._local_cache[cache_key] = (cached_data, self._get_timestamp())
+            if cached_config:
+                self._local_cache[cache_key] = (cached_config, self._get_timestamp())
                 self._logger.debug(f"Config obtenida de cache Redis: {cache_key}")
-                return self._parse_configs(cached_data)
+                return self._extract_configs(cached_config)
             
             # 3. Obtener de Supabase
             self._logger.info(f"Obteniendo config de Supabase: {cache_key}")
             
-            agent_data = await self._fetch_from_supabase(tenant_id, agent_id)
+            agent_config = await self.supabase_client.get_agent_config(str(agent_id))
             
-            if not agent_data:
+            if not agent_config:
                 raise ValueError(f"Agente no encontrado: {agent_id}")
             
             # 4. Guardar en caches
-            await self._save_to_cache(tenant_id, agent_id, agent_data)
+            await self._save_to_cache(agent_id, agent_config)
             
-            return self._parse_configs(agent_data)
+            return self._extract_configs(agent_config)
             
         except Exception as e:
             self._logger.error(f"Error obteniendo configuraciones: {e}")
@@ -101,11 +102,10 @@ class ConfigHandler(BaseHandler):
     
     async def invalidate_agent_config(
         self,
-        tenant_id: uuid.UUID,
         agent_id: uuid.UUID
     ) -> None:
         """Invalida la configuración de un agente en todos los caches."""
-        cache_key = f"{tenant_id}:{agent_id}"
+        cache_key = f"{agent_id}"
         
         # Remover de cache local
         self._local_cache.pop(cache_key, None)
@@ -113,66 +113,39 @@ class ConfigHandler(BaseHandler):
         # Remover de cache Redis
         await self.cache_manager.delete(
             cache_type="agent_config",
-            context=[str(tenant_id), str(agent_id)]
+            context=[str(agent_id)]
         )
         
         self._logger.info(f"Config invalidada: {cache_key}")
     
-    async def _fetch_from_supabase(
-        self,
-        tenant_id: uuid.UUID,
-        agent_id: uuid.UUID
-    ) -> Optional[Dict[str, Any]]:
-        """Obtiene configuración desde Supabase."""
-        try:
-            # Usar el cliente Supabase
-            response = await self.supabase_client.client.table('agents').select(
-                'id, name, tenant_id, execution_config, query_config, rag_config'
-            ).eq('tenant_id', str(tenant_id)).eq('id', str(agent_id)).single().execute()
-            
-            if response.data:
-                return response.data
-            return None
-            
-        except Exception as e:
-            self._logger.error(f"Error obteniendo de Supabase: {e}")
-            return None
-    
     async def _save_to_cache(
         self,
-        tenant_id: uuid.UUID,
         agent_id: uuid.UUID,
-        agent_data: Dict[str, Any]
+        agent_config: AgentConfig
     ) -> None:
         """Guarda configuración en ambos niveles de cache."""
-        cache_key = f"{tenant_id}:{agent_id}"
+        cache_key = f"{agent_id}"
         
         # Guardar en cache Redis
         await self.cache_manager.save(
             cache_type="agent_config",
-            context=[str(tenant_id), str(agent_id)],
-            data=agent_data
+            context=[str(agent_id)],
+            data=agent_config
         )
         
         # Guardar en cache local
-        self._local_cache[cache_key] = (agent_data, self._get_timestamp())
+        self._local_cache[cache_key] = (agent_config, self._get_timestamp())
     
-    def _parse_configs(
+    def _extract_configs(
         self,
-        agent_data: Dict[str, Any]
+        agent_config: AgentConfig
     ) -> Tuple[ExecutionConfig, QueryConfig, RAGConfig]:
-        """Parsea las configuraciones desde los datos del agente."""
-        execution_config = ExecutionConfig.model_validate(
-            agent_data.get("execution_config", {})
+        """Extrae las configuraciones desde AgentConfig."""
+        return (
+            agent_config.execution_config,
+            agent_config.query_config,
+            agent_config.rag_config
         )
-        query_config = QueryConfig.model_validate(
-            agent_data.get("query_config", {})
-        )
-        rag_config = RAGConfig.model_validate(
-            agent_data.get("rag_config", {})
-        )
-        
-        return execution_config, query_config, rag_config
     
     def _get_default_configs(self) -> Tuple[ExecutionConfig, QueryConfig, RAGConfig]:
         """Retorna configuraciones por defecto."""

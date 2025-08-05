@@ -248,16 +248,16 @@ export default function AgentsKnowledgePage() {
             onDrop={handleDrop}
           >
             <IconUpload size={48} className="mx-auto text-gray-400 mb-4" />
-            <p className="text-lg font-medium mb-2">Arrastra y suelta archivos aquí</p>
+            <p className="text-lg font-medium mb-2">Drag and drop files here</p>
             <p className="text-sm text-gray-500 mb-4">
-              o haz clic para seleccionar archivos
+              or click to select files
             </p>
             <Button variant="outline">
               <IconPlus size={16} className="mr-2" />
-              Seleccionar archivos
+              Select files
             </Button>
             <p className="text-xs text-gray-500 mt-4">
-              Formatos soportados: PDF, TXT, DOC, DOCX, HTML
+              Supported formats: PDF, TXT, DOC, DOCX, HTML
             </p>
           </div>
 
@@ -267,7 +267,7 @@ export default function AgentsKnowledgePage() {
               <div className="relative">
                 <IconSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                 <Input
-                  placeholder="Buscar conocimiento..."
+                  placeholder="Search knowledge..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -276,22 +276,22 @@ export default function AgentsKnowledgePage() {
             </div>
             <Select value={filterType} onValueChange={setFilterType}>
               <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Tipo" />
+                <SelectValue placeholder="Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos los tipos</SelectItem>
+                <SelectItem value="all">All types</SelectItem>
                 <SelectItem value="pdf">PDF</SelectItem>
-                <SelectItem value="text">Texto</SelectItem>
-                <SelectItem value="doc">Documento</SelectItem>
-                <SelectItem value="link">Enlace</SelectItem>
+                <SelectItem value="text">Text</SelectItem>
+                <SelectItem value="doc">Document</SelectItem>
+                <SelectItem value="link">Link</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterAgent} onValueChange={setFilterAgent}>
               <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Agente" />
+                <SelectValue placeholder="Agent" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos los agentes</SelectItem>
+                <SelectItem value="all">All agents</SelectItem>
                 {agents.map((agent) => (
                   <SelectItem key={agent.id} value={agent.id}>
                     {agent.name}
@@ -306,12 +306,12 @@ export default function AgentsKnowledgePage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Tamaño</TableHead>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Agentes asignados</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Size</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Assigned agents</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -343,7 +343,7 @@ export default function AgentsKnowledgePage() {
                             ) : null
                           })}
                           {item.agentIds.length === 0 && (
-                            <span className="text-sm text-gray-500">Sin asignar</span>
+                            <span className="text-sm text-gray-500">Not assigned</span>
                           )}
                         </div>
                       </TableCell>
@@ -372,7 +372,7 @@ export default function AgentsKnowledgePage() {
                 {filteredKnowledge.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                      No se encontraron resultados
+                      No results found
                     </TableCell>
                   </TableRow>
                 )}
@@ -386,9 +386,9 @@ export default function AgentsKnowledgePage() {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Asignar agentes</DialogTitle>
+            <DialogTitle>Assign agents</DialogTitle>
             <DialogDescription>
-              Selecciona los agentes que tendrán acceso a este conocimiento.
+              Select the agents that will have access to this knowledge.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -423,10 +423,10 @@ export default function AgentsKnowledgePage() {
                 setSelectedAgentIds([])
               }}
             >
-              Cancelar
+              Cancel
             </Button>
             <Button onClick={handleSaveEdit}>
-              Guardar cambios
+              Save changes
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -434,20 +434,3 @@ export default function AgentsKnowledgePage() {
     </div>
   )
 }
-
-/*
-
-/my-nooble/agents/knowledge
-├── KnowledgeGrid
-│   ├── Columnas: Nombre, Tipo, Tamaño, Fecha, Agentes asignados
-│   ├── Acciones: Ver, Editar, Eliminar
-│   └── Filtros por tipo y agente
-│
-└── UploadZone
-    ├── Drag & drop
-    ├── Tipos: PDF, TXT, DOC, Links
-    └── Asignación a agentes
-
-
-
-*/

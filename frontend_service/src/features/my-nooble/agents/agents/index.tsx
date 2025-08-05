@@ -1,7 +1,7 @@
 import { useEffect, useCallback } from 'react';
 import { useLocation } from '@tanstack/react-router';
 import { usePageContext } from '@/context/page-context';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AgentsManagement } from './components/agents-management';
 
 export default function AgentsAgentsPage() {
   const { setSubPages } = usePageContext();
@@ -36,23 +36,10 @@ export default function AgentsAgentsPage() {
 
   useEffect(() => {
     updateSubPages();
-
     return () => {
       setSubPages([]);
     };
   }, [updateSubPages, setSubPages]);
-  return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Agent Management</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">
-            Manage your agents and their permissions here.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
-  );
+  
+  return <AgentsManagement />;
 }
