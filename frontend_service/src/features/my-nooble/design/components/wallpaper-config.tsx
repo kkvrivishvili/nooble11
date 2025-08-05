@@ -25,7 +25,7 @@ interface WallpaperConfigProps {
 
 export function WallpaperConfig({ wallpaper, onChange, theme }: WallpaperConfigProps) {
   const [customGradientColors, setCustomGradientColors] = useState<string[]>(
-    wallpaper?.gradientColors || ['#fbbf24', '#f97316', '#dc2626']
+    wallpaper?.gradient_colors || ['#fbbf24', '#f97316', '#dc2626']
   );
 
   const wallpaperTypes = [
@@ -88,32 +88,32 @@ export function WallpaperConfig({ wallpaper, onChange, theme }: WallpaperConfigP
     
     switch (type) {
       case 'fill':
-        newWallpaper.fillColor = theme?.backgroundColor || '#f3f4f6';
+        newWallpaper.fill_color = theme?.background_color || '#f3f4f6';
         break;
       case 'gradient':
-        newWallpaper.gradientColors = customGradientColors;
-        newWallpaper.gradientDirection = 'diagonal';
+        newWallpaper.gradient_colors = customGradientColors;
+        newWallpaper.gradient_direction = 'diagonal';
         break;
       case 'pattern':
-        newWallpaper.patternType = 'dots';
-        newWallpaper.patternColor = '#6b7280';
-        newWallpaper.patternOpacity = 0.2;
-        newWallpaper.patternBlur = false;
-        newWallpaper.patternBlurIntensity = 5;
+        newWallpaper.pattern_type = 'dots';
+        newWallpaper.pattern_color = '#6b7280';
+        newWallpaper.pattern_opacity = 0.2;
+        newWallpaper.pattern_blur = false;
+        newWallpaper.pattern_blur_intensity = 5;
         break;
       case 'image':
-        newWallpaper.imageUrl = '';
-        newWallpaper.imagePosition = 'center';
-        newWallpaper.imageSize = 'cover';
-        newWallpaper.imageBlur = false;
-        newWallpaper.imageBlurIntensity = 10;
+        newWallpaper.image_url = '';
+        newWallpaper.image_position = 'center';
+        newWallpaper.image_size = 'cover';
+        newWallpaper.image_blur = false;
+        newWallpaper.image_blur_intensity = 10;
         break;
       case 'video':
-        newWallpaper.videoUrl = '';
-        newWallpaper.videoMuted = true;
-        newWallpaper.videoLoop = true;
-        newWallpaper.videoBlur = false;
-        newWallpaper.videoBlurIntensity = 10;
+        newWallpaper.video_url = '';
+        newWallpaper.video_muted = true;
+        newWallpaper.video_loop = true;
+        newWallpaper.video_blur = false;
+        newWallpaper.video_blur_intensity = 10;
         break;
     }
     
@@ -128,7 +128,7 @@ export function WallpaperConfig({ wallpaper, onChange, theme }: WallpaperConfigP
     const newColors = [...customGradientColors, newColor];
     setCustomGradientColors(newColors);
     if (wallpaper?.type === 'gradient') {
-      onChange({ ...wallpaper, gradientColors: newColors });
+      onChange({ ...wallpaper, gradient_colors: newColors });
     }
   };
 
@@ -199,7 +199,7 @@ export function WallpaperConfig({ wallpaper, onChange, theme }: WallpaperConfigP
     const newColors = customGradientColors.filter((_, i) => i !== index);
     setCustomGradientColors(newColors);
     if (wallpaper?.type === 'gradient') {
-      onChange({ ...wallpaper, gradientColors: newColors });
+      onChange({ ...wallpaper, gradient_colors: newColors });
     }
   };
 
@@ -208,11 +208,11 @@ export function WallpaperConfig({ wallpaper, onChange, theme }: WallpaperConfigP
     newColors[index] = color;
     setCustomGradientColors(newColors);
     if (wallpaper?.type === 'gradient') {
-      onChange({ ...wallpaper, gradientColors: newColors });
+      onChange({ ...wallpaper, gradient_colors: newColors });
     }
   };
 
-  const QuickToggle = ({ label, checked, onChange }: any) => (
+  const QuickToggle = ({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) => (
     <button
       onClick={() => onChange(!checked)}
       className={cn(
@@ -236,7 +236,7 @@ export function WallpaperConfig({ wallpaper, onChange, theme }: WallpaperConfigP
         {wallpaperTypes.map((type) => {
           const Icon = type.icon;
           const isActive = wallpaper?.type === type.value;
-          const currentColor = wallpaper?.fillColor || theme?.backgroundColor || '#f3f4f6';
+          const currentColor = wallpaper?.fill_color || theme?.background_color || '#f3f4f6';
           
           return (
             <button
@@ -288,8 +288,8 @@ export function WallpaperConfig({ wallpaper, onChange, theme }: WallpaperConfigP
                 <p className="text-xs text-base-content/60">Elige un color sólido para tu fondo</p>
               </div>
               <ColorPicker
-                value={wallpaper.fillColor || '#f3f4f6'}
-                onChange={(color) => onChange({ ...wallpaper, fillColor: color })}
+                value={wallpaper.fill_color || '#f3f4f6'}
+                onChange={(color) => onChange({ ...wallpaper, fill_color: color })}
               />
             </div>
           </div>
@@ -308,8 +308,8 @@ export function WallpaperConfig({ wallpaper, onChange, theme }: WallpaperConfigP
                       setCustomGradientColors(preset.colors);
                       onChange({
                         ...wallpaper,
-                        gradientColors: preset.colors,
-                        gradientDirection: preset.direction
+                        gradient_colors: preset.colors,
+                        gradient_direction: preset.direction
                       });
                     }}
                     className="relative group"
@@ -317,7 +317,7 @@ export function WallpaperConfig({ wallpaper, onChange, theme }: WallpaperConfigP
                     <div
                       className={cn(
                         "h-12 rounded-lg transition-all",
-                        JSON.stringify(wallpaper.gradientColors) === JSON.stringify(preset.colors)
+                        JSON.stringify(wallpaper.gradient_colors) === JSON.stringify(preset.colors)
                           ? "ring-2 ring-primary"
                           : "hover:ring-2 hover:ring-base-300"
                       )}
@@ -395,11 +395,11 @@ export function WallpaperConfig({ wallpaper, onChange, theme }: WallpaperConfigP
                     key={dir.value}
                     onClick={() => onChange({
                       ...wallpaper,
-                      gradientDirection: dir.value as any
+                      gradient_direction: dir.value as any
                     })}
                     className={cn(
                       "flex-1 h-10 rounded-lg font-bold text-lg transition-all",
-                      wallpaper.gradientDirection === dir.value
+                      wallpaper.gradient_direction === dir.value
                         ? "bg-primary text-primary-content shadow-sm"
                         : "bg-base-100 text-base-content hover:bg-base-300"
                     )}
@@ -426,11 +426,11 @@ export function WallpaperConfig({ wallpaper, onChange, theme }: WallpaperConfigP
                   key={pattern.value}
                   onClick={() => onChange({
                     ...wallpaper,
-                    patternType: pattern.value as any
+                    pattern_type: pattern.value as any
                   })}
                   className={cn(
                     "relative h-20 rounded-xl overflow-hidden transition-all group",
-                    wallpaper.patternType === pattern.value
+                    wallpaper.pattern_type === pattern.value
                       ? "ring-2 ring-primary shadow-md"
                       : "ring-1 ring-base-300 hover:ring-base-400"
                   )}
@@ -442,7 +442,7 @@ export function WallpaperConfig({ wallpaper, onChange, theme }: WallpaperConfigP
                       pattern.className
                     )}
                     style={{
-                      backgroundColor: wallpaper.patternColor || '#6b7280',
+                      backgroundColor: wallpaper.pattern_color || '#6b7280',
                       backgroundImage: 
                         pattern.value === 'dots' ? 'radial-gradient(circle, currentColor 1px, transparent 1px)' :
                         pattern.value === 'lines' ? 'repeating-linear-gradient(45deg, transparent, transparent 10px, currentColor 10px, currentColor 11px)' :
@@ -457,7 +457,7 @@ export function WallpaperConfig({ wallpaper, onChange, theme }: WallpaperConfigP
                   <div className="absolute inset-0 flex items-center justify-center">
                     <span className={cn(
                       "text-sm font-medium px-3 py-1 rounded-full",
-                      wallpaper.patternType === pattern.value
+                      wallpaper.pattern_type === pattern.value
                         ? "bg-primary text-primary-content"
                         : "bg-base-100/80 text-base-content"
                     )}>
@@ -473,8 +473,8 @@ export function WallpaperConfig({ wallpaper, onChange, theme }: WallpaperConfigP
               <div className="p-4 bg-base-200 rounded-xl">
                 <Label className="text-sm font-medium mb-2">Color</Label>
                 <ColorPicker
-                  value={wallpaper.patternColor || '#6b7280'}
-                  onChange={(color) => onChange({ ...wallpaper, patternColor: color })}
+                  value={wallpaper.pattern_color || '#6b7280'}
+                  onChange={(color) => onChange({ ...wallpaper, pattern_color: color })}
                   className="w-full"
                 />
               </div>
@@ -483,17 +483,17 @@ export function WallpaperConfig({ wallpaper, onChange, theme }: WallpaperConfigP
                 <Label className="text-sm font-medium mb-2">Opacidad</Label>
                 <div className="flex items-center gap-3">
                   <Slider
-                    value={[(wallpaper.patternOpacity || 0.2) * 100]}
+                    value={[(wallpaper.pattern_opacity || 0.2) * 100]}
                     onValueChange={([value]) => onChange({
                       ...wallpaper,
-                      patternOpacity: value / 100
+                      pattern_opacity: value / 100
                     })}
                     max={100}
                     step={5}
                     className="flex-1"
                   />
                   <span className="text-sm font-mono text-base-content/60 w-10">
-                    {Math.round((wallpaper.patternOpacity || 0.2) * 100)}%
+                    {Math.round((wallpaper.pattern_opacity || 0.2) * 100)}%
                   </span>
                 </div>
               </div>
@@ -503,28 +503,28 @@ export function WallpaperConfig({ wallpaper, onChange, theme }: WallpaperConfigP
             <div className="flex items-center gap-2">
               <QuickToggle
                 label="Desenfocar"
-                checked={wallpaper.patternBlur ?? false}
+                checked={wallpaper.pattern_blur ?? false}
                 onChange={(checked: boolean) => onChange({
                   ...wallpaper,
-                  patternBlur: checked
+                  pattern_blur: checked
                 })}
               />
-              {wallpaper.patternBlur && (
+              {wallpaper.pattern_blur && (
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-base-200 rounded-full">
                   <span className="text-xs text-base-content/60">Intensidad:</span>
                   <input
                     type="range"
                     min="0"
                     max="20"
-                    value={wallpaper.patternBlurIntensity || 5}
+                    value={wallpaper.pattern_blur_intensity || 5}
                     onChange={(e) => onChange({
                       ...wallpaper,
-                      patternBlurIntensity: parseInt(e.target.value)
+                      pattern_blur_intensity: parseInt(e.target.value)
                     })}
                     className="w-20 h-1"
                   />
                   <span className="text-xs font-mono text-base-content/70">
-                    {wallpaper.patternBlurIntensity || 5}px
+                    {wallpaper.pattern_blur_intensity || 5}px
                   </span>
                 </div>
               )}
@@ -537,10 +537,10 @@ export function WallpaperConfig({ wallpaper, onChange, theme }: WallpaperConfigP
             <div className="p-4 bg-base-200 rounded-xl">
               <Label className="text-sm font-medium mb-2">URL de la imagen</Label>
               <Input
-                value={wallpaper.imageUrl || ''}
+                value={wallpaper.image_url || ''}
                 onChange={(e) => onChange({
                   ...wallpaper,
-                  imageUrl: e.target.value
+                  image_url: e.target.value
                 })}
                 placeholder="https://ejemplo.com/imagen.jpg"
                 className="font-mono text-sm bg-base-100"
@@ -559,10 +559,10 @@ export function WallpaperConfig({ wallpaper, onChange, theme }: WallpaperConfigP
                              pos === 'top' ? 'Arriba' : 
                              pos === 'bottom' ? 'Abajo' :
                              pos === 'left' ? 'Izquierda' : 'Derecha'}
-                      checked={wallpaper.imagePosition === pos}
+                      checked={wallpaper.image_position === pos}
                       onChange={() => onChange({
                         ...wallpaper,
-                        imagePosition: pos as any
+                        image_position: pos as any
                       })}
                     />
                   ))}
@@ -577,10 +577,10 @@ export function WallpaperConfig({ wallpaper, onChange, theme }: WallpaperConfigP
                       key={size}
                       label={size === 'cover' ? 'Cubrir' : 
                              size === 'contain' ? 'Contener' : 'Auto'}
-                      checked={wallpaper.imageSize === size}
+                      checked={wallpaper.image_size === size}
                       onChange={() => onChange({
                         ...wallpaper,
-                        imageSize: size as any
+                        image_size: size as any
                       })}
                     />
                   ))}
@@ -592,13 +592,13 @@ export function WallpaperConfig({ wallpaper, onChange, theme }: WallpaperConfigP
                 <div className="flex items-center gap-2">
                   <QuickToggle
                     label="Desenfocar"
-                    checked={wallpaper.imageBlur ?? false}
+                    checked={wallpaper.image_blur ?? false}
                     onChange={(checked: boolean) => onChange({
                       ...wallpaper,
-                      imageBlur: checked
+                      image_blur: checked
                     })}
                   />
-                  {wallpaper.imageBlur && (
+                  {wallpaper.image_blur && (
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-base-200 rounded-full">
                       <span className="text-xs text-base-content/60">Intensidad:</span>
                       <input
@@ -606,15 +606,15 @@ export function WallpaperConfig({ wallpaper, onChange, theme }: WallpaperConfigP
                         min="0"
                         max="50"
                         step="5"
-                        value={wallpaper.imageBlurIntensity || 10}
+                        value={wallpaper.image_blur_intensity || 10}
                         onChange={(e) => onChange({
                           ...wallpaper,
-                          imageBlurIntensity: parseInt(e.target.value)
+                          image_blur_intensity: parseInt(e.target.value)
                         })}
                         className="w-20 h-1"
                       />
                       <span className="text-xs font-mono text-base-content/70">
-                        {wallpaper.imageBlurIntensity || 10}px
+                        {wallpaper.image_blur_intensity || 10}px
                       </span>
                     </div>
                   )}
@@ -629,10 +629,10 @@ export function WallpaperConfig({ wallpaper, onChange, theme }: WallpaperConfigP
             <div className="p-4 bg-base-200 rounded-xl">
               <Label className="text-sm font-medium mb-2">URL del video</Label>
               <Input
-                value={wallpaper.videoUrl || ''}
+                value={wallpaper.video_url || ''}
                 onChange={(e) => onChange({
                   ...wallpaper,
-                  videoUrl: e.target.value
+                  video_url: e.target.value
                 })}
                 placeholder="https://ejemplo.com/video.mp4"
                 className="font-mono text-sm bg-base-100"
@@ -644,31 +644,31 @@ export function WallpaperConfig({ wallpaper, onChange, theme }: WallpaperConfigP
               <div className="flex flex-wrap gap-2">
                 <QuickToggle
                   label="Silenciado"
-                  checked={wallpaper.videoMuted ?? true}
+                  checked={wallpaper.video_muted ?? true}
                   onChange={(checked: boolean) => onChange({
                     ...wallpaper,
-                    videoMuted: checked
+                    video_muted: checked
                   })}
                 />
                 <QuickToggle
                   label="En bucle"
-                  checked={wallpaper.videoLoop ?? true}
+                  checked={wallpaper.video_loop ?? true}
                   onChange={(checked: boolean) => onChange({
                     ...wallpaper,
-                    videoLoop: checked
+                    video_loop: checked
                   })}
                 />
                 <QuickToggle
                   label="Desenfocar"
-                  checked={wallpaper.videoBlur ?? false}
+                  checked={wallpaper.video_blur ?? false}
                   onChange={(checked: boolean) => onChange({
                     ...wallpaper,
-                    videoBlur: checked
+                    video_blur: checked
                   })}
                 />
               </div>
               
-              {wallpaper.videoBlur && (
+              {wallpaper.video_blur && (
                 <div className="mt-2 flex items-center gap-2 px-3 py-1.5 bg-base-200 rounded-full w-fit">
                   <span className="text-xs text-base-content/60">Desenfoque:</span>
                   <input
@@ -676,15 +676,15 @@ export function WallpaperConfig({ wallpaper, onChange, theme }: WallpaperConfigP
                     min="0"
                     max="50"
                     step="5"
-                    value={wallpaper.videoBlurIntensity || 10}
+                    value={wallpaper.video_blur_intensity || 10}
                     onChange={(e) => onChange({
                       ...wallpaper,
-                      videoBlurIntensity: parseInt(e.target.value)
+                      video_blur_intensity: parseInt(e.target.value)
                     })}
                     className="w-20 h-1"
                   />
                   <span className="text-xs font-mono text-base-content/70">
-                    {wallpaper.videoBlurIntensity || 10}px
+                    {wallpaper.video_blur_intensity || 10}px
                   </span>
                 </div>
               )}
