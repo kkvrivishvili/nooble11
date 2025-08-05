@@ -83,9 +83,9 @@ export class BaseWidget {
     ({ theme, className, children, withShadow = false, withGlass = false, customRadius, style, ...props }, ref) => {
       const containerStyles: React.CSSProperties = {
         borderRadius: customRadius || (theme ? getBorderRadius(theme) : '0.5rem'),
-        fontFamily: theme?.fontFamily ? getFontFamily(theme.fontFamily) : undefined,
+        fontFamily: theme?.font_family ? getFontFamily(theme.font_family) : undefined,
         ...(withShadow && theme && { boxShadow: getShadowStyle(theme) }),
-        ...(withGlass && theme?.buttonFill === 'glass' && {
+        ...(withGlass && theme?.button_fill === 'glass' && {
           backgroundColor: 'rgba(255, 255, 255, 0.1)',
           backdropFilter: 'blur(10px)',
           WebkitBackdropFilter: 'blur(10px)',
@@ -121,25 +121,25 @@ export class BaseWidget {
         
         switch (variant) {
           case 'primary':
-            return theme.textColor || theme.primaryColor
+            return theme.text_color || theme.primary_color
           case 'secondary':
-            return theme.primaryColor
+            return theme.primary_color
           case 'muted':
-            return `${theme.textColor || theme.primaryColor}80` // 50% opacity
+            return `${theme.text_color || theme.primary_color}80` // 50% opacity
           default:
-            return theme.textColor || theme.primaryColor
+            return theme.text_color || theme.primary_color
         }
       }
 
       const textStyles: React.CSSProperties = {
         color: getTextColor(),
-        fontFamily: theme?.fontFamily ? getFontFamily(theme.fontFamily) : undefined,
+        fontFamily: theme?.font_family ? getFontFamily(theme.font_family) : undefined,
         ...style,
       }
 
       return (
         <Component
-          ref={ref as React.RefObject<any>['current']}
+          ref={ref as React.Ref<HTMLSpanElement>}
           className={cn("transition-colors duration-200", className)}
           style={textStyles}
           {...props}
@@ -164,7 +164,7 @@ export class BaseWidget {
       const linkStyles = theme ? getButtonStyles(theme, variant) : {}
       const hoverStyles = theme ? getButtonHoverStyles(theme) : {}
 
-      const handleClick = (e: React.MouseEvent) => {
+      const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
         if (onClick) {
           onClick(e)
         }
@@ -225,10 +225,10 @@ export class BaseWidget {
 
       return {
         borderRadius: getBorderRadius(theme),
-        fontFamily: getFontFamily(theme.fontFamily),
-        color: variant === 'primary' ? theme.textColor || theme.primaryColor : theme.primaryColor,
+        fontFamily: getFontFamily(theme.font_family),
+        color: variant === 'primary' ? theme.text_color || theme.primary_color : theme.primary_color,
         ...(withShadow && { boxShadow: getShadowStyle(theme) }),
-        ...(withGlass && theme.buttonFill === 'glass' && {
+        ...(withGlass && theme.button_fill === 'glass' && {
           backgroundColor: 'rgba(255, 255, 255, 0.1)',
           backdropFilter: 'blur(10px)',
           WebkitBackdropFilter: 'blur(10px)',

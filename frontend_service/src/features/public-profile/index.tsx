@@ -22,24 +22,24 @@ function ProfileWallpaper() {
   const { theme } = useProfileTheme();
   
   // Video wallpaper
-  if (theme.wallpaper?.type === 'video' && theme.wallpaper.videoUrl) {
+  if (theme.wallpaper?.type === 'video' && theme.wallpaper.video_url) {
     return (
       <div className="profile-video-wallpaper">
         <video
           autoPlay
-          loop={theme.wallpaper.videoLoop}
-          muted={theme.wallpaper.videoMuted}
+          loop={theme.wallpaper.video_loop}
+          muted={theme.wallpaper.video_muted}
           playsInline
           style={{
-            filter: theme.wallpaper.videoBlur ? `blur(${theme.wallpaper.videoBlurIntensity || 10}px)` : 'none'
+            filter: theme.wallpaper.video_blur ? `blur(${theme.wallpaper.video_blur_intensity || 10}px)` : 'none'
           }}
         >
-          <source src={theme.wallpaper.videoUrl} type="video/mp4" />
+          <source src={theme.wallpaper.video_url} type="video/mp4" />
         </video>
-        {theme.wallpaper.videoOverlay && (
+        {theme.wallpaper.video_overlay && (
           <div 
             className="absolute inset-0 z-0"
-            style={{ backgroundColor: theme.wallpaper.videoOverlay }}
+            style={{ backgroundColor: theme.wallpaper.video_overlay }}
           />
         )}
       </div>
@@ -76,7 +76,7 @@ function ProfileContent({ profile, isPreview }: { profile: ProfileWithAgents; is
           <ProfileComponent 
             profile={profile} 
             isPreview={isPreview}
-            showSocialLinks={layout.socialPosition === 'top'}
+            showSocialLinks={layout.social_position === 'top'}
           />
         </div>
         
@@ -89,7 +89,7 @@ function ProfileContent({ profile, isPreview }: { profile: ProfileWithAgents; is
         </div>
         
         {/* Bottom social links */}
-        {layout.socialPosition === 'bottom' && (
+        {layout.social_position === 'bottom' && (
           <div className="mt-6 profile-animate-in" style={{ animationDelay: '0.2s' }}>
             <SocialLinks 
               social_links={profile.social_links || []}

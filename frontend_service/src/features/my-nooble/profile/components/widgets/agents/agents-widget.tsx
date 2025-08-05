@@ -20,15 +20,15 @@ interface Message {
 }
 
 interface ChatState {
-  agentId: string;
+  agent_id: string;
   messages: Message[];
-  isLoading: boolean;
+  is_loading: boolean;
 }
 
 export function AgentsWidget({
   widget,
   data,
-  isEditing,
+  is_editing,
   onEdit,
   onDelete,
 }: WidgetComponentProps<AgentsWidgetData>) {
@@ -39,11 +39,11 @@ export function AgentsWidget({
   
   // Get agent details from profile
   const agents = profile?.agentDetails.filter(
-    agent => data.agentIds.includes(agent.id) && agent.isActive
+    agent => data.agent_ids.includes(agent.id) && agent.is_active
   ) || [];
 
   const handleAgentClick = (agent: Agent) => {
-    if (!isEditing) {
+    if (!is_editing) {
       if (expandedAgentId === agent.id) {
         setExpandedAgentId(null);
       } else {
@@ -53,14 +53,14 @@ export function AgentsWidget({
           setChatStates(prev => ({
             ...prev,
             [agent.id]: {
-              agentId: agent.id,
+              agent_id: agent.id,
               messages: [{
                 id: `welcome-${Date.now()}`,
                 role: 'assistant',
                 content: `¡Hola! Soy ${agent.name}. ${agent.description || '¿En qué puedo ayudarte hoy?'}`,
                 timestamp: new Date()
               }],
-              isLoading: false
+              is_loading: false
             }
           }));
         }
@@ -84,7 +84,7 @@ export function AgentsWidget({
       [agentId]: {
         ...prev[agentId],
         messages: [...prev[agentId].messages, userMessage],
-        isLoading: true
+        is_loading: true
       }
     }));
 
@@ -104,7 +104,7 @@ export function AgentsWidget({
         [agentId]: {
           ...prev[agentId],
           messages: [...prev[agentId].messages, assistantMessage],
-          isLoading: false
+          is_loading: false
         }
       }));
     }, 1000);
@@ -179,7 +179,7 @@ export function AgentsWidget({
                     </div>
                   </div>
                 ))}
-                {chatState.isLoading && (
+                {chatState.is_loading && (
                   <div className="flex gap-2">
                     <Avatar className="h-8 w-8 flex-shrink-0">
                       <AvatarFallback className="text-xs">{agent.icon}</AvatarFallback>
@@ -208,13 +208,13 @@ export function AgentsWidget({
                     handleSendMessage(agent.id);
                   }
                 }}
-                disabled={chatState.isLoading}
+                disabled={chatState.is_loading}
                 className="flex-1"
               />
               <Button
                 size="sm"
                 onClick={() => handleSendMessage(agent.id)}
-                disabled={!inputValue.trim() || chatState.isLoading}
+                disabled={!inputValue.trim() || chatState.is_loading}
               >
                 <IconSend size={16} />
               </Button>
@@ -282,7 +282,7 @@ export function AgentsWidget({
   );
 
   return (
-    <SortableWidget widget={widget} isDraggingDisabled={isEditing}>
+    <SortableWidget widget={widget} isDraggingDisabled={is_editing}>
       <div className="widget-header">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           {/* Icon */}
@@ -298,7 +298,7 @@ export function AgentsWidget({
         <WidgetActions
           onEdit={onEdit}
           onDelete={onDelete}
-          disabled={isEditing}
+          disabled={is_editing}
           className="flex items-center gap-1"
         />
       </div>
@@ -308,25 +308,25 @@ export function AgentsWidget({
         <>
           <div className={cn(
             "p-4 pt-3",
-            data.displayStyle === 'bubble' && "flex flex-wrap gap-2"
+            data.display_style === 'bubble' && "flex flex-wrap gap-2"
           )}>
-            {data.displayStyle === 'card' && (
+            {data.display_style === 'card' && (
               <div className="space-y-3">
                 {agents.map(renderAgentCard)}
               </div>
             )}
             
-            {data.displayStyle === 'list' && (
+            {data.display_style === 'list' && (
               <div className="space-y-2">
                 {agents.map(renderAgentList)}
               </div>
             )}
             
-            {data.displayStyle === 'bubble' && agents.map(renderAgentBubble)}
+            {data.display_style === 'bubble' && agents.map(renderAgentBubble)}
           </div>
           
           {/* Bubble view expanded chat */}
-          {data.displayStyle === 'bubble' && expandedAgentId && chatStates[expandedAgentId] && (
+          {data.display_style === 'bubble' && expandedAgentId && chatStates[expandedAgentId] && (
             <div className="p-4 pt-0">
               <div className="p-4 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
                 {/* Same chat component */}

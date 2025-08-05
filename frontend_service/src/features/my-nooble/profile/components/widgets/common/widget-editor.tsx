@@ -10,8 +10,8 @@ interface WidgetEditorProps {
   icon: IconComponent;
   onSave: () => Promise<void>;
   onCancel: () => void;
-  isLoading?: boolean;
-  isSaving?: boolean;
+  is_loading?: boolean;
+  is_saving?: boolean;
   error?: string;
   children: React.ReactNode;
   className?: string;
@@ -22,8 +22,8 @@ export function WidgetEditor({
   icon: Icon,
   onSave,
   onCancel,
-  isLoading = false,
-  isSaving = false,
+  is_loading = false,
+  is_saving = false,
   error,
   children,
   className
@@ -69,16 +69,16 @@ export function WidgetEditor({
       <div className="flex gap-2 pt-2">
         <Button
           onClick={onSave}
-          disabled={isSaving || isLoading}
+          disabled={is_saving || is_loading}
           className="flex-1"
         >
           <IconCheck size={16} className="mr-1" />
-          {isSaving ? 'Guardando...' : 'Guardar'}
+          {is_saving ? 'Guardando...' : 'Guardar'}
         </Button>
         <Button
           onClick={onCancel}
           variant="outline"
-          disabled={isSaving || isLoading}
+          disabled={is_saving || is_loading}
           className="flex-1"
         >
           <IconX size={16} className="mr-1" />
