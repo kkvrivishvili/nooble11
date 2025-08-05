@@ -4,11 +4,11 @@ WebSocket Manager para notificaciones de progreso de ingestion.
 import json
 import logging
 import uuid
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 from fastapi import WebSocket, WebSocketDisconnect, Query
 from common.websocket.base_websocket_manager import BaseWebSocketManager
-from common.websocket.models import WebSocketMessage
+from common.websocket.models import WebSocketMessage, ConnectionInfo
 
 from ..config.settings import IngestionSettings
 
@@ -62,13 +62,14 @@ class IngestionWebSocketManager(BaseWebSocketManager):
             await self.add_connection(
                 connection_id=connection_id,
                 websocket=websocket,
-                connection_info={
-                    "connection_id": connection_id,
-                    "connection_type": "ingestion",
-                    "task_id": task_id,
-                    "user_id": user_info.id,
-                    "is_authenticated": True
-                }
+                connection_info=ConnectionInfo(
+                    connection_id=connection_id,
+                    connection_type="ingestion",
+                    user_id=user_info.id,
+                    is_authenticated=True,
+                    session_id=None,
+                    agent_id=None
+                )
             )
             
             # Mapear task_id a connection
@@ -76,7 +77,7 @@ class IngestionWebSocketManager(BaseWebSocketManager):
                 self._task_connections[task_id] = []
             self._task_connections[task_id].append(connection_id)
             
-            self._logger.info(f"WebSocket conectado para task {task_id}")
+            self.logger.info(f"WebSocket conectado para task {task_id}")
             
             # Mantener conexión viva
             while True:
@@ -93,7 +94,7 @@ class IngestionWebSocketManager(BaseWebSocketManager):
                     break
                     
         except Exception as e:
-            self._logger.error(f"Error en WebSocket: {e}")
+            self.logger.error(f"Error en WebSocket: {e}")
         finally:
             if connection_id:
                 # Limpiar mapeos

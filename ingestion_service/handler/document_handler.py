@@ -25,7 +25,10 @@ class DocumentHandler(BaseHandler):
     async def process_document(
         self,
         request: DocumentIngestionRequest,
-        document_id: str
+        document_id: str,
+        tenant_id: str,
+        collection_id: str,
+        agent_ids: List[str]
     ) -> List[ChunkModel]:
         """Procesa documento y retorna chunks."""
         try:
@@ -33,9 +36,14 @@ class DocumentHandler(BaseHandler):
             document = await self._load_document(request)
             
             # Configurar parser
+            # Obtener parámetros de chunking desde la RAG config del request
+            cfg = getattr(request, "rag_config", None)
+            chunk_size = getattr(cfg, "chunk_size", 512)
+            chunk_overlap = getattr(cfg, "chunk_overlap", 50)
+
             self.chunk_parser = SentenceSplitter(
-                chunk_size=request.chunk_size,
-                chunk_overlap=request.chunk_overlap
+                chunk_size=chunk_size,
+                chunk_overlap=chunk_overlap
             )
             
             # Parsear en chunks
@@ -46,8 +54,11 @@ class DocumentHandler(BaseHandler):
             for idx, node in enumerate(nodes):
                 chunk = ChunkModel(
                     document_id=document_id,
+                    tenant_id=tenant_id,
                     content=node.get_content(),
                     chunk_index=idx,
+                    collection_id=collection_id,
+                    agent_ids=agent_ids or [],
                     metadata={
                         **request.metadata,
                         "document_name": request.document_name,

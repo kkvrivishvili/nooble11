@@ -43,6 +43,14 @@ async def ingest_document(
     - document_id siempre generado por el servicio
     """
     try:
+        logger.info(
+            "POST /ingest - user_id=%s tenant_id=%s doc_name=%s type=%s",
+            user_auth.get("user_id"),
+            user_auth.get("app_metadata", {}).get("tenant_id"),
+            getattr(request, "document_name", None),
+            getattr(request, "document_type", None),
+        )
+        
         # Extraer tenant_id del JWT
         # Por ahora usamos user_id como tenant_id hasta resolver JWT
         tenant_id = user_auth.get("app_metadata", {}).get("tenant_id")
@@ -58,8 +66,8 @@ async def ingest_document(
         
         # Procesar ingestion
         result = await ingestion_service.ingest_document(
-            tenant_id=uuid.UUID(tenant_id),
-            user_id=uuid.UUID(user_auth["user_id"]),
+            tenant_id=uuid.UUID(str(tenant_id)),
+            user_id=uuid.UUID(str(user_auth["user_id"])),
             request=request
         )
         
@@ -131,8 +139,8 @@ async def batch_ingest_documents(
                 
                 # Procesar documento
                 result = await ingestion_service.ingest_document(
-                    tenant_id=uuid.UUID(tenant_id),
-                    user_id=uuid.UUID(user_auth["user_id"]),
+                    tenant_id=uuid.UUID(str(tenant_id)),
+                    user_id=uuid.UUID(str(user_auth["user_id"])),
                     request=doc_request
                 )
                 
@@ -167,6 +175,7 @@ async def batch_ingest_documents(
 
 @router.post("/upload")
 async def upload_and_ingest(
+    http_request: Request,
     file: UploadFile = File(...),
     collection_id: Optional[str] = Body(None),
     agent_ids: Optional[List[str]] = Body(default_factory=list),
@@ -179,6 +188,15 @@ async def upload_and_ingest(
 ) -> IngestionResponse:
     """Upload y procesa un archivo."""
     try:
+        logger.info(
+            "POST /upload - user_id=%s tenant_id=%s filename=%s size=%s content_type=%s",
+            user_auth.get("user_id"),
+            user_auth.get("app_metadata", {}).get("tenant_id"),
+            getattr(file, "filename", None),
+            getattr(file, "size", None),
+            getattr(file, "content_type", None),
+        )
+        
         # Validar tamaño
         if file.size > settings.max_file_size_mb * 1024 * 1024:
             raise HTTPException(
@@ -217,7 +235,7 @@ async def upload_and_ingest(
         # Delegar a ingest_document
         return await ingest_document(
             request=request,
-            http_request=Request,
+            http_request=http_request,
             user_auth=user_auth,
             ingestion_service=ingestion_service
         )
@@ -246,7 +264,7 @@ async def delete_document(
             tenant_id = user_auth["user_id"]
         
         result = await ingestion_service.delete_document(
-            tenant_id=uuid.UUID(tenant_id),
+            tenant_id=uuid.UUID(str(tenant_id)),
             document_id=document_id,
             collection_id=collection_id
         )
@@ -286,7 +304,7 @@ async def update_document_agents(
             tenant_id = user_auth["user_id"]
         
         result = await ingestion_service.update_document_agents(
-            tenant_id=uuid.UUID(tenant_id),
+            tenant_id=uuid.UUID(str(tenant_id)),
             document_id=document_id,
             agent_ids=agent_ids,
             operation=operation
@@ -311,7 +329,7 @@ async def get_ingestion_status(
     try:
         status = await ingestion_service.get_task_status(
             task_id, 
-            uuid.UUID(user_auth["user_id"])
+            uuid.UUID(str(user_auth["user_id"]))
         )
         
         if not status:

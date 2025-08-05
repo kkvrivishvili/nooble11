@@ -235,13 +235,28 @@ class SupabaseClient:
             user = response.user
             self.logger.info(f"User found: {user.id}, email: {user.email}")
             
+            # created_at/updated_at may be str (ISO) or datetime, depending on library version
+            def _parse_dt(value):
+                try:
+                    if isinstance(value, datetime):
+                        return value
+                    if isinstance(value, str):
+                        # Normalize Zulu timezone to +00:00
+                        return datetime.fromisoformat(value.replace('Z', '+00:00'))
+                except Exception as dt_e:
+                    self.logger.warning(f"Failed to parse datetime '{value}': {dt_e}")
+                return None
+
+            created_dt = _parse_dt(getattr(user, 'created_at', None)) or datetime.utcnow()
+            updated_dt = _parse_dt(getattr(user, 'updated_at', None))
+
             user_info = UserInfo(
                 id=uuid.UUID(user.id),
                 email=user.email,
                 user_metadata=user.user_metadata or {},
                 app_metadata=user.app_metadata or {},
-                created_at=datetime.fromisoformat(user.created_at.replace('Z', '+00:00')),
-                updated_at=datetime.fromisoformat(user.updated_at.replace('Z', '+00:00')) if user.updated_at else None
+                created_at=created_dt,
+                updated_at=updated_dt
             )
             
             self.logger.info(f"JWT verified successfully for user {user.id}")

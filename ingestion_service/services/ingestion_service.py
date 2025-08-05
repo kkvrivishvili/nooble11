@@ -208,7 +208,7 @@ class IngestionService(BaseService):
         # Notificar via WebSocket
         if self.websocket_manager:
             await self.websocket_manager.send_progress_update(
-                task_id=task["task_id"],
+                task_id=str(task["task_id"]),
                 status=status.value,
                 message=message,
                 percentage=percentage,
@@ -300,6 +300,20 @@ class IngestionService(BaseService):
         # Usar RAG config del request o defaults
         rag_config = request.rag_config or RAGConfigRequest()
         
+        # Normalizar agent_ids cuando llegan como cadena JSON (p.ej. "[]" o "[\"id\"]")
+        try:
+            if isinstance(request.agent_ids, list) and len(request.agent_ids) == 1 and isinstance(request.agent_ids[0], str):
+                raw = request.agent_ids[0].strip()
+                if raw in ("", "[]", "null", "None"):
+                    request.agent_ids = []
+                elif (raw.startswith("[") and raw.endswith("]")):
+                    parsed = json.loads(raw)
+                    if isinstance(parsed, list):
+                        request.agent_ids = [str(x) for x in parsed if x]
+        except Exception as _e:
+            # Si falla el parseo, dejar agent_ids tal como vino y continuar
+            pass
+        
         # Validar consistencia del modelo en la collection
         await self._validate_collection_consistency(
             tenant_id=str(tenant_id),
@@ -350,12 +364,18 @@ class IngestionService(BaseService):
         """Valida que todos los docs en una collection usen el mismo modelo."""
         try:
             # Consultar si ya hay documentos en esta collection
-            existing = await self.supabase_client.client.table("documents_rag").select(
-                "embedding_model, embedding_dimensions"
-            ).eq("tenant_id", tenant_id).eq(
-                "collection_id", collection_id
-            ).limit(1).execute()
-            
+            def _select_existing():
+                return (
+                    self.supabase_client.client
+                    .table("documents_rag")
+                    .select("embedding_model, embedding_dimensions")
+                    .eq("tenant_id", tenant_id)
+                    .eq("collection_id", collection_id)
+                    .limit(1)
+                    .execute()
+                )
+            existing = await asyncio.to_thread(_select_existing)
+             
             if existing.data:
                 existing_model = existing.data[0]["embedding_model"]
                 existing_dims = existing.data[0]["embedding_dimensions"]
@@ -551,9 +571,14 @@ class IngestionService(BaseService):
                 # Generar un UUID dummy para cumplir constraint
                 document_data["agent_id"] = str(uuid.uuid4())
             
-            response = await self.supabase_client.client.table("documents_rag").insert(
-                document_data
-            ).execute()
+            def _insert_document():
+                return (
+                    self.supabase_client.client
+                    .table("documents_rag")
+                    .insert(document_data)
+                    .execute()
+                )
+            response = await asyncio.to_thread(_insert_document)
             
             self._logger.info(
                 f"Metadata persistida para documento {task['document_id']} "
@@ -579,11 +604,19 @@ class IngestionService(BaseService):
             )
             
             # 2. Eliminar de Supabase
-            await self.supabase_client.client.table("documents_rag").delete().match({
-                "tenant_id": str(tenant_id),
-                "document_id": str(document_id),
-                "collection_id": collection_id
-            }).execute()
+            def _delete_document():
+                return (
+                    self.supabase_client.client
+                    .table("documents_rag")
+                    .delete()
+                    .match({
+                        "tenant_id": str(tenant_id),
+                        "document_id": str(document_id),
+                        "collection_id": collection_id
+                    })
+                    .execute()
+                )
+            await asyncio.to_thread(_delete_document)
             
             return {
                 "message": "Document deleted successfully",
@@ -617,12 +650,19 @@ class IngestionService(BaseService):
                 raise ValueError("Failed to update agents in Qdrant")
             
             # 2. Actualizar en Supabase (metadata JSON)
-            current_doc = await self.supabase_client.client.table("documents_rag").select(
-                "metadata"
-            ).match({
-                "tenant_id": str(tenant_id),
-                "document_id": str(document_id)
-            }).single().execute()
+            def _select_doc():
+                return (
+                    self.supabase_client.client
+                    .table("documents_rag")
+                    .select("metadata")
+                    .match({
+                        "tenant_id": str(tenant_id),
+                        "document_id": str(document_id)
+                    })
+                    .single()
+                    .execute()
+                )
+            current_doc = await asyncio.to_thread(_select_doc)
             
             if current_doc.data:
                 metadata = current_doc.data["metadata"] or {}
@@ -635,13 +675,21 @@ class IngestionService(BaseService):
                 elif operation == "remove":
                     metadata["agent_ids"] = [a for a in current_agents if a not in agent_ids]
                 
-                await self.supabase_client.client.table("documents_rag").update({
-                    "metadata": metadata,
-                    "agent_id": agent_ids[0] if agent_ids else str(uuid.uuid4())
-                }).match({
-                    "tenant_id": str(tenant_id),
-                    "document_id": str(document_id)
-                }).execute()
+                def _update_doc():
+                    return (
+                        self.supabase_client.client
+                        .table("documents_rag")
+                        .update({
+                            "metadata": metadata,
+                            "agent_id": agent_ids[0] if agent_ids else str(uuid.uuid4())
+                        })
+                        .match({
+                            "tenant_id": str(tenant_id),
+                            "document_id": str(document_id)
+                        })
+                        .execute()
+                    )
+                await asyncio.to_thread(_update_doc)
             
             return {
                 "success": True,

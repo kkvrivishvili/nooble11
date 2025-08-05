@@ -136,7 +136,14 @@ services:
       DASHBOARD_USERNAME: ${DASHBOARD_USERNAME}
       DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD}
     # https://unix.stackexchange.com/a/294837
-    entrypoint: bash -c 'eval "echo \"$$(cat ~/temp.yml)\"" > ~/kong.yml && /docker-entrypoint.sh kong docker-start'
+    # Generate kong.yml from temp.yml with environment variable substitution
+    entrypoint: bash -c 'eval "echo \"$(cat ~/temp.yml)\"" > ~/kong.yml && /docker-entrypoint.sh kong docker-start'
+    networks:
+      default:
+      nooble-network:
+        aliases:
+          - kong
+          - supabase-kong
 
   auth:
     container_name: supabase-auth
@@ -589,8 +596,8 @@ services:
       - "8001:8001"
     environment:
       # Supabase configuration
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_URL=http://kong:8000
+      - SUPABASE_ANON_KEY=${ANON_KEY}
       # Redis
       - REDIS_HOST=redis_database
       - REDIS_PORT=6379
@@ -633,7 +640,7 @@ services:
       # Logging
       - LOG_LEVEL=DEBUG
       # Supabase configuration
-      - SUPABASE_URL=http://supabase-kong:8000
+      - SUPABASE_URL=http://kong:8000
       - SUPABASE_ANON_KEY=${ANON_KEY}
       - SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
       - JWT_SECRET=${JWT_SECRET}

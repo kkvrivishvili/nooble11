@@ -1,6 +1,7 @@
 """
 Dependencias corregidas para las rutas API.
 """
+import logging
 from typing import Optional, Dict, Any
 from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -12,6 +13,9 @@ from common.supabase.client import SupabaseClient
 
 # Security
 security = HTTPBearer()
+
+# Logger
+logger = logging.getLogger(__name__)
 
 # Instancias globales
 _ingestion_service: Optional[IngestionService] = None
@@ -45,13 +49,28 @@ async def verify_jwt_token(
     TODO: Implementar verificación real y extraer tenant_id del token.
     """
     if not _supabase_client:
+        logger.error("Auth failed: Supabase client not initialized")
         raise HTTPException(status_code=500, detail="Supabase client not initialized")
     
     try:
+        # Debug info about token and environment (sin exponer datos sensibles)
+        masked = f"{credentials.credentials[:8]}..." if credentials and credentials.credentials else "<empty>"
+        try:
+            # Registrar a qué URL de Supabase vamos a validar
+            settings = get_settings()
+            logger.info(
+                "JWT verify - incoming Authorization: Bearer %s | supabase_url=%s",
+                masked,
+                getattr(settings, 'supabase_url', '<unset>')
+            )
+        except Exception:
+            logger.debug("Could not read settings inside verify_jwt_token", exc_info=True)
+        
         # Verificar token con Supabase
         user_info = await _supabase_client.verify_jwt_token(credentials.credentials)
         
         if not user_info:
+            logger.warning("JWT verify - invalid token (no user_info)")
             raise HTTPException(status_code=401, detail="Invalid token")
         
         # Construir respuesta con info del usuario
@@ -70,9 +89,17 @@ async def verify_jwt_token(
             # TODO: Implementar consulta real a profiles table
             auth_data["app_metadata"]["tenant_id"] = user_info.id
         
+        logger.info(
+            "JWT verify - success user_id=%s tenant_id=%s email=%s",
+            auth_data["user_id"],
+            auth_data["app_metadata"].get("tenant_id"),
+            auth_data.get("email")
+        )
+        
         return auth_data
         
     except Exception as e:
+        logger.exception("JWT verify - exception: %s", str(e))
         raise HTTPException(status_code=401, detail=f"Authentication failed: {str(e)}")
 
 
