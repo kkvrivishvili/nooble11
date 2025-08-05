@@ -25,8 +25,8 @@ function ProfileHeader() {
   }
 
   // Count active link widgets
-  const activeLinkWidgets = profile.widgets.filter(w => w.type === 'link' && w.isActive).length;
-  const totalActiveAgents = profile.agentDetails.filter(a => a.isActive).length;
+  const activeLinkWidgets = profile.widgets.filter(w => w.type === 'link' && w.is_active).length;
+  const totalActiveAgents = profile.agentDetails.filter(a => a.is_active).length;
 
   return (
     <>
@@ -38,9 +38,12 @@ function ProfileHeader() {
             <Avatar className="h-24 w-24 border-2 border-gray-200 dark:border-gray-700">
               <AvatarImage src={profile.avatar} />
               <AvatarFallback className="text-2xl bg-gray-100 dark:bg-gray-700">
-                {profile.displayName
-                  ? profile.displayName.split(' ').map((n: string) => n[0]).join('')
-                  : 'NN'}
+                {(profile.display_name || '')
+                  .trim()
+                  .split(' ')
+                  .filter(Boolean)
+                  .map((n: string) => n[0])
+                  .join('') || 'NN'}
               </AvatarFallback>
             </Avatar>
           </div>
@@ -49,7 +52,7 @@ function ProfileHeader() {
           <div className="flex-1 text-center md:text-left">
             <div className="flex items-center justify-center md:justify-start gap-3 mb-3">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {profile.displayName}
+                {profile.display_name}
               </h1>
               <Button 
                 variant="ghost" 
@@ -72,14 +75,14 @@ function ProfileHeader() {
               <span>•</span>
               <span>{totalActiveAgents} agente{totalActiveAgents !== 1 ? 's' : ''}</span>
               <span>•</span>
-              <span>{(profile.socialLinks ?? []).length} red{(profile.socialLinks ?? []).length !== 1 ? 'es' : ''} social{(profile.socialLinks ?? []).length !== 1 ? 'es' : ''}</span>
+              <span>{(profile.social_links ?? []).length} red{(profile.social_links ?? []).length !== 1 ? 'es' : ''} social{(profile.socialLinks ?? []).length !== 1 ? 'es' : ''}</span>
               <span>•</span>
               <span>@{profile.username}</span>
             </div>
             
             {/* Social links */}
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-              {(profile.socialLinks ?? []).map((link) => {
+              {(profile.social_links ?? []).map((link) => {
                 const Icon = socialPlatformIcons[link.platform as keyof typeof socialPlatformIcons];
                 if (!Icon) return null;
                 

@@ -139,7 +139,7 @@ export function SignUpForm({ className, ...props }: SignUpFormProps) {
       const { error } = await signUp(data.email, data.password, {
         data: {
           username: data.username,
-          displayName: data.username, // Use username as initial display name
+          display_name: data.username, // Use username as initial display name
         }
       });
       

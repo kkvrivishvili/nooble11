@@ -15,7 +15,7 @@ interface ProfileEditorProps {
 export function ProfileEditor({ onCancel }: ProfileEditorProps) {
   const { profile, updateProfileInfo, updateProfile } = useProfile();
   const [formData, setFormData] = useState({
-    displayName: '',
+    display_name: '',
     description: '',
     avatar: '',
   });
@@ -26,9 +26,9 @@ export function ProfileEditor({ onCancel }: ProfileEditorProps) {
   useEffect(() => {
     if (profile) {
       const initialData = {
-        displayName: profile.displayName,
-        description: profile.description,
-        avatar: profile.avatar,
+        display_name: profile.display_name ?? '',
+        description: profile.description ?? '',
+        avatar: profile.avatar ?? '',
       };
       setFormData(initialData);
     }
@@ -37,9 +37,9 @@ export function ProfileEditor({ onCancel }: ProfileEditorProps) {
   useEffect(() => {
     if (profile) {
       const hasChanges = 
-        formData.displayName !== profile.displayName ||
-        formData.description !== profile.description ||
-        formData.avatar !== profile.avatar;
+        (formData.display_name ?? '') !== (profile.display_name ?? '') ||
+        (formData.description ?? '') !== (profile.description ?? '') ||
+        (formData.avatar ?? '') !== (profile.avatar ?? '');
       setHasChanges(hasChanges);
     }
   }, [formData, profile]);
@@ -47,11 +47,11 @@ export function ProfileEditor({ onCancel }: ProfileEditorProps) {
   if (!profile) return null;
 
   const validateForm = () => {
-    if (!formData.displayName.trim()) {
+    if (!formData.display_name.trim()) {
       setError('El nombre es requerido');
       return false;
     }
-    if (formData.displayName.length > 100) {
+    if (formData.display_name.length > 100) {
       setError('El nombre no puede tener más de 100 caracteres');
       return false;
     }
@@ -143,7 +143,12 @@ export function ProfileEditor({ onCancel }: ProfileEditorProps) {
           <Avatar className="h-32 w-32 border-4 border-gray-200 dark:border-gray-700">
             <AvatarImage src={formData.avatar} />
             <AvatarFallback className="text-3xl bg-gray-100 dark:bg-gray-700">
-              {(formData.displayName || '').split(' ').map(n => n[0]).join('')}
+              {(formData.display_name || '')
+                .trim()
+                .split(' ')
+                .filter(Boolean)
+                .map((n) => n[0])
+                .join('')}
             </AvatarFallback>
           </Avatar>
           <label 
@@ -174,14 +179,14 @@ export function ProfileEditor({ onCancel }: ProfileEditorProps) {
       {/* Basic information section */}
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="displayName" className="text-sm font-medium">
+          <Label htmlFor="display_name" className="text-sm font-medium">
             Nombre para mostrar *
           </Label>
           <Input
-            id="displayName"
-            value={formData.displayName}
+            id="display_name"
+            value={formData.display_name}
             onChange={(e) => {
-              setFormData({...formData, displayName: e.target.value});
+              setFormData({...formData, display_name: e.target.value});
               setError('');
             }}
             className="h-11"
@@ -191,7 +196,7 @@ export function ProfileEditor({ onCancel }: ProfileEditorProps) {
           />
           <div className="flex justify-between text-xs text-gray-500">
             <span>Este nombre aparecerá en tu perfil público</span>
-            <span>{formData.displayName.length}/100</span>
+            <span>{(formData.display_name?.length ?? 0)}/100</span>
           </div>
         </div>
 
@@ -213,7 +218,7 @@ export function ProfileEditor({ onCancel }: ProfileEditorProps) {
               disabled={isLoading}
             />
             <div className="absolute bottom-2 right-2 text-xs text-muted-foreground bg-background px-1 rounded">
-              {formData.description.length}/200
+              {(formData.description?.length ?? 0)}/200
             </div>
           </div>
           <p className="text-xs text-gray-500">
