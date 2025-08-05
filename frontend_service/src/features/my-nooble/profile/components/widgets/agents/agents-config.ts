@@ -12,20 +12,20 @@ export function validateAgentsData(data: AgentsWidgetData): ValidationResult {
     errors.title = 'El título no puede tener más de 100 caracteres';
   }
   
-  // Validate agentIds
-  if (!data.agentIds || data.agentIds.length === 0) {
-    errors.agentIds = 'Debes seleccionar al menos un agente';
-  } else if (data.agentIds.length > 10) {
-    errors.agentIds = 'No puedes seleccionar más de 10 agentes';
+  // Validate agent_ids
+  if (!data.agent_ids || data.agent_ids.length === 0) {
+    errors.agent_ids = 'Debes seleccionar al menos un agente';
+  } else if (data.agent_ids.length > 10) {
+    errors.agent_ids = 'No puedes seleccionar más de 10 agentes';
   }
   
-  // Validate displayStyle
-  if (!['card', 'list', 'bubble'].includes(data.displayStyle)) {
-    errors.displayStyle = 'Estilo de visualización inválido';
+  // Validate display_style
+  if (!['card', 'list', 'bubble'].includes(data.display_style)) {
+    errors.display_style = 'Estilo de visualización inválido';
   }
   
   return {
-    isValid: Object.keys(errors).length === 0,
+    is_valid: Object.keys(errors).length === 0,
     errors
   };
 }
@@ -36,9 +36,9 @@ export const agentsWidgetConfig: WidgetConfig<AgentsWidgetData> = {
   description: 'Muestra tus agentes de chat para que los visitantes puedan interactuar',
   icon: IconUsers,
   defaultData: {
-    title: 'Chat con nuestros agentes',
-    agentIds: [],
-    displayStyle: 'card'
+    title: 'Mis Agentes',
+    agent_ids: [],
+    display_style: 'card'
   },
   validator: validateAgentsData
 };

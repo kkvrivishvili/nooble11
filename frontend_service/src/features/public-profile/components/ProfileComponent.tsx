@@ -1,4 +1,4 @@
-// src/features/public-profile/components/ProfileComponent.tsx - Updated without spacing
+// src/features/public-profile/components/ProfileComponent.tsx - Fixed snake_case
 import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Profile } from '@/types/profile'
@@ -19,20 +19,20 @@ export default function ProfileComponent({
   const { theme, layout } = useProfileTheme();
 
   // Use theme utility for avatar radius (avatar uses specific Tailwind classes)
-  const avatarRadiusClass = theme.borderRadius === 'sharp' ? 'rounded-md' :
-                           theme.borderRadius === 'round' ? 'rounded-full' : 'rounded-xl';
+  const avatarRadiusClass = theme.border_radius === 'sharp' ? 'rounded-md' :
+                           theme.border_radius === 'round' ? 'rounded-full' : 'rounded-xl';
 
   return (
     <div 
       className={cn(
         "w-full mx-auto px-4 pt-8 pb-4",
-        layout.contentWidth === 'narrow' && 'max-w-md',
-        layout.contentWidth === 'normal' && 'max-w-xl',
-        layout.contentWidth === 'wide' && 'max-w-3xl'
+        layout.content_width === 'narrow' && 'max-w-md',
+        layout.content_width === 'normal' && 'max-w-xl',
+        layout.content_width === 'wide' && 'max-w-3xl'
       )}
       style={{
-        fontFamily: theme.fontFamily === 'serif' ? 'serif' :
-                   theme.fontFamily === 'mono' ? 'monospace' : 'sans-serif'
+        fontFamily: theme.font_family === 'serif' ? 'serif' :
+                   theme.font_family === 'mono' ? 'monospace' : 'sans-serif'
       }}
     >
       {/* Avatar y Nombre */}
@@ -50,12 +50,12 @@ export default function ProfileComponent({
           <AvatarFallback 
             className="font-bold"
             style={{ 
-              backgroundColor: theme.primaryColor,
-              color: theme.buttonTextColor || '#ffffff'
+              backgroundColor: theme.primary_color,
+              color: theme.button_text_color || '#ffffff'
             }}
           >
-            {profile.displayName
-              ? profile.displayName.split(' ').map((n: string) => n[0]).join('')
+            {profile.display_name
+              ? profile.display_name.split(' ').map((n: string) => n[0]).join('')
               : 'NN'}
           </AvatarFallback>
         </Avatar>
@@ -65,10 +65,10 @@ export default function ProfileComponent({
           isPreview ? "text-xl" : "text-2xl"
         )}
         style={{ 
-          color: theme.textColor || theme.primaryColor,
+          color: theme.text_color || theme.primary_color,
         }}
         >
-          {profile.displayName}
+          {profile.display_name}
         </h1>
       </div>
       
@@ -78,7 +78,7 @@ export default function ProfileComponent({
         isPreview && "text-sm"
       )}
       style={{ 
-        color: theme.textColor || theme.primaryColor,
+        color: theme.text_color || theme.primary_color,
         opacity: 0.8,
       }}
       >
@@ -88,7 +88,7 @@ export default function ProfileComponent({
       {/* Social Links */}
       {showSocialLinks && (
         <SocialLinks 
-          socialLinks={profile.socialLinks || []}
+          socialLinks={profile.social_links || []}
           isPreview={isPreview}
           position="top"
           iconSize={20}

@@ -1,3 +1,4 @@
+// src/features/public-profile/widgets/types.ts - Fixed snake_case
 import { ProfileTheme } from '@/types/profile';
 
 export interface PublicWidgetProps {
@@ -14,7 +15,7 @@ export interface PublicWidgetProps {
       description?: string;
       icon: string;
     }>;
-    displayStyle?: 'card' | 'list' | 'bubble';
+    display_style?: 'card' | 'list' | 'bubble';
     onAgentClick?: (agentId: string) => void;
   }
   
@@ -33,6 +34,6 @@ export interface PublicWidgetProps {
       description?: string;
       icon: string;
     }>;
-    displayStyle: 'card' | 'list' | 'bubble';
+    display_style: 'card' | 'list' | 'bubble';
     onAgentClick?: (agentId: string) => void;
   }

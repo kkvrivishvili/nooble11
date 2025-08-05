@@ -1,4 +1,4 @@
-// src/features/public-profile/widgets/public-agents-widget.tsx - Refactored with BaseWidget utilities
+// src/features/public-profile/widgets/public-agents-widget.tsx - Fixed for snake_case
 import { IconMessage } from '@tabler/icons-react';
 import { PublicWidgetProps, PublicAgentsWidgetData } from './types';
 import BaseWidget from './BaseWidget';
@@ -16,11 +16,11 @@ export function PublicAgentsWidget({ data, theme, className }: PublicAgentsWidge
     const baseStyles = {
       borderRadius: getBorderRadius(theme),
       transition: 'all 0.2s ease',
-      fontFamily: getFontFamily(theme.fontFamily),
+      fontFamily: getFontFamily(theme.font_family),
     };
 
     if (isCard) {
-      if (theme.buttonFill === 'glass') {
+      if (theme.button_fill === 'glass') {
         return {
           ...baseStyles,
           backgroundColor: 'rgba(255, 255, 255, 0.1)',
@@ -31,8 +31,8 @@ export function PublicAgentsWidget({ data, theme, className }: PublicAgentsWidge
       }
       return {
         ...baseStyles,
-        backgroundColor: theme.backgroundColor || '#ffffff',
-        border: `1px solid ${theme.primaryColor || '#e5e7eb'}`,
+        backgroundColor: theme.background_color || '#ffffff',
+        border: `1px solid ${theme.primary_color || '#e5e7eb'}`,
       };
     }
     
@@ -60,7 +60,7 @@ export function PublicAgentsWidget({ data, theme, className }: PublicAgentsWidge
         <div className="flex-1 text-left">
           <h4 
             className="font-medium text-sm"
-            style={{ color: theme?.textColor || theme?.primaryColor || '#111827' }}
+            style={{ color: theme?.text_color || theme?.primary_color || '#111827' }}
           >
             {agent.name}
           </h4>
@@ -68,7 +68,7 @@ export function PublicAgentsWidget({ data, theme, className }: PublicAgentsWidge
             <p 
               className="text-xs mt-1"
               style={{ 
-                color: theme?.textColor || theme?.primaryColor || '#6b7280',
+                color: theme?.text_color || theme?.primary_color || '#6b7280',
                 opacity: 0.7
               }}
             >
@@ -78,7 +78,7 @@ export function PublicAgentsWidget({ data, theme, className }: PublicAgentsWidge
         </div>
         <IconMessage 
           size={16} 
-          style={{ color: theme?.primaryColor || '#6b7280' }}
+          style={{ color: theme?.primary_color || '#6b7280' }}
         />
       </div>
     </button>
@@ -91,10 +91,10 @@ export function PublicAgentsWidget({ data, theme, className }: PublicAgentsWidge
       className="w-full flex items-center gap-3 p-2 rounded-lg transition-colors"
       style={{
         backgroundColor: 'transparent',
-        fontFamily: theme ? getFontFamily(theme.fontFamily) : 'sans-serif',
+        fontFamily: theme ? getFontFamily(theme.font_family) : 'sans-serif',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.backgroundColor = `${theme?.primaryColor || '#000'}10`;
+        e.currentTarget.style.backgroundColor = `${theme?.primary_color || '#000'}10`;
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.backgroundColor = 'transparent';
@@ -103,7 +103,7 @@ export function PublicAgentsWidget({ data, theme, className }: PublicAgentsWidge
       <div className="text-xl">{agent.icon}</div>
       <span 
         className="flex-1 text-left font-medium text-sm"
-        style={{ color: theme?.textColor || theme?.primaryColor || '#111827' }}
+        style={{ color: theme?.text_color || theme?.primary_color || '#111827' }}
       >
         {agent.name}
       </span>
@@ -112,12 +112,12 @@ export function PublicAgentsWidget({ data, theme, className }: PublicAgentsWidge
 
   const renderAgentBubble = (agent: typeof data.agents[0]) => {
     const bubbleStyles = {
-      backgroundColor: `${theme?.primaryColor || '#f3f4f6'}20`,
-      color: theme?.primaryColor || '#374151',
-      border: `1px solid ${theme?.primaryColor || '#e5e7eb'}`,
-      borderRadius: theme?.borderRadius === 'sharp' ? '0.5rem' :
-                   theme?.borderRadius === 'curved' ? '1rem' : '9999px', // Bubble keeps its unique radius logic
-      fontFamily: theme ? getFontFamily(theme.fontFamily) : 'sans-serif',
+      backgroundColor: `${theme?.primary_color || '#f3f4f6'}20`,
+      color: theme?.primary_color || '#374151',
+      border: `1px solid ${theme?.primary_color || '#e5e7eb'}`,
+      borderRadius: theme?.border_radius === 'sharp' ? '0.5rem' :
+                   theme?.border_radius === 'curved' ? '1rem' : '9999px', // Bubble keeps its unique radius logic
+      fontFamily: theme ? getFontFamily(theme.font_family) : 'sans-serif',
     };
 
     return (
@@ -143,19 +143,19 @@ export function PublicAgentsWidget({ data, theme, className }: PublicAgentsWidge
         {data.title}
       </BaseWidget.Text>
       
-      {data.displayStyle === 'card' && (
+      {data.display_style === 'card' && (
         <div className="space-y-2">
           {data.agents.map(renderAgentCard)}
         </div>
       )}
       
-      {data.displayStyle === 'list' && (
+      {data.display_style === 'list' && (
         <div className="space-y-1">
           {data.agents.map(renderAgentList)}
         </div>
       )}
       
-      {data.displayStyle === 'bubble' && (
+      {data.display_style === 'bubble' && (
         <div className="flex flex-wrap gap-2">
           {data.agents.map(renderAgentBubble)}
         </div>

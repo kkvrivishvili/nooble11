@@ -1,3 +1,4 @@
+// src/features/public-profile/utils/theme-styles.ts - Fixed snake_case
 import { ProfileTheme } from '@/types/profile';
 
 export const getBorderRadius = (theme: ProfileTheme) => {
@@ -6,16 +7,15 @@ export const getBorderRadius = (theme: ProfileTheme) => {
     'curved': '0.5rem',
     'round': '9999px'
   };
-  return radiusMap[theme.borderRadius || 'curved'];
+  return radiusMap[theme.border_radius || 'curved'];
 };
 
 export const getShadowStyle = (theme: ProfileTheme) => {
-  if (theme.buttonShadow === 'none') return 'none';
-  if (theme.buttonShadow === 'hard') return '4px 4px 0 rgba(0,0,0,0.2)';
+  if (theme.button_shadow === 'none') return 'none';
+  if (theme.button_shadow === 'hard') return '4px 4px 0 rgba(0,0,0,0.2)';
   return '0 2px 4px rgba(0,0,0,0.1)';
 };
 
-//a
 export const getGlassEffect = () => ({
   backgroundColor: 'rgba(255, 255, 255, 0.1)',
   backdropFilter: 'blur(10px)',
@@ -27,53 +27,53 @@ export const getButtonStyles = (theme: ProfileTheme, variant?: 'primary' | 'seco
   const baseStyles = {
     borderRadius: getBorderRadius(theme),
     transition: 'all 0.2s ease',
-    fontFamily: theme.fontFamily === 'serif' ? 'serif' :
-                theme.fontFamily === 'mono' ? 'monospace' : 'sans-serif',
+    fontFamily: theme.font_family === 'serif' ? 'serif' :
+                theme.font_family === 'mono' ? 'monospace' : 'sans-serif',
     boxShadow: getShadowStyle(theme),
   };
 
-  if (theme.buttonFill === 'glass') {
+  if (theme.button_fill === 'glass') {
     return {
       ...baseStyles,
       ...getGlassEffect(),
-      color: theme.primaryColor,
+      color: theme.primary_color,
     };
-  } else if (theme.buttonFill === 'outline') {
+  } else if (theme.button_fill === 'outline') {
     return {
       ...baseStyles,
       backgroundColor: 'transparent',
-      border: `2px solid ${theme.primaryColor}`,
-      color: theme.primaryColor,
+      border: `2px solid ${theme.primary_color}`,
+      color: theme.primary_color,
     };
   } else {
     // Solid fill
     return {
       ...baseStyles,
       backgroundColor: variant === 'secondary' 
-        ? `${theme.primaryColor}20` 
-        : theme.primaryColor,
+        ? `${theme.primary_color}20` 
+        : theme.primary_color,
       color: variant === 'secondary' 
-        ? theme.primaryColor 
-        : theme.buttonTextColor || '#ffffff',
+        ? theme.primary_color 
+        : theme.button_text_color || '#ffffff',
       border: 'none',
     };
   }
 };
 
 export const getButtonHoverStyles = (theme: ProfileTheme) => {
-  if (theme.buttonFill === 'outline') {
+  if (theme.button_fill === 'outline') {
     return {
-      backgroundColor: theme.primaryColor,
-      color: theme.buttonTextColor || '#ffffff',
+      backgroundColor: theme.primary_color,
+      color: theme.button_text_color || '#ffffff',
     };
-  } else if (theme.buttonFill === 'glass') {
+  } else if (theme.button_fill === 'glass') {
     return {
       backgroundColor: 'rgba(255, 255, 255, 0.2)',
     };
   } else {
     return {
       transform: 'translateY(-2px)',
-      boxShadow: theme.buttonShadow === 'hard' 
+      boxShadow: theme.button_shadow === 'hard' 
         ? '6px 6px 0 rgba(0,0,0,0.2)' 
         : '0 4px 8px rgba(0,0,0,0.15)',
     };

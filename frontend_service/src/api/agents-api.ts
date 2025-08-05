@@ -1,4 +1,4 @@
-// src/api/agents-api.ts
+// src/api/agents-api.ts - Fixed snake_case version
 import { supabase } from '@/lib/supabase';
 import { Agent, AgentTemplate } from '@/types/profile';
 import { PostgrestError, AuthError } from '@supabase/supabase-js';
@@ -389,29 +389,29 @@ class AgentsAPI {
       throw new Error('Agent not found or access denied');
     }
 
-    // Get conversation count
+    // Get conversation count - NOTE: conversations table still uses camelCase
     const { count: conversationCount, error: convError } = await supabase
       .from('conversations')
       .select('*', { count: 'exact', head: true })
-      .eq('agent_id', agentId);
+      .eq('agentId', agentId);
 
     // Get message count and last used
     const { data: messageStats, error: msgError } = await supabase
       .from('messages')
-      .select('created_at')
-      .in('conversation_id', 
+      .select('createdAt')
+      .in('conversationId', 
         supabase
           .from('conversations')
           .select('id')
-          .eq('agent_id', agentId)
+          .eq('agentId', agentId)
       )
-      .order('created_at', { ascending: false })
+      .order('createdAt', { ascending: false })
       .limit(1);
 
     return {
       totalConversations: conversationCount || 0,
       totalMessages: messageStats?.length || 0,
-      lastUsed: messageStats?.[0]?.created_at
+      lastUsed: messageStats?.[0]?.createdAt
     };
   }
 }

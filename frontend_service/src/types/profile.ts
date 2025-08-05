@@ -1,4 +1,4 @@
-// src/types/profile.ts - Updated types
+// src/types/profile.ts - Updated types with snake_case convention
 import React from 'react';
 import { QueryObserverResult } from '@tanstack/react-query';
 import { WidgetType } from './widget';
@@ -12,15 +12,15 @@ export interface SocialLink {
   icon?: string | IconComponent;
 }
 
-// Updated ProfileLink to match widgetLinks table
+// Updated ProfileLink to match widget_links table
 export interface ProfileLink {
   id: string;
-  profileId: string;
+  profile_id: string;
   title: string;
   url: string;
   description?: string;
   icon?: string;
-  createdAt?: string;
+  created_at?: string;
 }
 
 // Widget types
@@ -28,64 +28,64 @@ export interface Widget {
   id: string;
   type: WidgetType;
   position: number;
-  isActive: boolean;
+  is_active: boolean;
 }
 
-// Agent types - now normalized
+// Agent types - now normalized with snake_case
 export interface AgentTemplate {
   id: string;
   name: string;
   category: string;
   description: string;
   icon: string;
-  systemPromptTemplate: string;
-  defaultQueryConfig: {
+  system_prompt_template: string;
+  default_query_config: {
     model: string;
     temperature: number;
-    maxTokens: number;
-    topP: number;
-    frequencyPenalty: number;
-    presencePenalty: number;
+    max_tokens: number;
+    top_p: number;
+    frequency_penalty: number;
+    presence_penalty: number;
     stream: boolean;
   };
-  defaultRagConfig: {
-    embeddingModel: string;
-    embeddingDimensions: number;
-    chunkSize: number;
-    chunkOverlap: number;
-    topK: number;
-    similarityThreshold: number;
-    hybridSearch: boolean;
+  default_rag_config: {
+    embedding_model: string;
+    embedding_dimensions: number;
+    chunk_size: number;
+    chunk_overlap: number;
+    top_k: number;
+    similarity_threshold: number;
+    hybrid_search: boolean;
     rerank: boolean;
   };
-  defaultExecutionConfig: {
-    historyEnabled: boolean;
-    historyWindow: number;
-    historyTtl: number;
-    maxIterations: number;
-    timeoutSeconds: number;
+  default_execution_config: {
+    history_enabled: boolean;
+    history_window: number;
+    history_ttl: number;
+    max_iterations: number;
+    timeout_seconds: number;
   };
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 // Enhanced Design types
 export interface ProfileTheme {
   // Colors
-  primaryColor: string;
-  backgroundColor: string;
-  textColor?: string;
-  buttonTextColor?: string;
+  primary_color: string;
+  background_color: string;
+  text_color?: string;
+  button_text_color?: string;
   
   // Typography
-  fontFamily?: 'sans' | 'serif' | 'mono';
-  fontSize?: 'sm' | 'md' | 'lg';
+  font_family?: 'sans' | 'serif' | 'mono';
+  font_size?: 'sm' | 'md' | 'lg';
   
   // Styling
-  borderRadius?: 'sharp' | 'curved' | 'round';
-  buttonFill?: 'solid' | 'glass' | 'outline';
-  buttonShadow?: 'none' | 'subtle' | 'hard';
+  border_radius?: 'sharp' | 'curved' | 'round';
+  button_fill?: 'solid' | 'glass' | 'outline';
+  button_shadow?: 'none' | 'subtle' | 'hard';
   
   // Wallpaper
   wallpaper?: ProfileWallpaper;
@@ -95,40 +95,40 @@ export interface ProfileWallpaper {
   type: 'fill' | 'gradient' | 'pattern' | 'image' | 'video';
   
   // Fill type
-  fillColor?: string;
+  fill_color?: string;
   
   // Gradient type
-  gradientColors?: string[];
-  gradientDirection?: 'up' | 'down' | 'left' | 'right' | 'diagonal';
-  gradientType?: 'linear' | 'radial';
+  gradient_colors?: string[];
+  gradient_direction?: 'up' | 'down' | 'left' | 'right' | 'diagonal';
+  gradient_type?: 'linear' | 'radial';
   
   // Pattern type
-  patternType?: 'dots' | 'lines' | 'grid' | 'waves' | 'circles';
-  patternColor?: string;
-  patternOpacity?: number;
-  patternBlur?: boolean;
-  patternBlurIntensity?: number;
+  pattern_type?: 'dots' | 'lines' | 'grid' | 'waves' | 'circles';
+  pattern_color?: string;
+  pattern_opacity?: number;
+  pattern_blur?: boolean;
+  pattern_blur_intensity?: number;
   
   // Image type
-  imageUrl?: string;
-  imagePosition?: 'center' | 'top' | 'bottom' | 'left' | 'right';
-  imageSize?: 'cover' | 'contain' | 'auto';
-  imageOverlay?: string; // rgba color for overlay
-  imageBlur?: boolean;
-  imageBlurIntensity?: number;
+  image_url?: string;
+  image_position?: 'center' | 'top' | 'bottom' | 'left' | 'right';
+  image_size?: 'cover' | 'contain' | 'auto';
+  image_overlay?: string; // rgba color for overlay
+  image_blur?: boolean;
+  image_blur_intensity?: number;
   
   // Video type
-  videoUrl?: string;
-  videoMuted?: boolean;
-  videoLoop?: boolean;
-  videoOverlay?: string;
-  videoBlur?: boolean;
-  videoBlurIntensity?: number;
+  video_url?: string;
+  video_muted?: boolean;
+  video_loop?: boolean;
+  video_overlay?: string;
+  video_blur?: boolean;
+  video_blur_intensity?: number;
 }
 
 export interface ProfileLayout {
-  socialPosition?: 'top' | 'bottom' | 'hidden';
-  contentWidth?: 'narrow' | 'normal' | 'wide';
+  social_position?: 'top' | 'bottom' | 'hidden';
+  content_width?: 'narrow' | 'normal' | 'wide';
 }
 
 export interface ProfileDesign {
@@ -141,116 +141,116 @@ export interface ProfileDesign {
 export interface Profile {
   id: string;
   username: string;
-  displayName: string;
+  display_name: string;
   description: string;
   avatar: string;
-  socialLinks: SocialLink[];
+  social_links: SocialLink[];
   agents: string[]; // Array of agent UUIDs
   widgets: Widget[]; // Widget ordering and metadata
   design: ProfileDesign;
-  isPublic?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
+  is_public?: boolean;
+  created_at?: string;
+  updated_at?: string;
   version?: number;
 }
 
-// Widget-specific types matching database tables
+// Widget-specific types matching database tables with snake_case
 export interface WidgetLinks {
   id: string;
-  profileId: string;
+  profile_id: string;
   title: string;
   url: string;
   description?: string;
   icon?: string;
-  createdAt: string;
+  created_at: string;
 }
 
 export interface WidgetGallery {
   id: string;
-  profileId: string;
+  profile_id: string;
   title?: string;
   products: string[]; // Product IDs (jsonb)
-  showPrice: boolean;
-  showDescription: boolean;
+  show_price: boolean;
+  show_description: boolean;
   columns: number;
-  createdAt: string;
+  created_at: string;
 }
 
 export interface WidgetAgents {
   id: string;
-  profileId: string;
+  profile_id: string;
   title: string;
-  agentIds: string[]; // Agent IDs (jsonb)
-  displayStyle: 'card' | 'list' | 'bubble';
-  createdAt: string;
+  agent_ids: string[]; // Agent IDs (jsonb)
+  display_style: 'card' | 'list' | 'bubble';
+  created_at: string;
 }
 
 export interface WidgetYouTube {
   id: string;
-  profileId: string;
-  videoUrl: string;
+  profile_id: string;
+  video_url: string;
   title?: string;
   autoplay: boolean;
-  showControls: boolean;
-  createdAt: string;
+  show_controls: boolean;
+  created_at: string;
 }
 
 export interface WidgetMaps {
   id: string;
-  profileId: string;
+  profile_id: string;
   address: string;
   latitude?: number;
   longitude?: number;
-  zoomLevel: number;
-  mapStyle: string;
-  createdAt: string;
+  zoom_level: number;
+  map_style: string;
+  created_at: string;
 }
 
 export interface WidgetSpotify {
   id: string;
-  profileId: string;
-  spotifyUrl: string;
-  embedType: 'track' | 'playlist' | 'album' | 'artist';
+  profile_id: string;
+  spotify_url: string;
+  embed_type: 'track' | 'playlist' | 'album' | 'artist';
   height: number;
   theme: 'dark' | 'light';
-  createdAt: string;
+  created_at: string;
 }
 
 export interface WidgetCalendar {
   id: string;
-  profileId: string;
-  calendlyUrl: string;
+  profile_id: string;
+  calendly_url: string;
   title: string;
-  hideEventDetails: boolean;
-  hideCookieBanner: boolean;
-  createdAt: string;
+  hide_event_details: boolean;
+  hide_cookie_banner: boolean;
+  created_at: string;
 }
 
 export interface WidgetSeparator {
   id: string;
-  profileId: string;
+  profile_id: string;
   style: 'solid' | 'dashed' | 'dotted';
   thickness: number;
   color: string;
-  marginTop: number;
-  marginBottom: number;
-  createdAt: string;
+  margin_top: number;
+  margin_bottom: number;
+  created_at: string;
 }
 
 export interface WidgetTitle {
   id: string;
-  profileId: string;
+  profile_id: string;
   text: string;
-  fontSize: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
-  textAlign: 'left' | 'center' | 'right';
-  fontWeight: 'normal' | 'medium' | 'semibold' | 'bold';
-  createdAt: string;
+  font_size: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
+  text_align: 'left' | 'center' | 'right';
+  font_weight: 'normal' | 'medium' | 'semibold' | 'bold';
+  created_at: string;
 }
 
 // Full profile with populated data
 export interface ProfileWithAgents extends Profile {
   agentDetails: Agent[]; // Full agent objects
-  linkWidgets: WidgetLinks[]; // Links from widgetLinks table
+  linkWidgets: WidgetLinks[]; // Links from widget_links table
   agentWidgets?: WidgetAgents[]; // Agent widgets data
   galleryWidgets?: WidgetGallery[]; // Gallery widgets data
   youtubeWidgets?: WidgetYouTube[]; // YouTube widgets data
@@ -266,11 +266,11 @@ export interface ProfileContextType {
   isLoading: boolean;
   isError: boolean;
   updateProfile: (payload: ProfileUpdatePayload) => void;
-  updateProfileInfo: (data: { displayName?: string; description?: string; avatar?: string; }) => void;
+  updateProfileInfo: (data: { display_name?: string; description?: string; avatar?: string; }) => void;
   isUsernameAvailable: (username: string) => Promise<boolean>;
   // Link widget management
-  addLinkWidget: (link: Omit<ProfileLink, 'id' | 'createdAt' | 'profileId'>) => void;
-  updateLinkWidget: (id: string, data: Partial<Omit<ProfileLink, 'id' | 'profileId'>>) => void;
+  addLinkWidget: (link: Omit<ProfileLink, 'id' | 'created_at' | 'profile_id'>) => void;
+  updateLinkWidget: (id: string, data: Partial<Omit<ProfileLink, 'id' | 'profile_id'>>) => void;
   removeLinkWidget: (id: string) => void;
   reorderWidgets: (widgets: Widget[]) => void;
   // Social links (still in profile)
@@ -293,12 +293,12 @@ export interface SyncStatus {
 
 // API Request/Response types
 export interface ProfileUpdatePayload {
-  displayName?: string;
+  display_name?: string;
   description?: string;
   avatar?: string;
-  socialLinks?: SocialLink[];
+  social_links?: SocialLink[];
   design?: ProfileDesign;
-  isPublic?: boolean;
+  is_public?: boolean;
 }
 
 // Platform configurations
@@ -319,59 +319,44 @@ export interface LinkTypeConfig {
   placeholder: string;
 }
 
-// Agregar estos tipos si no existen
+// Agent type with snake_case
 export interface Agent {
   id: string;
-  userId: string;
-  templateId?: string;
+  user_id: string;
+  template_id?: string;
   name: string;
   description?: string;
   icon: string;
-  systemPrompt?: string;
-  systemPromptOverride?: string;
-  queryConfig: {
+  system_prompt?: string;
+  system_prompt_override?: string;
+  query_config: {
     model: string;
     temperature: number;
-    maxTokens: number;
-    topP: number;
-    frequencyPenalty: number;
-    presencePenalty: number;
+    max_tokens: number;
+    top_p: number;
+    frequency_penalty: number;
+    presence_penalty: number;
     stream: boolean;
   };
-  ragConfig: {
-    embeddingModel: string;
-    embeddingDimensions: number;
-    chunkSize: number;
-    chunkOverlap: number;
-    topK: number;
-    similarityThreshold: number;
-    hybridSearch: boolean;
+  rag_config: {
+    embedding_model: string;
+    embedding_dimensions: number;
+    chunk_size: number;
+    chunk_overlap: number;
+    top_k: number;
+    similarity_threshold: number;
+    hybrid_search: boolean;
     rerank: boolean;
   };
-  executionConfig: {
-    historyEnabled: boolean;
-    historyWindow: number;
-    historyTtl: number;
-    maxIterations: number;
-    timeoutSeconds: number;
+  execution_config: {
+    history_enabled: boolean;
+    history_window: number;
+    history_ttl: number;
+    max_iterations: number;
+    timeout_seconds: number;
   };
-  isActive: boolean;
-  isPublic: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface AgentTemplate {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
-  icon: string;
-  systemPromptTemplate: string;
-  defaultQueryConfig: Agent['queryConfig'];
-  defaultRagConfig: Agent['ragConfig'];
-  defaultExecutionConfig: Agent['executionConfig'];
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  is_active: boolean;
+  is_public: boolean;
+  created_at: string;
+  updated_at: string;
 }

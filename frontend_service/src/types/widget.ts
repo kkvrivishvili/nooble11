@@ -6,7 +6,7 @@ export interface BaseWidget {
   id: string;
   type: WidgetType;
   position: number;
-  isActive: boolean;
+  is_active: boolean;
 }
 
 // Widget types enum
@@ -27,7 +27,7 @@ export interface Widget {
   id: string;
   type: WidgetType;
   position: number;
-  isActive: boolean;
+  is_active: boolean;
 }
 
 // Widget data wrapper
@@ -46,60 +46,60 @@ export interface LinkWidgetData {
 
 export interface AgentsWidgetData {
   title: string;
-  agentIds: string[];
-  displayStyle: 'card' | 'list' | 'bubble';
+  agent_ids: string[];
+  display_style: 'card' | 'list' | 'bubble';
 }
 
 export interface GalleryWidgetData {
   title?: string;
   products: string[];
-  showPrice: boolean;
-  showDescription: boolean;
+  show_price: boolean;
+  show_description: boolean;
   columns: number;
 }
 
 export interface YouTubeWidgetData {
-  videoUrl: string;
+  video_url: string;
   title?: string;
   autoplay: boolean;
-  showControls: boolean;
+  show_controls: boolean;
 }
 
 export interface MapsWidgetData {
   address: string;
   latitude?: number;
   longitude?: number;
-  zoomLevel: number;
-  mapStyle: string;
+  zoom_level: number;
+  map_style: string;
 }
 
 export interface SpotifyWidgetData {
-  spotifyUrl: string;
-  embedType: 'track' | 'playlist' | 'album' | 'artist';
+  spotify_url: string;
+  embed_type: 'track' | 'playlist' | 'album' | 'artist';
   height: number;
   theme: 'dark' | 'light';
 }
 
 export interface CalendarWidgetData {
-  calendlyUrl: string;
+  calendly_url: string;
   title: string;
-  hideEventDetails: boolean;
-  hideCookieBanner: boolean;
+  hide_event_details: boolean;
+  hide_cookie_banner: boolean;
 }
 
 export interface SeparatorWidgetData {
   style: 'solid' | 'dashed' | 'dotted';
   thickness: number;
   color: string;
-  marginTop: number;
-  marginBottom: number;
+  margin_top: number;
+  margin_bottom: number;
 }
 
 export interface TitleWidgetData {
   text: string;
-  fontSize: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
-  textAlign: 'left' | 'center' | 'right';
-  fontWeight: 'normal' | 'medium' | 'semibold' | 'bold';
+  font_size: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
+  text_align: 'left' | 'center' | 'right';
+  font_weight: 'normal' | 'medium' | 'semibold' | 'bold';
 }
 
 // Union type for all widget data
@@ -125,7 +125,7 @@ export interface WidgetConfig<T = unknown> {
 }
 
 export interface ValidationResult {
-  isValid: boolean;
+  is_valid: boolean;
   errors: Record<string, string>;
 }
 
@@ -133,7 +133,7 @@ export interface ValidationResult {
 export interface WidgetComponentProps<T = unknown> {
   widget: Widget;
   data: T;
-  isEditing: boolean;
+  is_editing: boolean;
   onEdit: () => void;
   onDelete: () => Promise<void>;
   onUpdate?: (data: T) => Promise<void>;
@@ -143,7 +143,7 @@ export interface WidgetEditorProps<T = unknown> {
   data?: T;
   onSave: (data: T) => Promise<void>;
   onCancel: () => void;
-  isLoading?: boolean;
+  is_loading?: boolean;
 }
 
 // Drag and drop types
@@ -165,7 +165,7 @@ export function isLinkWidget(data: AnyWidgetData): data is LinkWidgetData {
 }
 
 export function isAgentsWidget(data: AnyWidgetData): data is AgentsWidgetData {
-  return 'agentIds' in data && 'displayStyle' in data;
+  return 'agent_ids' in data && 'display_style' in data;
 }
 
 export function isGalleryWidget(data: AnyWidgetData): data is GalleryWidgetData {
@@ -173,25 +173,25 @@ export function isGalleryWidget(data: AnyWidgetData): data is GalleryWidgetData 
 }
 
 export function isYouTubeWidget(data: AnyWidgetData): data is YouTubeWidgetData {
-  return 'videoUrl' in data && 'autoplay' in data;
+  return 'video_url' in data && 'autoplay' in data;
 }
 
 export function isMapsWidget(data: AnyWidgetData): data is MapsWidgetData {
-  return 'address' in data && 'zoomLevel' in data;
+  return 'address' in data && 'zoom_level' in data;
 }
 
 export function isSpotifyWidget(data: AnyWidgetData): data is SpotifyWidgetData {
-  return 'spotifyUrl' in data && 'embedType' in data;
+  return 'spotify_url' in data && 'embed_type' in data;
 }
 
 export function isCalendarWidget(data: AnyWidgetData): data is CalendarWidgetData {
-  return 'calendlyUrl' in data && 'hideEventDetails' in data;
+  return 'calendly_url' in data && 'hide_event_details' in data;
 }
 
 export function isSeparatorWidget(data: AnyWidgetData): data is SeparatorWidgetData {
-  return 'style' in data && 'thickness' in data && 'marginTop' in data;
+  return 'style' in data && 'thickness' in data && 'margin_top' in data;
 }
 
 export function isTitleWidget(data: AnyWidgetData): data is TitleWidgetData {
-  return 'text' in data && 'fontSize' in data && 'textAlign' in data;
+  return 'text' in data && 'font_size' in data && 'text_align' in data;
 }

@@ -1,4 +1,4 @@
-// src/context/auth-context.tsx - Updated with username support
+// src/context/auth-context.tsx - Updated with snake_case support
 import React, { createContext, useEffect, useState } from 'react'
 import { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
@@ -11,7 +11,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, options?: {
     data?: {
       username?: string;
-      displayName?: string;
+      display_name?: string;
       [key: string]: any;
     }
   }) => Promise<{ error: AuthError | null }>
@@ -61,7 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     options?: {
       data?: {
         username?: string;
-        displayName?: string;
+        display_name?: string;
         [key: string]: any;
       }
     }
@@ -107,8 +107,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Ensure username is properly formatted in metadata
       options.data.username = username;
-      if (!options.data.displayName) {
-        options.data.displayName = username; // Use username as default display name
+      if (!options.data.display_name) {
+        options.data.display_name = username; // Use username as default display name
       }
     }
 

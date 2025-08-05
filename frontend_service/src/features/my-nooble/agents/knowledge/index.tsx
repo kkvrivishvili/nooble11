@@ -1,4 +1,4 @@
-// src/features/my-nooble/agents/knowledge/index.tsx
+// src/features/my-nooble/agents/knowledge/index.tsx - Fixed upload handling
 import { Progress } from '@/components/ui/progress'
 import { useEffect, useCallback, useState } from 'react'
 import { useLocation } from '@tanstack/react-router'

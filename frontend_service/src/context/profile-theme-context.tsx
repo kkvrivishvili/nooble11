@@ -1,4 +1,4 @@
-// src/context/profile-theme-context.tsx
+// src/context/profile-theme-context.tsx - Fixed snake_case
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { ProfileDesign, ProfileTheme, ProfileLayout, ProfileWallpaper } from '@/types/profile';
 
@@ -12,19 +12,19 @@ interface ProfileThemeContextType {
 }
 
 const defaultTheme: ProfileTheme = {
-  primaryColor: '#000000',
-  backgroundColor: '#ffffff',
-  textColor: '#111827',
-  buttonTextColor: '#ffffff',
-  borderRadius: 'curved',
-  buttonFill: 'solid',
-  buttonShadow: 'subtle',
-  fontFamily: 'sans',
+  primary_color: '#000000',
+  background_color: '#ffffff',
+  text_color: '#111827',
+  button_text_color: '#ffffff',
+  border_radius: 'curved',
+  button_fill: 'solid',
+  button_shadow: 'subtle',
+  font_family: 'sans',
 };
 
 const defaultLayout: ProfileLayout = {
-  socialPosition: 'top',
-  contentWidth: 'normal',
+  social_position: 'top',
+  content_width: 'normal',
 };
 
 const ProfileThemeContext = createContext<ProfileThemeContextType | null>(null);
@@ -48,23 +48,23 @@ export function ProfileThemeProvider({
 
     switch (wallpaper.type) {
       case 'fill':
-        return wallpaper.fillColor || '#ffffff';
+        return wallpaper.fill_color || '#ffffff';
       
       case 'gradient': {
-        if (!wallpaper.gradientColors || wallpaper.gradientColors.length === 0) return '';
-        const direction = wallpaper.gradientDirection === 'diagonal' ? 'to bottom right' :
-                         wallpaper.gradientDirection === 'up' ? 'to top' :
-                         wallpaper.gradientDirection === 'down' ? 'to bottom' :
-                         wallpaper.gradientDirection === 'left' ? 'to left' : 'to right';
-        return `linear-gradient(${direction}, ${wallpaper.gradientColors.join(', ')})`;
+        if (!wallpaper.gradient_colors || wallpaper.gradient_colors.length === 0) return '';
+        const direction = wallpaper.gradient_direction === 'diagonal' ? 'to bottom right' :
+                         wallpaper.gradient_direction === 'up' ? 'to top' :
+                         wallpaper.gradient_direction === 'down' ? 'to bottom' :
+                         wallpaper.gradient_direction === 'left' ? 'to left' : 'to right';
+        return `linear-gradient(${direction}, ${wallpaper.gradient_colors.join(', ')})`;
       }
       
       case 'pattern':
         return generatePatternBackground(wallpaper);
       
       case 'image':
-        if (!wallpaper.imageUrl) return '';
-        return `url(${wallpaper.imageUrl})`;
+        if (!wallpaper.image_url) return '';
+        return `url(${wallpaper.image_url})`;
       
       case 'video':
         // Video backgrounds need to be handled differently with a video element
@@ -77,10 +77,10 @@ export function ProfileThemeProvider({
 
   // Generate pattern backgrounds
   const generatePatternBackground = (wallpaper: ProfileWallpaper): string => {
-    const color = wallpaper.patternColor || '#000000';
-    const opacity = wallpaper.patternOpacity || 0.2;
+    const color = wallpaper.pattern_color || '#000000';
+    const opacity = wallpaper.pattern_opacity || 0.2;
     
-    switch (wallpaper.patternType) {
+    switch (wallpaper.pattern_type) {
       case 'dots':
         return `radial-gradient(circle, ${color}${Math.round(opacity * 255).toString(16).padStart(2, '0')} 1px, transparent 1px)`;
       case 'lines':
@@ -105,10 +105,10 @@ export function ProfileThemeProvider({
     const variables: Record<string, string> = {};
     
     // Colors
-    variables['--profile-primary-color'] = theme.primaryColor;
-    variables['--profile-background-color'] = theme.backgroundColor;
-    variables['--profile-text-color'] = theme.textColor || '#111827';
-    variables['--profile-button-text-color'] = theme.buttonTextColor || '#ffffff';
+    variables['--profile-primary-color'] = theme.primary_color;
+    variables['--profile-background-color'] = theme.background_color;
+    variables['--profile-text-color'] = theme.text_color || '#111827';
+    variables['--profile-button-text-color'] = theme.button_text_color || '#ffffff';
     
     // Border radius mapping
     const radiusMap = {
@@ -116,7 +116,7 @@ export function ProfileThemeProvider({
       'curved': '0.5rem',
       'round': '9999px'
     };
-    variables['--profile-border-radius'] = radiusMap[theme.borderRadius || 'curved'];
+    variables['--profile-border-radius'] = radiusMap[theme.border_radius || 'curved'];
     
     // Font family
     const fontMap = {
@@ -124,10 +124,10 @@ export function ProfileThemeProvider({
       'serif': 'Georgia, serif',
       'mono': 'Monaco, monospace'
     };
-    variables['--profile-font-family'] = fontMap[theme.fontFamily || 'sans'];
+    variables['--profile-font-family'] = fontMap[theme.font_family || 'sans'];
     
     // Button styles
-    variables['--profile-button-fill'] = theme.buttonFill || 'solid';
+    variables['--profile-button-fill'] = theme.button_fill || 'solid';
     
     // Button shadow mapping
     const shadowMap = {
@@ -135,7 +135,7 @@ export function ProfileThemeProvider({
       'subtle': '0 2px 4px rgba(0, 0, 0, 0.1)',
       'hard': '4px 4px 0 rgba(0, 0, 0, 0.2)'
     };
-    variables['--profile-button-shadow'] = shadowMap[theme.buttonShadow || 'subtle'];
+    variables['--profile-button-shadow'] = shadowMap[theme.button_shadow || 'subtle'];
     
     // Wallpaper
     if (theme.wallpaper) {
@@ -146,8 +146,8 @@ export function ProfileThemeProvider({
       if (theme.wallpaper.type === 'pattern') {
         variables['--profile-wallpaper-size'] = '20px 20px';
       } else if (theme.wallpaper.type === 'image') {
-        variables['--profile-wallpaper-size'] = theme.wallpaper.imageSize || 'cover';
-        variables['--profile-wallpaper-position'] = theme.wallpaper.imagePosition || 'center';
+        variables['--profile-wallpaper-size'] = theme.wallpaper.image_size || 'cover';
+        variables['--profile-wallpaper-position'] = theme.wallpaper.image_position || 'center';
       } else {
         variables['--profile-wallpaper-size'] = 'auto';
         variables['--profile-wallpaper-position'] = 'center';
@@ -155,16 +155,16 @@ export function ProfileThemeProvider({
       
       // Blur effect for image, pattern, and video
       let blurIntensity = '0';
-      if (theme.wallpaper.type === 'image' && theme.wallpaper.imageBlur) {
-        blurIntensity = `${theme.wallpaper.imageBlurIntensity || 10}px`;
-      } else if (theme.wallpaper.type === 'pattern' && theme.wallpaper.patternBlur) {
-        blurIntensity = `${theme.wallpaper.patternBlurIntensity || 5}px`;
-      } else if (theme.wallpaper.type === 'video' && theme.wallpaper.videoBlur) {
-        blurIntensity = `${theme.wallpaper.videoBlurIntensity || 10}px`;
+      if (theme.wallpaper.type === 'image' && theme.wallpaper.image_blur) {
+        blurIntensity = `${theme.wallpaper.image_blur_intensity || 10}px`;
+      } else if (theme.wallpaper.type === 'pattern' && theme.wallpaper.pattern_blur) {
+        blurIntensity = `${theme.wallpaper.pattern_blur_intensity || 5}px`;
+      } else if (theme.wallpaper.type === 'video' && theme.wallpaper.video_blur) {
+        blurIntensity = `${theme.wallpaper.video_blur_intensity || 10}px`;
       }
       variables['--profile-blur-intensity'] = blurIntensity;
     } else {
-      variables['--profile-wallpaper'] = theme.backgroundColor;
+      variables['--profile-wallpaper'] = theme.background_color;
       variables['--profile-wallpaper-size'] = 'auto';
       variables['--profile-blur-intensity'] = '0';
     }
@@ -182,7 +182,7 @@ export function ProfileThemeProvider({
       'normal': '36rem',
       'wide': '48rem'
     };
-    variables['--profile-content-width'] = widthMap[layout.contentWidth || 'normal'];
+    variables['--profile-content-width'] = widthMap[layout.content_width || 'normal'];
     
     // Always use compact spacing
     variables['--profile-spacing'] = '0.5rem';

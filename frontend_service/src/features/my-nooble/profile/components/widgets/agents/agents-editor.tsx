@@ -19,9 +19,9 @@ export function AgentsEditor({
 }: WidgetEditorProps<AgentsWidgetData>) {
   const { profile } = useProfile();
   const [formData, setFormData] = useState<AgentsWidgetData>({
-    title: initialData?.title || 'Chat con nuestros agentes',
-    agentIds: initialData?.agentIds || [],
-    displayStyle: initialData?.displayStyle || 'card',
+    title: initialData?.title || 'Mis Agentes',
+    agent_ids: initialData?.agent_ids || [],
+    display_style: initialData?.display_style || 'card',
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -50,18 +50,17 @@ export function AgentsEditor({
     }
   };
 
-  const toggleAgent = (agentId: string) => {
+  const handleAgentToggle = (agentId: string) => {
     setFormData(prev => ({
       ...prev,
-      agentIds: prev.agentIds.includes(agentId)
-        ? prev.agentIds.filter(id => id !== agentId)
-        : [...prev.agentIds, agentId]
+      agent_ids: prev.agent_ids.includes(agentId)
+        ? prev.agent_ids.filter(id => id !== agentId)
+        : [...prev.agent_ids, agentId]
     }));
-    
-    // Clear agentIds error
-    if (errors.agentIds) {
+    // Clear agent_ids error
+    if (errors.agent_ids) {
       const newErrors = { ...errors };
-      delete newErrors.agentIds;
+      delete newErrors.agent_ids;
       setErrors(newErrors);
     }
   };
@@ -121,11 +120,11 @@ export function AgentsEditor({
                 key={agent.id}
                 className={cn(
                   "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
-                  formData.agentIds.includes(agent.id)
+                  formData.agent_ids.includes(agent.id)
                     ? "border-primary bg-primary/5"
                     : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
                 )}
-                onClick={() => toggleAgent(agent.id)}
+                onClick={() => handleAgentToggle(agent.id)}
               >
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="text-xs">{agent.icon}</AvatarFallback>
@@ -138,7 +137,7 @@ export function AgentsEditor({
                     </p>
                   )}
                 </div>
-                {formData.agentIds.includes(agent.id) && (
+                {formData.agent_ids.includes(agent.id) && (
                   <IconCheck size={16} className="text-primary" />
                 )}
               </div>
@@ -149,14 +148,14 @@ export function AgentsEditor({
             </p>
           )}
         </div>
-        {errors.agentIds && (
+        {errors.agent_ids && (
           <p className="text-xs text-red-500 flex items-center gap-1">
             <IconAlertCircle size={12} />
-            {errors.agentIds}
+            {errors.agent_ids}
           </p>
         )}
         <p className="text-xs text-gray-500">
-          Seleccionados: {formData.agentIds.length} de {availableAgents.length}
+          Seleccionados: {formData.agent_ids.length} de {availableAgents.length}
         </p>
       </div>
 
@@ -166,9 +165,9 @@ export function AgentsEditor({
           Estilo de visualización
         </label>
         <RadioGroup
-          value={formData.displayStyle}
-          onValueChange={(value: 'card' | 'list' | 'bubble') => 
-            setFormData({ ...formData, displayStyle: value })
+          value={formData.display_style}
+          onValueChange={(value: any) => 
+            setFormData({ ...formData, display_style: value })
           }
         >
           <div className="flex items-center space-x-2">
