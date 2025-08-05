@@ -124,15 +124,16 @@ export default function AgentsKnowledgePage() {
   const { data: documents = [], isLoading: documentsLoading } = useQuery({
     queryKey: ['user-documents'],
     queryFn: () => ingestionApi.getUserDocuments(),
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // Refetch every 5 seconds if any document is processing
-      const hasProcessing = data?.some(doc => doc.status === 'processing')
-      return hasProcessing ? 5000 : false
+      const documents = query.state.data;
+      const hasProcessing = Array.isArray(documents) && documents.some(doc => doc.status === 'processing');
+      return hasProcessing ? 5000 : false;
     }
   })
 
   // Get user's agents
-  const { data: agents = [], isLoading: agentsLoading } = useQuery({
+  const { data: agents = [] } = useQuery({
     queryKey: ['user-agents'],
     queryFn: () => agentsApi.getUserAgents(),
   })
@@ -245,12 +246,6 @@ export default function AgentsKnowledgePage() {
     }
   })
 
-  const formatFileSize = (bytes?: number) => {
-    if (!bytes) return '-'
-    const sizes = ['Bytes', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(1024))
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i]
-  }
 
   const getFileIcon = (type: string) => {
     switch (type) {

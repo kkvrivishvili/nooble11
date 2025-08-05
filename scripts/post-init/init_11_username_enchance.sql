@@ -61,10 +61,10 @@ BEGIN
   INSERT INTO public.profiles (
     id, 
     username, 
-    "displayName", 
+    display_name, 
     description, 
     avatar, 
-    "socialLinks", 
+    social_links, 
     agents, 
     widgets,
     design
@@ -119,10 +119,10 @@ EXCEPTION
     INSERT INTO public.profiles (
       id, 
       username, 
-      "displayName", 
+      display_name, 
       description, 
       avatar, 
-      "socialLinks", 
+      social_links, 
       agents, 
       widgets,
       design
@@ -243,7 +243,7 @@ BEGIN
     -- Update the profile
     UPDATE public.profiles 
     SET username = new_username,
-        "updatedAt" = now()
+        updated_at = now()
     WHERE id = profile_record.id;
     
     RAISE NOTICE 'Updated username for profile % from % to %', 
@@ -286,7 +286,7 @@ DROP CONSTRAINT IF EXISTS check_display_name_not_empty;
 
 ALTER TABLE public.profiles 
 ADD CONSTRAINT check_display_name_not_empty 
-CHECK ("displayName" IS NOT NULL AND length(trim("displayName")) > 0);
+CHECK (display_name IS NOT NULL AND length(trim(display_name)) > 0);
 
 -- ============================================
 -- PART 7: Update RLS policies if needed
@@ -296,7 +296,7 @@ CHECK ("displayName" IS NOT NULL AND length(trim("displayName")) > 0);
 DROP POLICY IF EXISTS "Public profiles viewable by username" ON public.profiles;
 CREATE POLICY "Public profiles viewable by username" ON public.profiles
   FOR SELECT 
-  USING ("isPublic" = true);
+  USING (is_public = true);
 
 -- Ensure users can check username availability
 DROP POLICY IF EXISTS "Anyone can check username availability" ON public.profiles;

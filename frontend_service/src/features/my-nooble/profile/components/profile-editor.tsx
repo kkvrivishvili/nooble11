@@ -143,7 +143,7 @@ export function ProfileEditor({ onCancel }: ProfileEditorProps) {
           <Avatar className="h-32 w-32 border-4 border-gray-200 dark:border-gray-700">
             <AvatarImage src={formData.avatar} />
             <AvatarFallback className="text-3xl bg-gray-100 dark:bg-gray-700">
-              {formData.displayName.split(' ').map(n => n[0]).join('')}
+              {(formData.displayName || '').split(' ').map(n => n[0]).join('')}
             </AvatarFallback>
           </Avatar>
           <label 
