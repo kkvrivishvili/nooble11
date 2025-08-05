@@ -7,7 +7,7 @@ import { SpotifyWidgetData, WidgetComponentProps } from '@/types/widget';
 export function SpotifyWidget({
   widget,
   data,
-  isEditing,
+  is_editing,
   onEdit,
   onDelete,
 }: WidgetComponentProps<SpotifyWidgetData>) {
@@ -17,13 +17,13 @@ export function SpotifyWidget({
     return match ? match[1] : null;
   };
 
-  const spotifyId = getSpotifyId(data.spotifyUrl);
+  const spotifyId = getSpotifyId(data.spotify_url);
 
   // Get embed URL based on type
   const getEmbedUrl = () => {
     if (!spotifyId) return null;
     
-    switch (data.embedType) {
+    switch (data.embed_type) {
       case 'track':
         return `https://open.spotify.com/embed/track/${spotifyId}`;
       case 'playlist':
@@ -40,7 +40,7 @@ export function SpotifyWidget({
   const embedUrl = getEmbedUrl();
 
   return (
-    <SortableWidget widget={widget} isDraggingDisabled={isEditing}>
+    <SortableWidget widget={widget} isDraggingDisabled={is_editing}>
       <div className="widget-header">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           {/* Icon */}
@@ -50,10 +50,10 @@ export function SpotifyWidget({
           
           {/* Title */}
           <h3 className="widget-title">
-            {data.embedType === 'track' && 'Canción de Spotify'}
-            {data.embedType === 'playlist' && 'Playlist de Spotify'}
-            {data.embedType === 'album' && 'Álbum de Spotify'}
-            {data.embedType === 'artist' && 'Artista de Spotify'}
+            {data.embed_type === 'track' && 'Canción de Spotify'}
+            {data.embed_type === 'playlist' && 'Playlist de Spotify'}
+            {data.embed_type === 'album' && 'Álbum de Spotify'}
+            {data.embed_type === 'artist' && 'Artista de Spotify'}
           </h3>
         </div>
         
@@ -61,7 +61,7 @@ export function SpotifyWidget({
         <WidgetActions
           onEdit={onEdit}
           onDelete={onDelete}
-          disabled={isEditing}
+          disabled={is_editing}
           className="flex items-center gap-1"
         />
       </div>

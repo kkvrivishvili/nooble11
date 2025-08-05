@@ -7,12 +7,12 @@ import { SeparatorWidgetData, WidgetComponentProps } from '@/types/widget';
 export function SeparatorWidget({
   widget,
   data,
-  isEditing,
+  is_editing,
   onEdit,
   onDelete,
 }: WidgetComponentProps<SeparatorWidgetData>) {
   return (
-    <SortableWidget widget={widget} isDraggingDisabled={isEditing}>
+    <SortableWidget widget={widget} isDraggingDisabled={is_editing}>
       <div className="widget-header">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           {/* Icon */}
@@ -28,7 +28,7 @@ export function SeparatorWidget({
         <WidgetActions
           onEdit={onEdit}
           onDelete={onDelete}
-          disabled={isEditing}
+          disabled={is_editing}
           className="flex items-center gap-1"
         />
       </div>
@@ -38,8 +38,8 @@ export function SeparatorWidget({
         <div
           style={{
             borderTop: `${data.thickness}px ${data.style} ${data.color}`,
-            marginTop: `${data.marginTop}px`,
-            marginBottom: `${data.marginBottom}px`,
+            marginTop: `${data.margin_top}px`,
+            marginBottom: `${data.margin_bottom}px`,
           }}
         />
       </div>

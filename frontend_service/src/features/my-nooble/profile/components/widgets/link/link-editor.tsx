@@ -10,7 +10,7 @@ export function LinkEditor({
   data: initialData,
   onSave,
   onCancel,
-  isLoading = false,
+  is_loading = false,
 }: WidgetEditorProps<LinkWidgetData>) {
   const [formData, setFormData] = useState<LinkWidgetData>({
     title: initialData?.title || '',
@@ -20,12 +20,12 @@ export function LinkEditor({
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isSaving, setIsSaving] = useState(false);
+  const [is_saving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
     const validation = validateLinkData(formData);
     
-    if (!validation.isValid) {
+    if (!validation.is_valid) {
       setErrors(validation.errors);
       return;
     }
@@ -54,8 +54,8 @@ export function LinkEditor({
       icon={IconLink}
       onSave={handleSave}
       onCancel={onCancel}
-      isLoading={isLoading}
-      isSaving={isSaving}
+      is_loading={is_loading}
+      is_saving={is_saving}
       error={errors.general}
     >
       {/* Title input */}
@@ -75,7 +75,7 @@ export function LinkEditor({
             }
           }}
           className={errors.title ? 'border-red-300' : ''}
-          disabled={isSaving || isLoading}
+          disabled={is_saving || is_loading}
           maxLength={100}
         />
         <div className="flex justify-between">
@@ -109,7 +109,7 @@ export function LinkEditor({
             }
           }}
           className={errors.url ? 'border-red-300' : ''}
-          disabled={isSaving || isLoading}
+          disabled={is_saving || is_loading}
         />
         {errors.url && (
           <p className="text-xs text-red-500 flex items-center gap-1">
@@ -128,7 +128,7 @@ export function LinkEditor({
           placeholder="Breve descripción del enlace"
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          disabled={isSaving || isLoading}
+          disabled={is_saving || is_loading}
           maxLength={200}
         />
         <span className="text-xs text-gray-500 ml-auto block text-right">

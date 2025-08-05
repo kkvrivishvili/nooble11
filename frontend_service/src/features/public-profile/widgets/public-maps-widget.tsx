@@ -40,19 +40,19 @@ export function PublicMapsWidget({ data, theme, className }: PublicMapsWidgetPro
   };
 
   const buttonStyles = {
-    backgroundColor: theme?.buttonFill === 'glass' 
+    backgroundColor: theme?.button_fill === 'glass' 
       ? 'rgba(255, 255, 255, 0.1)'
-      : theme?.buttonFill === 'outline'
+      : theme?.button_fill === 'outline'
       ? 'transparent'
-      : `${theme?.primaryColor || '#3b82f6'}20`,
-    color: theme?.primaryColor || '#3b82f6',
-    border: theme?.buttonFill === 'outline' 
-      ? `2px solid ${theme?.primaryColor || '#3b82f6'}`
-      : `1px solid ${theme?.primaryColor || '#3b82f6'}`,
+      : `${theme?.primary_color || '#3b82f6'}20`,
+    color: theme?.primary_color || '#3b82f6',
+    border: theme?.button_fill === 'outline' 
+      ? `2px solid ${theme?.primary_color || '#3b82f6'}`
+      : `1px solid ${theme?.primary_color || '#3b82f6'}`,
     borderRadius: theme ? getBorderRadius(theme) : '9999px',
-    backdropFilter: theme?.buttonFill === 'glass' ? 'blur(10px)' : 'none',
-    WebkitBackdropFilter: theme?.buttonFill === 'glass' ? 'blur(10px)' : 'none',
-    fontFamily: theme ? getFontFamily(theme.fontFamily) : 'sans-serif',
+    backdropFilter: theme?.button_fill === 'glass' ? 'blur(10px)' : 'none',
+    WebkitBackdropFilter: theme?.button_fill === 'glass' ? 'blur(10px)' : 'none',
+    fontFamily: theme ? getFontFamily(theme.font_family) : 'sans-serif',
   };
 
   return (
@@ -75,14 +75,14 @@ export function PublicMapsWidget({ data, theme, className }: PublicMapsWidgetPro
             <div 
               className="p-3 rounded-full shadow-lg group-hover:scale-110 transition-transform"
               style={{
-                backgroundColor: theme?.buttonFill === 'glass'
+                backgroundColor: theme?.button_fill === 'glass'
                   ? 'rgba(255, 255, 255, 0.9)'
                   : 'white',
-                backdropFilter: theme?.buttonFill === 'glass' ? 'blur(10px)' : 'none',
-                WebkitBackdropFilter: theme?.buttonFill === 'glass' ? 'blur(10px)' : 'none',
+                backdropFilter: theme?.button_fill === 'glass' ? 'blur(10px)' : 'none',
+                WebkitBackdropFilter: theme?.button_fill === 'glass' ? 'blur(10px)' : 'none',
               }}
             >
-              <IconMapPin size={24} style={{ color: theme?.primaryColor || '#ef4444' }} />
+              <IconMapPin size={24} style={{ color: theme?.primary_color || '#ef4444' }} />
             </div>
           </div>
           
@@ -116,15 +116,15 @@ export function PublicMapsWidget({ data, theme, className }: PublicMapsWidgetPro
             className="inline-flex items-center gap-2 px-4 py-2 transition-all hover:scale-105 active:scale-95"
             style={buttonStyles}
             onMouseEnter={(e) => {
-              if (theme?.buttonFill === 'outline') {
-                e.currentTarget.style.backgroundColor = theme?.primaryColor || '#3b82f6';
-                e.currentTarget.style.color = theme?.buttonTextColor || '#ffffff';
+              if (theme?.button_fill === 'outline') {
+                e.currentTarget.style.backgroundColor = theme?.primary_color || '#3b82f6';
+                e.currentTarget.style.color = theme?.button_text_color || '#ffffff';
               }
             }}
             onMouseLeave={(e) => {
-              if (theme?.buttonFill === 'outline') {
+              if (theme?.button_fill === 'outline') {
                 e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.color = theme?.primaryColor || '#3b82f6';
+                e.currentTarget.style.color = theme?.primary_color || '#3b82f6';
               }
             }}
           >

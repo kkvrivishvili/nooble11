@@ -23,7 +23,7 @@ export function validateGalleryData(data: GalleryWidgetData): ValidationResult {
   }
   
   return {
-    isValid: Object.keys(errors).length === 0,
+    is_valid: Object.keys(errors).length === 0,
     errors
   };
 }
@@ -36,8 +36,8 @@ export const galleryWidgetConfig: WidgetConfig<GalleryWidgetData> = {
   defaultData: {
     title: '',
     products: [],
-    showPrice: true,
-    showDescription: true,
+    show_price: true,
+    show_description: true,
     columns: 3
   },
   validator: validateGalleryData

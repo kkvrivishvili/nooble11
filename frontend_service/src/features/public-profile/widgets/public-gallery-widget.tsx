@@ -9,8 +9,8 @@ interface PublicGalleryWidgetProps extends PublicWidgetProps {
   data: {
     title?: string;
     products: string[]; // Product IDs from database
-    showPrice: boolean;
-    showDescription: boolean;
+    show_price: boolean;
+    show_description: boolean;
     columns: number;
   };
   // Products data would come from profile.products or a separate query
@@ -65,12 +65,12 @@ export function PublicGalleryWidget({ data, productsData = [], theme, className 
     borderRadius: theme ? getBorderRadius(theme) : '1rem',
     overflow: 'hidden',
     boxShadow: theme ? getShadowStyle(theme) : 'none',
-    fontFamily: theme ? getFontFamily(theme.fontFamily) : 'sans-serif',
-    backgroundColor: theme?.buttonFill === 'glass'
+    fontFamily: theme ? getFontFamily(theme.font_family) : 'sans-serif',
+    backgroundColor: theme?.button_fill === 'glass'
       ? 'rgba(255, 255, 255, 0.1)'
-      : theme?.backgroundColor || '#ffffff',
-    backdropFilter: theme?.buttonFill === 'glass' ? 'blur(10px)' : 'none',
-    WebkitBackdropFilter: theme?.buttonFill === 'glass' ? 'blur(10px)' : 'none',
+      : theme?.background_color || '#ffffff',
+    backdropFilter: theme?.button_fill === 'glass' ? 'blur(10px)' : 'none',
+    WebkitBackdropFilter: theme?.button_fill === 'glass' ? 'blur(10px)' : 'none',
   };
 
   if (products.length === 0) {
@@ -119,7 +119,7 @@ export function PublicGalleryWidget({ data, productsData = [], theme, className 
                 <div className="w-full h-full flex items-center justify-center">
                   <IconPhoto 
                     size={48} 
-                    style={{ color: theme?.primaryColor, opacity: 0.3 }}
+                    style={{ color: theme?.primary_color, opacity: 0.3 }}
                   />
                 </div>
               )}
@@ -129,8 +129,8 @@ export function PublicGalleryWidget({ data, productsData = [], theme, className 
                 <div 
                   className="absolute top-2 right-2 px-2 py-1 rounded text-xs font-medium"
                   style={{
-                    backgroundColor: theme?.primaryColor || '#3b82f6',
-                    color: theme?.buttonTextColor || '#ffffff',
+                    backgroundColor: theme?.primary_color || '#3b82f6',
+                    color: theme?.button_text_color || '#ffffff',
                     borderRadius: theme ? getBorderRadius(theme) : '9999px',
                   }}
                 >
@@ -144,12 +144,12 @@ export function PublicGalleryWidget({ data, productsData = [], theme, className 
                   <div 
                     className="p-3 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                     style={{
-                      backgroundColor: theme?.buttonFill === 'glass'
+                      backgroundColor: theme?.button_fill === 'glass'
                         ? 'rgba(255, 255, 255, 0.9)'
                         : 'rgba(255, 255, 255, 0.9)',
                     }}
                   >
-                    <IconExternalLink size={20} style={{ color: theme?.primaryColor }} />
+                    <IconExternalLink size={20} style={{ color: theme?.primary_color }} />
                   </div>
                 </div>
               )}
@@ -170,19 +170,19 @@ export function PublicGalleryWidget({ data, productsData = [], theme, className 
                   <IconTag 
                     size={16} 
                     className="ml-2 flex-shrink-0" 
-                    style={{ color: theme?.primaryColor, opacity: 0.6 }}
+                    style={{ color: theme?.primary_color, opacity: 0.6 }}
                   />
                 ) : (
                   <IconShoppingBag 
                     size={16} 
                     className="ml-2 flex-shrink-0" 
-                    style={{ color: theme?.primaryColor, opacity: 0.6 }}
+                    style={{ color: theme?.primary_color, opacity: 0.6 }}
                   />
                 )}
               </div>
               
               {/* Description */}
-              {data.showDescription && product.description && (
+              {data.show_description && product.description && (
                 <BaseWidget.Text
                   theme={theme}
                   variant="primary"
@@ -194,7 +194,7 @@ export function PublicGalleryWidget({ data, productsData = [], theme, className 
               )}
               
               {/* Price */}
-              {data.showPrice && (
+              {data.show_price && (
                 <div className="flex items-center justify-between">
                   <BaseWidget.Text
                     theme={theme}
@@ -207,8 +207,8 @@ export function PublicGalleryWidget({ data, productsData = [], theme, className 
                     <span 
                       className="text-xs px-2 py-1 rounded"
                       style={{ 
-                        backgroundColor: `${theme?.primaryColor}10`,
-                        color: theme?.primaryColor,
+                        backgroundColor: `${theme?.primary_color}10`,
+                        color: theme?.primary_color,
                         borderRadius: theme ? getBorderRadius(theme) : '9999px',
                       }}
                     >
@@ -241,7 +241,7 @@ export function PublicGalleryWidget({ data, productsData = [], theme, className 
               onClick={() => setSelectedImage(null)}
               className="absolute top-4 right-4 p-2 rounded-full transition-all hover:scale-110"
               style={{
-                backgroundColor: theme?.buttonFill === 'glass'
+                backgroundColor: theme?.button_fill === 'glass'
                   ? 'rgba(255, 255, 255, 0.2)'
                   : 'rgba(255, 255, 255, 0.2)',
                 backdropFilter: 'blur(10px)',

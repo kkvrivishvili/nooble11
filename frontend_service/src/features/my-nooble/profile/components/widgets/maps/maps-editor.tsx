@@ -13,23 +13,23 @@ export function MapsEditor({
   data: initialData,
   onSave,
   onCancel,
-  isLoading = false,
+  is_loading = false,
 }: WidgetEditorProps<MapsWidgetData>) {
   const [formData, setFormData] = useState<MapsWidgetData>({
     address: initialData?.address || '',
     latitude: initialData?.latitude,
     longitude: initialData?.longitude,
-    zoomLevel: initialData?.zoomLevel || 15,
-    mapStyle: initialData?.mapStyle || 'roadmap',
+    zoom_level: initialData?.zoom_level ?? 15,
+    map_style: initialData?.map_style ?? 'roadmap',
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isSaving, setIsSaving] = useState(false);
+  const [is_saving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
     const validation = validateMapsData(formData);
     
-    if (!validation.isValid) {
+    if (!validation.is_valid) {
       setErrors(validation.errors);
       return;
     }
@@ -52,8 +52,8 @@ export function MapsEditor({
       icon={IconMap}
       onSave={handleSave}
       onCancel={onCancel}
-      isLoading={isLoading}
-      isSaving={isSaving}
+      is_loading={is_loading}
+      is_saving={is_saving}
       error={errors.general}
     >
       {/* Address input */}
@@ -73,7 +73,7 @@ export function MapsEditor({
             }
           }}
           className={errors.address ? 'border-red-300' : ''}
-          disabled={isSaving || isLoading}
+          disabled={is_saving || is_loading}
           maxLength={500}
         />
         {errors.address && (
@@ -102,7 +102,7 @@ export function MapsEditor({
               step="0.00000001"
               min="-90"
               max="90"
-              disabled={isSaving || isLoading}
+              disabled={is_saving || is_loading}
             />
           </div>
           <div>
@@ -117,7 +117,7 @@ export function MapsEditor({
               step="0.00000001"
               min="-180"
               max="180"
-              disabled={isSaving || isLoading}
+              disabled={is_saving || is_loading}
             />
           </div>
         </div>
@@ -132,8 +132,8 @@ export function MapsEditor({
           Estilo de mapa
         </label>
         <Select
-          value={formData.mapStyle}
-          onValueChange={(value) => setFormData({ ...formData, mapStyle: value })}
+          value={formData.map_style}
+          onValueChange={(value) => setFormData({ ...formData, map_style: value })}
         >
           <SelectTrigger>
             <SelectValue />
@@ -150,16 +150,16 @@ export function MapsEditor({
       {/* Zoom level */}
       <div className="space-y-2">
         <Label className="text-sm font-medium">
-          Nivel de zoom: {formData.zoomLevel}
+          Nivel de zoom: {formData.zoom_level}
         </Label>
         <Slider
-          value={[formData.zoomLevel]}
-          onValueChange={([value]) => setFormData({ ...formData, zoomLevel: value })}
+          value={[formData.zoom_level]}
+          onValueChange={([value]) => setFormData({ ...formData, zoom_level: value })}
           min={1}
           max={20}
           step={1}
           className="w-full"
-          disabled={isSaving || isLoading}
+          disabled={is_saving || is_loading}
         />
         <div className="flex justify-between text-xs text-gray-500">
           <span>Mundo</span>

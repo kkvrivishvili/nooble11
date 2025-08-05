@@ -24,18 +24,18 @@ export function GalleryEditor({
   data: initialData,
   onSave,
   onCancel,
-  isLoading = false,
+  is_loading = false,
 }: WidgetEditorProps<GalleryWidgetData>) {
   const [formData, setFormData] = useState<GalleryWidgetData>({
     title: initialData?.title || '',
     products: initialData?.products || [],
-    showPrice: initialData?.showPrice ?? true,
-    showDescription: initialData?.showDescription ?? true,
+    show_price: initialData?.show_price ?? true,
+    show_description: initialData?.show_description ?? true,
     columns: initialData?.columns || 3,
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isSaving, setIsSaving] = useState(false);
+  const [is_saving, setIsSaving] = useState(false);
 
   // TODO: Replace with actual products from database
   const availableProducts: Product[] = [];
@@ -44,7 +44,7 @@ export function GalleryEditor({
   const handleSave = async () => {
     const validation = validateGalleryData(formData);
     
-    if (!validation.isValid) {
+    if (!validation.is_valid) {
       setErrors(validation.errors);
       return;
     }
@@ -83,8 +83,8 @@ export function GalleryEditor({
       icon={IconPhoto}
       onSave={handleSave}
       onCancel={onCancel}
-      isLoading={isLoading}
-      isSaving={isSaving}
+      is_loading={is_loading}
+      is_saving={is_saving}
       error={errors.general}
     >
       {/* Title input */}
@@ -104,7 +104,7 @@ export function GalleryEditor({
             }
           }}
           className={errors.title ? 'border-red-300' : ''}
-          disabled={isSaving || isLoading}
+          disabled={is_saving || is_loading}
           maxLength={100}
         />
         {errors.title && (
@@ -199,11 +199,11 @@ export function GalleryEditor({
           </Label>
           <Switch
             id="show-price"
-            checked={formData.showPrice}
+            checked={formData.show_price}
             onCheckedChange={(checked) => 
-              setFormData({ ...formData, showPrice: checked })
+              setFormData({ ...formData, show_price: checked })
             }
-            disabled={hasNoProducts}
+            disabled={hasNoProducts || is_saving || is_loading}
           />
         </div>
         
@@ -213,11 +213,11 @@ export function GalleryEditor({
           </Label>
           <Switch
             id="show-description"
-            checked={formData.showDescription}
+            checked={formData.show_description}
             onCheckedChange={(checked) => 
-              setFormData({ ...formData, showDescription: checked })
+              setFormData({ ...formData, show_description: checked })
             }
-            disabled={hasNoProducts}
+            disabled={hasNoProducts || is_saving || is_loading}
           />
         </div>
         
@@ -234,7 +234,7 @@ export function GalleryEditor({
             max={4}
             step={1}
             className="w-full"
-            disabled={hasNoProducts}
+            disabled={hasNoProducts || is_saving || is_loading}
           />
           <div className="flex justify-between text-xs text-gray-500">
             <span>1</span>

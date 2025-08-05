@@ -35,7 +35,7 @@ export function validateLinkData(data: LinkWidgetData): ValidationResult {
   }
   
   return {
-    isValid: Object.keys(errors).length === 0,
+    is_valid: Object.keys(errors).length === 0,
     errors
   };
 }

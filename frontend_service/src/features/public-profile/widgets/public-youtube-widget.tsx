@@ -7,10 +7,10 @@ import { getBorderRadius, getShadowStyle } from '@/features/public-profile/utils
 
 interface PublicYouTubeWidgetProps extends PublicWidgetProps {
   data: {
-    videoUrl: string;
+    video_url: string;
     title?: string;
     autoplay: boolean;
-    showControls: boolean;
+    show_controls: boolean;
   };
 }
 
@@ -24,12 +24,12 @@ export function PublicYouTubeWidget({ data, theme, className }: PublicYouTubeWid
     return match ? match[1] : null;
   };
 
-  const videoId = getVideoId(data.videoUrl);
+  const videoId = getVideoId(data.video_url);
   
   if (!videoId) {
     return (
       <div className={`p-4 text-center ${className}`}>
-        <p style={{ color: theme?.textColor || theme?.primaryColor }}>Video no válido</p>
+        <p style={{ color: theme?.text_color || theme?.primary_color }}>Video no válido</p>
       </div>
     );
   }
@@ -41,7 +41,7 @@ export function PublicYouTubeWidget({ data, theme, className }: PublicYouTubeWid
   // Para YouTube widget, si el borde es 'round', usar 'curved' en su lugar
   const containerStyles = {
     borderRadius: theme ? 
-      theme.borderRadius === 'round' ? '0.5rem' : getBorderRadius(theme) 
+      theme.border_radius === 'round' ? '0.5rem' : getBorderRadius(theme) 
       : '0.5rem',
     overflow: 'hidden',
     boxShadow: theme ? getShadowStyle(theme) : 'none',
@@ -104,9 +104,9 @@ export function PublicYouTubeWidget({ data, theme, className }: PublicYouTubeWid
                 <div 
                   className="rounded-full p-4 group-hover:scale-110 transition-transform shadow-lg"
                   style={{
-                    backgroundColor: theme?.buttonFill === 'glass' 
+                    backgroundColor: theme?.button_fill === 'glass' 
                       ? 'rgba(255, 255, 255, 0.9)' 
-                      : theme?.primaryColor || '#ff0000',
+                      : theme?.primary_color || '#ff0000',
                     boxShadow: theme ? getShadowStyle(theme) : 'none',
                   }}
                 >
@@ -114,12 +114,12 @@ export function PublicYouTubeWidget({ data, theme, className }: PublicYouTubeWid
                     size={32} 
                     className="ml-1" 
                     style={{ 
-                      color: theme?.buttonFill === 'glass' 
-                        ? (theme?.primaryColor || '#ff0000')
-                        : (theme?.buttonTextColor || '#ffffff'),
-                      fill: theme?.buttonFill === 'glass' 
-                        ? (theme?.primaryColor || '#ff0000')
-                        : (theme?.buttonTextColor || '#ffffff')
+                      color: theme?.button_fill === 'glass' 
+                        ? (theme?.primary_color || '#ff0000')
+                        : (theme?.button_text_color || '#ffffff'),
+                      fill: theme?.button_fill === 'glass' 
+                        ? (theme?.primary_color || '#ff0000')
+                        : (theme?.button_text_color || '#ffffff')
                     }}
                   />
                 </div>
@@ -131,7 +131,7 @@ export function PublicYouTubeWidget({ data, theme, className }: PublicYouTubeWid
                 size={24} 
                 className="drop-shadow-lg transition-colors" 
                 style={{
-                  color: theme?.textColor || theme?.primaryColor || '#ffffff',
+                  color: theme?.text_color || theme?.primary_color || '#ffffff',
                   filter: `drop-shadow(0px 1px 1px rgba(0,0,0,0.5))`,
                 }}
               />
@@ -142,9 +142,9 @@ export function PublicYouTubeWidget({ data, theme, className }: PublicYouTubeWid
                 <p 
                   className="font-medium" 
                   style={{
-                    color: theme?.textColor || theme?.primaryColor || '#ffffff',
-                    fontFamily: theme?.fontFamily === 'serif' ? 'serif' :
-                               theme?.fontFamily === 'mono' ? 'monospace' : 'sans-serif'
+                    color: theme?.text_color || theme?.primary_color || '#ffffff',
+                    fontFamily: theme?.font_family === 'serif' ? 'serif' :
+                               theme?.font_family === 'mono' ? 'monospace' : 'sans-serif'
                   }}
                 >
                   {data.title}
@@ -156,7 +156,7 @@ export function PublicYouTubeWidget({ data, theme, className }: PublicYouTubeWid
           /* YouTube embed when playing */
           <iframe
             className="absolute inset-0 w-full h-full"
-            src={`https://www.youtube.com/embed/${videoId}?autoplay=1&controls=${data.showControls ? '1' : '0'}`}
+            src={`https://www.youtube.com/embed/${videoId}?autoplay=1&controls=${data.show_controls ? '1' : '0'}`}
             title={data.title || 'YouTube video'}
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

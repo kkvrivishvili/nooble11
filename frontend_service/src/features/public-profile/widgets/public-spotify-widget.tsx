@@ -6,8 +6,8 @@ import { getBorderRadius, getShadowStyle, getFontFamily } from '@/features/publi
 
 interface PublicSpotifyWidgetProps extends PublicWidgetProps {
   data: {
-    spotifyUrl: string;
-    embedType: 'track' | 'playlist' | 'album' | 'artist';
+    spotify_url: string;
+    embed_type: 'track' | 'playlist' | 'album' | 'artist';
     height: number;
     theme: 'dark' | 'light';
   };
@@ -20,15 +20,15 @@ export function PublicSpotifyWidget({ data, theme, className }: PublicSpotifyWid
     return match ? match[1] : null;
   };
 
-  const spotifyId = getSpotifyId(data.spotifyUrl);
+  const spotifyId = getSpotifyId(data.spotify_url);
 
   // Generate thumbnail URL (Spotify doesn't provide direct thumbnail access, so we'll use a placeholder)
   const getThumbnailUrl = () => {
-    return `https://via.placeholder.com/300x300/1DB954/white?text=${data.embedType.toUpperCase()}`;
+    return `https://via.placeholder.com/300x300/1DB954/white?text=${data.embed_type.toUpperCase()}`;
   };
 
   const handleSpotifyClick = () => {
-    window.open(data.spotifyUrl, '_blank', 'noopener,noreferrer');
+    window.open(data.spotify_url, '_blank', 'noopener,noreferrer');
   };
 
   const getTypeLabel = () => {
@@ -38,7 +38,7 @@ export function PublicSpotifyWidget({ data, theme, className }: PublicSpotifyWid
       album: 'Álbum',
       artist: 'Artista'
     };
-    return labels[data.embedType];
+    return labels[data.embed_type];
   };
 
   if (!spotifyId) {
@@ -55,24 +55,24 @@ export function PublicSpotifyWidget({ data, theme, className }: PublicSpotifyWid
     borderRadius: theme ? getBorderRadius(theme) : '1rem',
     overflow: 'hidden',
     boxShadow: theme ? getShadowStyle(theme) : 'none',
-    backgroundColor: theme?.buttonFill === 'glass' 
+    backgroundColor: theme?.button_fill === 'glass' 
       ? 'rgba(255, 255, 255, 0.1)'
-      : theme?.backgroundColor || '#ffffff',
-    backdropFilter: theme?.buttonFill === 'glass' ? 'blur(10px)' : 'none',
-    WebkitBackdropFilter: theme?.buttonFill === 'glass' ? 'blur(10px)' : 'none',
+      : theme?.background_color || '#ffffff',
+    backdropFilter: theme?.button_fill === 'glass' ? 'blur(10px)' : 'none',
+    WebkitBackdropFilter: theme?.button_fill === 'glass' ? 'blur(10px)' : 'none',
   };
 
   const ctaStyles = {
-    backgroundColor: theme?.buttonFill === 'outline' 
+    backgroundColor: theme?.button_fill === 'outline' 
       ? 'transparent'
       : '#1DB954',
-    color: theme?.buttonFill === 'outline' 
+    color: theme?.button_fill === 'outline' 
       ? '#1DB954'
       : 'white',
-    border: theme?.buttonFill === 'outline' 
+    border: theme?.button_fill === 'outline' 
       ? '2px solid #1DB954'
       : 'none',
-    fontFamily: theme ? getFontFamily(theme.fontFamily) : 'sans-serif',
+    fontFamily: theme ? getFontFamily(theme.font_family) : 'sans-serif',
   };
 
   return (
@@ -95,15 +95,15 @@ export function PublicSpotifyWidget({ data, theme, className }: PublicSpotifyWid
             <div 
               className="rounded-full p-4 group-hover:scale-110 transition-transform shadow-lg opacity-0 group-hover:opacity-100"
               style={{
-                backgroundColor: theme?.buttonFill === 'glass'
+                backgroundColor: theme?.button_fill === 'glass'
                   ? 'rgba(255, 255, 255, 0.9)'
                   : '#1DB954',
               }}
             >
               <IconBrandSpotify 
                 size={32} 
-                className={theme?.buttonFill === 'glass' ? "text-green-500" : "text-white"} 
-                fill={theme?.buttonFill === 'glass' ? "#1DB954" : "white"}
+                className={theme?.button_fill === 'glass' ? "text-green-500" : "text-white"} 
+                fill={theme?.button_fill === 'glass' ? "#1DB954" : "white"}
               />
             </div>
           </div>
@@ -113,12 +113,12 @@ export function PublicSpotifyWidget({ data, theme, className }: PublicSpotifyWid
             <div 
               className="px-2 py-1 rounded text-xs font-medium"
               style={{
-                backgroundColor: theme?.buttonFill === 'glass'
+                backgroundColor: theme?.button_fill === 'glass'
                   ? 'rgba(29, 185, 84, 0.9)'
                   : '#1DB954',
                 color: 'white',
-                borderRadius: theme?.borderRadius === 'sharp' ? '0.25rem' :
-                             theme?.borderRadius === 'curved' ? '0.5rem' : '9999px',
+                borderRadius: theme?.border_radius === 'sharp' ? '0.25rem' :
+                             theme?.border_radius === 'curved' ? '0.5rem' : '9999px',
               }}
             >
               {getTypeLabel()}
@@ -145,13 +145,13 @@ export function PublicSpotifyWidget({ data, theme, className }: PublicSpotifyWid
           className="p-4 text-center transition-all"
           style={ctaStyles}
           onMouseEnter={(e) => {
-            if (theme?.buttonFill === 'outline') {
+            if (theme?.button_fill === 'outline') {
               e.currentTarget.style.backgroundColor = '#1DB954';
               e.currentTarget.style.color = 'white';
             }
           }}
           onMouseLeave={(e) => {
-            if (theme?.buttonFill === 'outline') {
+            if (theme?.button_fill === 'outline') {
               e.currentTarget.style.backgroundColor = 'transparent';
               e.currentTarget.style.color = '#1DB954';
             }

@@ -13,22 +13,22 @@ export function validateTitleData(data: TitleWidgetData): ValidationResult {
   }
   
   // Validate fontSize
-  if (!['sm', 'md', 'lg', 'xl', '2xl', '3xl'].includes(data.fontSize)) {
-    errors.fontSize = 'Tamaño de fuente inválido';
+  if (!['sm', 'md', 'lg', 'xl', '2xl', '3xl'].includes(data.font_size)) {
+    errors.font_size = 'Tamaño de fuente inválido';
   }
   
   // Validate textAlign
-  if (!['left', 'center', 'right'].includes(data.textAlign)) {
-    errors.textAlign = 'Alineación inválida';
+  if (!['left', 'center', 'right'].includes(data.text_align)) {
+    errors.text_align = 'Alineación inválida';
   }
   
   // Validate fontWeight
-  if (!['normal', 'medium', 'semibold', 'bold'].includes(data.fontWeight)) {
-    errors.fontWeight = 'Peso de fuente inválido';
+  if (!['normal', 'medium', 'semibold', 'bold'].includes(data.font_weight)) {
+    errors.font_weight = 'Peso de fuente inválido';
   }
   
   return {
-    isValid: Object.keys(errors).length === 0,
+    is_valid: Object.keys(errors).length === 0,
     errors
   };
 }
@@ -40,9 +40,9 @@ export const titleWidgetConfig: WidgetConfig<TitleWidgetData> = {
   icon: IconLetterT,
   defaultData: {
     text: '',
-    fontSize: 'xl',
-    textAlign: 'center',
-    fontWeight: 'bold'
+    font_size: 'xl',
+    text_align: 'center',
+    font_weight: 'bold'
   },
   validator: validateTitleData
 };

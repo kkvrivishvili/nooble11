@@ -21,16 +21,16 @@ export function validateSeparatorData(data: SeparatorWidgetData): ValidationResu
   }
   
   // Validate margins
-  if (data.marginTop < 0 || data.marginTop > 100) {
-    errors.marginTop = 'El margen superior debe estar entre 0 y 100';
+  if (data.margin_top < 0 || data.margin_top > 100) {
+    errors.margin_top = 'El margen superior debe estar entre 0 y 100';
   }
   
-  if (data.marginBottom < 0 || data.marginBottom > 100) {
-    errors.marginBottom = 'El margen inferior debe estar entre 0 y 100';
+  if (data.margin_bottom < 0 || data.margin_bottom > 100) {
+    errors.margin_bottom = 'El margen inferior debe estar entre 0 y 100';
   }
   
   return {
-    isValid: Object.keys(errors).length === 0,
+    is_valid: Object.keys(errors).length === 0,
     errors
   };
 }
@@ -44,8 +44,8 @@ export const separatorWidgetConfig: WidgetConfig<SeparatorWidgetData> = {
     style: 'solid',
     thickness: 1,
     color: '#cccccc',
-    marginTop: 20,
-    marginBottom: 20
+    margin_top: 20,
+    margin_bottom: 20
   },
   validator: validateSeparatorData
 };

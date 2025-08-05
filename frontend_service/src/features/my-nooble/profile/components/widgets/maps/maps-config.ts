@@ -26,12 +26,12 @@ export function validateMapsData(data: MapsWidgetData): ValidationResult {
   }
   
   // Validate zoom level
-  if (data.zoomLevel < 1 || data.zoomLevel > 20) {
-    errors.zoomLevel = 'El nivel de zoom debe estar entre 1 y 20';
+  if (data.zoom_level < 1 || data.zoom_level > 20) {
+    errors.zoom_level = 'El nivel de zoom debe estar entre 1 y 20';
   }
   
   return {
-    isValid: Object.keys(errors).length === 0,
+    is_valid: Object.keys(errors).length === 0,
     errors
   };
 }
@@ -45,8 +45,8 @@ export const mapsWidgetConfig: WidgetConfig<MapsWidgetData> = {
     address: '',
     latitude: undefined,
     longitude: undefined,
-    zoomLevel: 15,
-    mapStyle: 'roadmap'
+    zoom_level: 15,
+    map_style: 'roadmap'
   },
   validator: validateMapsData
 };

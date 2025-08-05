@@ -6,13 +6,13 @@ export function validateCalendarData(data: CalendarWidgetData): ValidationResult
   const errors: Record<string, string> = {};
   
   // Validate Calendly URL
-  if (!data.calendlyUrl?.trim()) {
-    errors.calendlyUrl = 'La URL de Calendly es requerida';
+  if (!data.calendly_url?.trim()) {
+    errors.calendly_url = 'La URL de Calendly es requerida';
   } else {
     // Basic Calendly URL validation
     const calendlyRegex = /^(https?:\/\/)?(www\.)?calendly\.com\/[a-zA-Z0-9-_]+/;
-    if (!calendlyRegex.test(data.calendlyUrl)) {
-      errors.calendlyUrl = 'URL de Calendly inválida';
+    if (!calendlyRegex.test(data.calendly_url)) {
+      errors.calendly_url = 'URL de Calendly inválida';
     }
   }
   
@@ -24,7 +24,7 @@ export function validateCalendarData(data: CalendarWidgetData): ValidationResult
   }
   
   return {
-    isValid: Object.keys(errors).length === 0,
+    is_valid: Object.keys(errors).length === 0,
     errors
   };
 }
@@ -35,10 +35,10 @@ export const calendarWidgetConfig: WidgetConfig<CalendarWidgetData> = {
   description: 'Permite a los visitantes agendar reuniones contigo',
   icon: IconCalendar,
   defaultData: {
-    calendlyUrl: '',
+    calendly_url: '',
     title: 'Agenda una reunión',
-    hideEventDetails: false,
-    hideCookieBanner: true
+    hide_event_details: false,
+    hide_cookie_banner: true
   },
   validator: validateCalendarData
 };

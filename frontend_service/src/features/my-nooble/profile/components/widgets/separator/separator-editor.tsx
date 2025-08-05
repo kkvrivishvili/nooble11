@@ -13,23 +13,23 @@ export function SeparatorEditor({
   data: initialData,
   onSave,
   onCancel,
-  isLoading = false,
+  is_loading = false,
 }: WidgetEditorProps<SeparatorWidgetData>) {
   const [formData, setFormData] = useState<SeparatorWidgetData>({
     style: initialData?.style || 'solid',
     thickness: initialData?.thickness || 1,
     color: initialData?.color || '#cccccc',
-    marginTop: initialData?.marginTop || 20,
-    marginBottom: initialData?.marginBottom || 20,
+    margin_top: initialData?.margin_top || 20,
+    margin_bottom: initialData?.margin_bottom || 20,
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isSaving, setIsSaving] = useState(false);
+  const [is_saving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
     const validation = validateSeparatorData(formData);
     
-    if (!validation.isValid) {
+    if (!validation.is_valid) {
       setErrors(validation.errors);
       return;
     }
@@ -52,8 +52,8 @@ export function SeparatorEditor({
       icon={IconMinus}
       onSave={handleSave}
       onCancel={onCancel}
-      isLoading={isLoading}
-      isSaving={isSaving}
+      is_loading={is_loading}
+      is_saving={is_saving}
       error={errors.general}
     >
       {/* Style selector */}
@@ -90,7 +90,7 @@ export function SeparatorEditor({
           max={5}
           step={1}
           className="w-full"
-          disabled={isSaving || isLoading}
+          disabled={is_saving || is_loading}
         />
       </div>
 
@@ -105,7 +105,7 @@ export function SeparatorEditor({
             value={formData.color}
             onChange={(e) => setFormData({ ...formData, color: e.target.value })}
             className="w-16 h-10 p-1 cursor-pointer"
-            disabled={isSaving || isLoading}
+            disabled={is_saving || is_loading}
           />
           <Input
             type="text"
@@ -113,7 +113,7 @@ export function SeparatorEditor({
             onChange={(e) => setFormData({ ...formData, color: e.target.value })}
             placeholder="#cccccc"
             className="flex-1"
-            disabled={isSaving || isLoading}
+            disabled={is_saving || is_loading}
           />
         </div>
         {errors.color && (
@@ -128,31 +128,31 @@ export function SeparatorEditor({
       <div className="space-y-4">
         <div className="space-y-2">
           <Label className="text-sm font-medium">
-            Margen superior: {formData.marginTop}px
+            Margen superior: {formData.margin_top}px
           </Label>
           <Slider
-            value={[formData.marginTop]}
-            onValueChange={([value]) => setFormData({ ...formData, marginTop: value })}
+            value={[formData.margin_top]}
+            onValueChange={([value]) => setFormData({ ...formData, margin_top: value })}
             min={0}
             max={100}
             step={5}
             className="w-full"
-            disabled={isSaving || isLoading}
+            disabled={is_saving || is_loading}
           />
         </div>
         
         <div className="space-y-2">
           <Label className="text-sm font-medium">
-            Margen inferior: {formData.marginBottom}px
+            Margen inferior: {formData.margin_bottom}px
           </Label>
           <Slider
-            value={[formData.marginBottom]}
-            onValueChange={([value]) => setFormData({ ...formData, marginBottom: value })}
+            value={[formData.margin_bottom]}
+            onValueChange={([value]) => setFormData({ ...formData, margin_bottom: value })}
             min={0}
             max={100}
             step={5}
             className="w-full"
-            disabled={isSaving || isLoading}
+            disabled={is_saving || is_loading}
           />
         </div>
       </div>
@@ -164,8 +164,8 @@ export function SeparatorEditor({
           <div
             style={{
               borderTop: `${formData.thickness}px ${formData.style} ${formData.color}`,
-              marginTop: `${formData.marginTop}px`,
-              marginBottom: `${formData.marginBottom}px`,
+              marginTop: `${formData.margin_top}px`,
+              marginBottom: `${formData.margin_bottom}px`,
             }}
           />
         </div>
