@@ -1,11 +1,11 @@
 -- Nooble8 Products Schema
--- Version: 4.0 - camelCase
--- Description: Products and services management with camelCase convention
+-- Version: 5.0 - Snake Case
+-- Description: Products and services management with snake_case convention
 
 -- Step 1: Create products table
 CREATE TABLE public.products (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  "tenantId" uuid NOT NULL,
+  tenant_id uuid NOT NULL,
   name text NOT NULL,
   description text,
   price decimal(10, 2),
@@ -13,27 +13,27 @@ CREATE TABLE public.products (
   link text, -- External link for the product
   images jsonb DEFAULT '[]'::jsonb, -- Array of image URLs
   category text,
-  "stockQuantity" integer, -- NULL for services
-  "isService" boolean DEFAULT false,
+  stock_quantity integer, -- NULL for services
+  is_service boolean DEFAULT false,
   metadata jsonb DEFAULT '{}'::jsonb,
-  "isActive" boolean DEFAULT true,
-  "createdAt" timestamptz DEFAULT now(),
-  "updatedAt" timestamptz DEFAULT now(),
+  is_active boolean DEFAULT true,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
   CONSTRAINT positive_price CHECK (price >= 0),
-  CONSTRAINT positive_stock CHECK ("stockQuantity" >= 0 OR "stockQuantity" IS NULL)
+  CONSTRAINT positive_stock CHECK (stock_quantity >= 0 OR stock_quantity IS NULL)
 );
 
 -- Step 2: Create indexes
-CREATE INDEX idx_products_tenant ON public.products("tenantId");
+CREATE INDEX idx_products_tenant ON public.products(tenant_id);
 CREATE INDEX idx_products_category ON public.products(category);
-CREATE INDEX idx_products_is_service ON public.products("isService");
-CREATE INDEX idx_products_is_active ON public.products("isActive") WHERE "isActive" = true;
+CREATE INDEX idx_products_is_service ON public.products(is_service);
+CREATE INDEX idx_products_is_active ON public.products(is_active) WHERE is_active = true;
 
 -- Step 3: Create gallery view for widgets
 CREATE OR REPLACE VIEW products_gallery AS
 SELECT 
   p.id,
-  p."tenantId",
+  p.tenant_id,
   p.name,
   p.description,
   p.price,
@@ -41,15 +41,15 @@ SELECT
   p.link,
   p.images,
   p.category,
-  p."isService",
+  p.is_service,
   CASE 
-    WHEN p."stockQuantity" > 0 THEN 'inStock'
-    WHEN p."stockQuantity" = 0 THEN 'outOfStock'
-    WHEN p."isService" THEN 'available'
+    WHEN p.stock_quantity > 0 THEN 'in_stock'
+    WHEN p.stock_quantity = 0 THEN 'out_of_stock'
+    WHEN p.is_service THEN 'available'
     ELSE 'unavailable'
   END as availability
 FROM products p
-WHERE p."isActive" = true;
+WHERE p.is_active = true;
 
 -- Step 4: Add trigger
 CREATE TRIGGER update_products_updated_at 

@@ -97,7 +97,7 @@ BEGIN
       ),
       'version', 3
     ),
-    "updatedAt" = now()
+    updated_at = now()
     WHERE id = profile_record.id;
   END LOOP;
 END;

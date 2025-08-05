@@ -743,9 +743,6 @@ services:
       timeout: 10s
       retries: 5
 networks:
-  default:
-    name: nooble-network
-    external: true
   nooble-network:
     driver: bridge
     name: nooble-network

@@ -1,169 +1,132 @@
 -- Nooble8 RLS Policies
--- Version: 4.0 - camelCase
--- Description: Row Level Security policies with camelCase convention
+-- Version: 5.0 - Snake Case
+-- Description: Row Level Security policies with snake_case convention
 
 -- Enable RLS on all tables
-ALTER TABLE public."agentTemplates" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.agent_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.agents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public."documentCollections" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public."documentsRag" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public."agentDocuments" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.documents_rag ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public."widgetLinks" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public."widgetGallery" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public."widgetAgents" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public."widgetYoutube" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public."widgetMaps" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public."widgetSpotify" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public."widgetCalendar" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public."widgetSeparator" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public."widgetTitle" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.widget_links ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.widget_gallery ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.widget_agents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.widget_youtube ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.widget_maps ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.widget_spotify ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.widget_calendar ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.widget_separator ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.widget_title ENABLE ROW LEVEL SECURITY;
 
 -- AGENT TEMPLATES (public read)
-CREATE POLICY "Agent templates are viewable by everyone" ON public."agentTemplates"
-  FOR SELECT USING ("isActive" = true);
+CREATE POLICY "Agent templates are viewable by everyone" ON public.agent_templates
+  FOR SELECT USING (is_active = true);
 
 -- AGENTS
 CREATE POLICY "Public agents are viewable by everyone" ON public.agents
-  FOR SELECT USING ("isPublic" = true AND "isActive" = true);
+  FOR SELECT USING (is_public = true AND is_active = true);
 
 CREATE POLICY "Users can view their own agents" ON public.agents
-  FOR SELECT USING (auth.uid() = "userId");
+  FOR SELECT USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can manage their own agents" ON public.agents
-  FOR ALL USING (auth.uid() = "userId");
+  FOR ALL USING (auth.uid() = user_id);
 
-
+-- CONVERSATIONS
 CREATE POLICY "Anyone can create conversations with public agents" ON public.conversations
   FOR INSERT WITH CHECK (
-    "agentId" IN (SELECT id FROM agents WHERE "isPublic" = true AND "isActive" = true)
+    agent_id IN (SELECT id FROM agents WHERE is_public = true AND is_active = true)
   );
 
 -- MESSAGES
 CREATE POLICY "Users can view messages in conversations they have access to" ON public.messages
   FOR SELECT USING (
-    "conversationId" IN (
+    conversation_id IN (
       SELECT id FROM conversations WHERE 
-      auth.uid() = "tenantId" OR
-      "agentId" IN (SELECT id FROM agents WHERE "userId" = auth.uid())
+      auth.uid() = tenant_id OR
+      agent_id IN (SELECT id FROM agents WHERE user_id = auth.uid())
     )
   );
 
 CREATE POLICY "Anyone can create messages in their conversations" ON public.messages
-  FOR INSERT WITH CHECK (
-    -- This will be validated at application level for anonymous users
-    true
-  );
+  FOR INSERT WITH CHECK (true);
 
 -- DOCUMENTS
-CREATE POLICY "Users can manage their own document collections" ON public."documentCollections"
-  FOR ALL USING (auth.uid() = "tenantId");
-
-CREATE POLICY "Users can manage their own documents" ON public."documentsRag"
-  FOR ALL USING (auth.uid() = "tenantId");
-
-CREATE POLICY "Users can manage agent-document relationships" ON public."agentDocuments"
-  FOR ALL USING (
-    "agentId" IN (SELECT id FROM agents WHERE "userId" = auth.uid())
-  );
+CREATE POLICY "Users can manage their own documents" ON public.documents_rag
+  FOR ALL USING (auth.uid() = profile_id);
 
 -- PRODUCTS
 CREATE POLICY "Products of public profiles are viewable" ON public.products
   FOR SELECT USING (
-    "tenantId" IN (SELECT id FROM profiles WHERE "isPublic" = true)
+    tenant_id IN (SELECT id FROM profiles WHERE is_public = true)
   );
 
 CREATE POLICY "Users can manage their own products" ON public.products
-  FOR ALL USING (auth.uid() = "tenantId");
+  FOR ALL USING (auth.uid() = tenant_id);
 
--- WIDGET LINKS
-DROP POLICY IF EXISTS "Authenticated users can view all link widgets" ON public."widgetLinks";
-DROP POLICY IF EXISTS "Users can manage their own link widgets" ON public."widgetLinks";
--- WIDGET LINKS - All widgets are public
-CREATE POLICY "Anyone can view link widgets" ON public."widgetLinks"
+-- WIDGET POLICIES (all widget tables)
+-- Pattern: Anyone can view widgets, users can manage their own
+
+-- Widget Links
+CREATE POLICY "Anyone can view link widgets" ON public.widget_links
   FOR SELECT USING (true);
 
-CREATE POLICY "Users can manage their own link widgets" ON public."widgetLinks"
-  FOR ALL USING (auth.uid() = "profileId");
+CREATE POLICY "Users can manage their own link widgets" ON public.widget_links
+  FOR ALL USING (auth.uid() = profile_id);
 
--- WIDGET GALLERY
-DROP POLICY IF EXISTS "Authenticated users can view all gallery widgets" ON public."widgetGallery";
-DROP POLICY IF EXISTS "Users can manage their own gallery widgets" ON public."widgetGallery";
--- WIDGET GALLERY - All widgets are public
-CREATE POLICY "Anyone can view gallery widgets" ON public."widgetGallery"
+-- Widget Gallery
+CREATE POLICY "Anyone can view gallery widgets" ON public.widget_gallery
   FOR SELECT USING (true);
 
-CREATE POLICY "Users can manage their own gallery widgets" ON public."widgetGallery"
-  FOR ALL USING (auth.uid() = "profileId");
+CREATE POLICY "Users can manage their own gallery widgets" ON public.widget_gallery
+  FOR ALL USING (auth.uid() = profile_id);
 
--- WIDGET AGENTS
-DROP POLICY IF EXISTS "Authenticated users can view all agent widgets" ON public."widgetAgents";
-DROP POLICY IF EXISTS "Users can manage their own agent widgets" ON public."widgetAgents";
--- WIDGET AGENTS - All widgets are public
-CREATE POLICY "Anyone can view agent widgets" ON public."widgetAgents"
+-- Widget Agents
+CREATE POLICY "Anyone can view agent widgets" ON public.widget_agents
   FOR SELECT USING (true);
 
-CREATE POLICY "Users can manage their own agent widgets" ON public."widgetAgents"
-  FOR ALL USING (auth.uid() = "profileId");
+CREATE POLICY "Users can manage their own agent widgets" ON public.widget_agents
+  FOR ALL USING (auth.uid() = profile_id);
 
--- WIDGET YOUTUBE
-DROP POLICY IF EXISTS "Authenticated users can view all youtube widgets" ON public."widgetYoutube";
-DROP POLICY IF EXISTS "Users can manage their own youtube widgets" ON public."widgetYoutube";
--- WIDGET YOUTUBE - All widgets are public
-CREATE POLICY "Anyone can view youtube widgets" ON public."widgetYoutube"
+-- Widget YouTube
+CREATE POLICY "Anyone can view youtube widgets" ON public.widget_youtube
   FOR SELECT USING (true);
 
-CREATE POLICY "Users can manage their own youtube widgets" ON public."widgetYoutube"
-  FOR ALL USING (auth.uid() = "profileId");
+CREATE POLICY "Users can manage their own youtube widgets" ON public.widget_youtube
+  FOR ALL USING (auth.uid() = profile_id);
 
--- WIDGET MAPS
-DROP POLICY IF EXISTS "Authenticated users can view all map widgets" ON public."widgetMaps";
-DROP POLICY IF EXISTS "Users can manage their own map widgets" ON public."widgetMaps";
--- WIDGET MAPS - All widgets are public
-CREATE POLICY "Anyone can view map widgets" ON public."widgetMaps"
+-- Widget Maps
+CREATE POLICY "Anyone can view map widgets" ON public.widget_maps
   FOR SELECT USING (true);
 
-CREATE POLICY "Users can manage their own map widgets" ON public."widgetMaps"
-  FOR ALL USING (auth.uid() = "profileId");
+CREATE POLICY "Users can manage their own map widgets" ON public.widget_maps
+  FOR ALL USING (auth.uid() = profile_id);
 
--- WIDGET SPOTIFY
-DROP POLICY IF EXISTS "Authenticated users can view all spotify widgets" ON public."widgetSpotify";
-DROP POLICY IF EXISTS "Users can manage their own spotify widgets" ON public."widgetSpotify";
--- WIDGET SPOTIFY - All widgets are public
-CREATE POLICY "Anyone can view spotify widgets" ON public."widgetSpotify"
+-- Widget Spotify
+CREATE POLICY "Anyone can view spotify widgets" ON public.widget_spotify
   FOR SELECT USING (true);
 
-CREATE POLICY "Users can manage their own spotify widgets" ON public."widgetSpotify"
-  FOR ALL USING (auth.uid() = "profileId");
+CREATE POLICY "Users can manage their own spotify widgets" ON public.widget_spotify
+  FOR ALL USING (auth.uid() = profile_id);
 
--- WIDGET CALENDAR
-DROP POLICY IF EXISTS "Authenticated users can view all calendar widgets" ON public."widgetCalendar";
-DROP POLICY IF EXISTS "Users can manage their own calendar widgets" ON public."widgetCalendar";
--- WIDGET CALENDAR - All widgets are public
-CREATE POLICY "Anyone can view calendar widgets" ON public."widgetCalendar"
+-- Widget Calendar
+CREATE POLICY "Anyone can view calendar widgets" ON public.widget_calendar
   FOR SELECT USING (true);
 
-CREATE POLICY "Users can manage their own calendar widgets" ON public."widgetCalendar"
-  FOR ALL USING (auth.uid() = "profileId");
+CREATE POLICY "Users can manage their own calendar widgets" ON public.widget_calendar
+  FOR ALL USING (auth.uid() = profile_id);
 
--- WIDGET SEPARATOR
-DROP POLICY IF EXISTS "Authenticated users can view all separator widgets" ON public."widgetSeparator";
-DROP POLICY IF EXISTS "Users can manage their own separator widgets" ON public."widgetSeparator";
--- WIDGET SEPARATOR - All widgets are public
-CREATE POLICY "Anyone can view separator widgets" ON public."widgetSeparator"
+-- Widget Separator
+CREATE POLICY "Anyone can view separator widgets" ON public.widget_separator
   FOR SELECT USING (true);
 
-CREATE POLICY "Users can manage their own separator widgets" ON public."widgetSeparator"
-  FOR ALL USING (auth.uid() = "profileId");
+CREATE POLICY "Users can manage their own separator widgets" ON public.widget_separator
+  FOR ALL USING (auth.uid() = profile_id);
 
--- WIDGET TITLE
-DROP POLICY IF EXISTS "Authenticated users can view all title widgets" ON public."widgetTitle";
-DROP POLICY IF EXISTS "Users can manage their own title widgets" ON public."widgetTitle";
--- WIDGET TITLE - All widgets are public
-CREATE POLICY "Anyone can view title widgets" ON public."widgetTitle"
+-- Widget Title
+CREATE POLICY "Anyone can view title widgets" ON public.widget_title
   FOR SELECT USING (true);
 
-CREATE POLICY "Users can manage their own title widgets" ON public."widgetTitle"
-  FOR ALL USING (auth.uid() = "profileId");
+CREATE POLICY "Users can manage their own title widgets" ON public.widget_title
+  FOR ALL USING (auth.uid() = profile_id);

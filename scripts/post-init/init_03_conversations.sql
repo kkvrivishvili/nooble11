@@ -1,54 +1,54 @@
 -- Nooble8 Conversations Schema
--- Version: 4.0 - camelCase
--- Description: Conversations and messages for agent interactions with camelCase convention
+-- Version: 5.0 - Snake Case
+-- Description: Conversations and messages for agent interactions with snake_case convention
 
 -- Step 1: Create conversations table
 CREATE TABLE public.conversations (
   id uuid PRIMARY KEY, -- Deterministic: uuid5(namespace, tenant:session:agent)
-  "tenantId" uuid NOT NULL, -- Owner of the agent (userId)
-  "sessionId" uuid NOT NULL, -- Visitor's session
-  "agentId" uuid NOT NULL REFERENCES public.agents(id) ON DELETE CASCADE,
-  "visitorInfo" jsonb DEFAULT '{
+  tenant_id uuid NOT NULL, -- Owner of the agent (user_id)
+  session_id uuid NOT NULL, -- Visitor's session
+  agent_id uuid NOT NULL REFERENCES public.agents(id) ON DELETE CASCADE,
+  visitor_info jsonb DEFAULT '{
     "ip": null,
     "location": null,
-    "deviceType": null,
-    "userAgent": null
+    "device_type": null,
+    "user_agent": null
   }'::jsonb,
-  "startedAt" timestamptz NOT NULL DEFAULT now(),
-  "endedAt" timestamptz,
-  "isActive" boolean DEFAULT true,
-  "messageCount" integer DEFAULT 0,
-  "lastMessageAt" timestamptz DEFAULT now(),
-  CONSTRAINT unique_conversation UNIQUE("tenantId", "sessionId", "agentId")
+  started_at timestamptz NOT NULL DEFAULT now(),
+  ended_at timestamptz,
+  is_active boolean DEFAULT true,
+  message_count integer DEFAULT 0,
+  last_message_at timestamptz DEFAULT now(),
+  CONSTRAINT unique_conversation UNIQUE(tenant_id, session_id, agent_id)
 );
 
 -- Step 2: Create messages table
 CREATE TABLE public.messages (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  "conversationId" uuid NOT NULL REFERENCES public.conversations(id) ON DELETE CASCADE,
+  conversation_id uuid NOT NULL REFERENCES public.conversations(id) ON DELETE CASCADE,
   role varchar(20) NOT NULL CHECK (role IN ('user', 'assistant')),
   content text NOT NULL,
   metadata jsonb DEFAULT '{}'::jsonb, -- tokens used, model, etc.
-  "createdAt" timestamptz DEFAULT now()
+  created_at timestamptz DEFAULT now()
 );
 
 -- Step 3: Create indexes
-CREATE INDEX idx_conversations_tenant ON public.conversations("tenantId");
-CREATE INDEX idx_conversations_session ON public.conversations("sessionId");
-CREATE INDEX idx_conversations_agent ON public.conversations("agentId");
-CREATE INDEX idx_conversations_active ON public.conversations("isActive") WHERE "isActive" = true;
-CREATE INDEX idx_conversations_dates ON public.conversations("startedAt", "endedAt");
-CREATE INDEX idx_messages_conversation ON public.messages("conversationId");
-CREATE INDEX idx_messages_created ON public.messages("createdAt");
+CREATE INDEX idx_conversations_tenant ON public.conversations(tenant_id);
+CREATE INDEX idx_conversations_session ON public.conversations(session_id);
+CREATE INDEX idx_conversations_agent ON public.conversations(agent_id);
+CREATE INDEX idx_conversations_active ON public.conversations(is_active) WHERE is_active = true;
+CREATE INDEX idx_conversations_dates ON public.conversations(started_at, ended_at);
+CREATE INDEX idx_messages_conversation ON public.messages(conversation_id);
+CREATE INDEX idx_messages_created ON public.messages(created_at);
 
 -- Step 4: Function to update message count
 CREATE OR REPLACE FUNCTION update_conversation_message_count()
 RETURNS TRIGGER AS $$
 BEGIN
   UPDATE conversations 
-  SET "messageCount" = "messageCount" + 1,
-      "lastMessageAt" = NEW."createdAt"
-  WHERE id = NEW."conversationId";
+  SET message_count = message_count + 1,
+      last_message_at = NEW.created_at
+  WHERE id = NEW.conversation_id;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -61,25 +61,25 @@ CREATE TRIGGER update_message_count_on_insert
 CREATE OR REPLACE VIEW conversation_summary AS
 SELECT 
   c.id,
-  c."tenantId",
-  c."sessionId",
-  c."agentId",
-  a.name as "agentName",
-  c."visitorInfo",
-  c."startedAt",
-  c."endedAt",
-  c."isActive",
-  c."messageCount",
-  c."lastMessageAt",
+  c.tenant_id,
+  c.session_id,
+  c.agent_id,
+  a.name as agent_name,
+  c.visitor_info,
+  c.started_at,
+  c.ended_at,
+  c.is_active,
+  c.message_count,
+  c.last_message_at,
   CASE 
-    WHEN c."endedAt" IS NOT NULL THEN c."endedAt" - c."startedAt"
-    ELSE now() - c."startedAt"
+    WHEN c.ended_at IS NOT NULL THEN c.ended_at - c.started_at
+    ELSE now() - c.started_at
   END as duration,
-  COUNT(m.id) FILTER (WHERE m.role = 'user') as "userMessages",
-  COUNT(m.id) FILTER (WHERE m.role = 'assistant') as "agentMessages"
+  COUNT(m.id) FILTER (WHERE m.role = 'user') as user_messages,
+  COUNT(m.id) FILTER (WHERE m.role = 'assistant') as agent_messages
 FROM conversations c
-LEFT JOIN agents a ON c."agentId" = a.id
-LEFT JOIN messages m ON c.id = m."conversationId"
+LEFT JOIN agents a ON c.agent_id = a.id
+LEFT JOIN messages m ON c.id = m.conversation_id
 GROUP BY c.id, a.name;
 
 -- Step 6: Auto-close old conversations (3 months)
@@ -87,9 +87,9 @@ CREATE OR REPLACE FUNCTION auto_close_old_conversations()
 RETURNS void AS $$
 BEGIN
   UPDATE conversations
-  SET "isActive" = false,
-      "endedAt" = "lastMessageAt"
-  WHERE "isActive" = true
-    AND "lastMessageAt" < now() - interval '3 months';
+  SET is_active = false,
+      ended_at = last_message_at
+  WHERE is_active = true
+    AND last_message_at < now() - interval '3 months';
 END;
 $$ LANGUAGE plpgsql;

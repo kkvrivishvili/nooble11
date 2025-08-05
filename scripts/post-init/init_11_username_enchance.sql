@@ -72,7 +72,7 @@ BEGIN
     NEW.id,
     final_username,
     COALESCE(
-      NEW.raw_user_meta_data->>'displayName',
+      NEW.raw_user_meta_data->>'display_name',
       NEW.raw_user_meta_data->>'username',
       final_username
     ),
@@ -130,7 +130,7 @@ EXCEPTION
       NEW.id,
       final_username,
       COALESCE(
-        NEW.raw_user_meta_data->>'displayName',
+        NEW.raw_user_meta_data->>'display_name',
         NEW.raw_user_meta_data->>'username',
         final_username
       ),
@@ -199,8 +199,8 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 -- ============================================
 
 -- Recreate the trigger to use the updated function
-DROP TRIGGER IF EXISTS "onAuthUserCreated" ON auth.users;
-CREATE TRIGGER "onAuthUserCreated"
+DROP TRIGGER IF EXISTS "on_auth_user_created" ON auth.users;
+CREATE TRIGGER "on_auth_user_created"
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
@@ -280,7 +280,7 @@ CHECK (
   username ~ '^[a-z0-9_-]+$'
 );
 
--- Add constraint to ensure displayName is not empty
+-- Add constraint to ensure display_name is not empty
 ALTER TABLE public.profiles 
 DROP CONSTRAINT IF EXISTS check_display_name_not_empty;
 

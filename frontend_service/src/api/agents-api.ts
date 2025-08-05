@@ -389,29 +389,29 @@ class AgentsAPI {
       throw new Error('Agent not found or access denied');
     }
 
-    // Get conversation count - NOTE: conversations table still uses camelCase
+    // Get conversation count - FIXED: Use snake_case
     const { count: conversationCount, error: convError } = await supabase
       .from('conversations')
       .select('*', { count: 'exact', head: true })
-      .eq('agentId', agentId);
+      .eq('agent_id', agentId);
 
-    // Get message count and last used
+    // Get message count and last used - FIXED: Use snake_case
     const { data: messageStats, error: msgError } = await supabase
       .from('messages')
-      .select('createdAt')
-      .in('conversationId', 
+      .select('created_at')
+      .in('conversation_id', 
         supabase
           .from('conversations')
           .select('id')
-          .eq('agentId', agentId)
+          .eq('agent_id', agentId)
       )
-      .order('createdAt', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(1);
 
     return {
       totalConversations: conversationCount || 0,
       totalMessages: messageStats?.length || 0,
-      lastUsed: messageStats?.[0]?.createdAt
+      lastUsed: messageStats?.[0]?.created_at
     };
   }
 }

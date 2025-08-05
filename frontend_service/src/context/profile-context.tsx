@@ -91,7 +91,7 @@ export const ProfileProvider = ({ children }: ProfileProviderProps) => {
   });
 
   // Profile info update
-  const updateProfileInfo = (data: { displayName?: string; description?: string; avatar?: string; }) => {
+  const updateProfileInfo = (data: { display_name?: string; description?: string; avatar?: string; }) => {
     updateProfileMutation.mutate(data);
   };
 
