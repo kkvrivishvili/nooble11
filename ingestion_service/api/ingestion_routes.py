@@ -12,14 +12,14 @@ from ..models import (
     DocumentIngestionRequest,
     IngestionResponse,
     IngestionStatus,
-    RAGConfigRequest
+    RAGConfigRequest,
+    DocumentType
 )
 from ..services.ingestion_service import IngestionService
 from ..config.settings import IngestionSettings
 from .dependencies import (
     verify_jwt_token,
     get_ingestion_service,
-    get_websocket_manager,
     get_settings
 )
 
@@ -211,6 +211,8 @@ async def upload_and_ingest(
                 status_code=400,
                 detail="Unsupported file type"
             )
+        # Normalizar extensión a Enum DocumentType (md -> markdown)
+        normalized_ext = 'markdown' if file_extension == 'md' else file_extension
         
         # Guardar archivo temporalmente
         temp_path = await ingestion_service.save_uploaded_file(file)
@@ -222,10 +224,10 @@ async def upload_and_ingest(
             chunk_overlap=chunk_overlap
         )
         
-        # Crear request de ingestion
+        # Crear request de ingestion (asegurar Enum DocumentType)
         request = DocumentIngestionRequest(
             document_name=file.filename,
-            document_type=file_extension,
+            document_type=DocumentType(normalized_ext),
             file_path=str(temp_path),
             collection_id=collection_id,
             agent_ids=agent_ids or [],

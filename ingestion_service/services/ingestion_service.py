@@ -208,8 +208,8 @@ class IngestionService(BaseService):
         # Notificar via WebSocket
         if self.websocket_manager:
             await self.websocket_manager.send_progress_update(
-                task_id=str(task["task_id"]),
-                status=status.value,
+                task_id=task["task_id"],
+                status=(status.value if hasattr(status, "value") else status),
                 message=message,
                 percentage=percentage,
                 total_chunks=task.get("total_chunks"),
@@ -380,7 +380,16 @@ class IngestionService(BaseService):
                 existing_model = existing.data[0]["embedding_model"]
                 existing_dims = existing.data[0]["embedding_dimensions"]
                 
-                if (existing_model != rag_config.embedding_model or 
+                # Asegurar valor string del modelo del request (Enum o str)
+                req_model_value = (
+                    rag_config.embedding_model.value
+                    if hasattr(rag_config, "embedding_model") and hasattr(rag_config.embedding_model, "value")
+                    else getattr(rag_config, "embedding_model", None)
+                )
+                if not isinstance(req_model_value, str):
+                    req_model_value = str(req_model_value)
+
+                if (existing_model != req_model_value or 
                     existing_dims != rag_config.embedding_dimensions):
                     raise ValueError(
                         f"Collection '{collection_id}' ya usa modelo '{existing_model}' "
@@ -404,15 +413,12 @@ class IngestionService(BaseService):
             
             # 1. Procesar documento en chunks
             chunks = await self.document_handler.process_document(
-                task["request"],
-                str(task["document_id"])
+                request=task["request"],
+                document_id=str(task["document_id"]),
+                tenant_id=task["tenant_id"],
+                collection_id=task["collection_id"],
+                agent_ids=task.get("agent_ids") or []
             )
-            
-            # Agregar IDs de jerarquía a cada chunk
-            for chunk in chunks:
-                chunk.tenant_id = task["tenant_id"]
-                chunk.collection_id = task["collection_id"]
-                chunk.agent_ids = task["agent_ids"]
             
             task["total_chunks"] = len(chunks)
             task["chunks"] = chunks
@@ -432,11 +438,17 @@ class IngestionService(BaseService):
                 50
             )
             
+            # Determinar un único agent_id para el servicio de embeddings
+            agent_ids = task.get("agent_ids") or []
+            if not agent_ids:
+                raise ValueError("No agent_id provided for embedding generation")
+            agent_id_str = str(agent_ids[0])
+
             # Usar RAG config guardada en la task
             await self.embedding_handler.generate_embeddings(
                 chunks=chunks,
                 tenant_id=uuid.UUID(task["tenant_id"]),
-                agent_ids=task["agent_ids"],
+                agent_id=uuid.UUID(agent_id_str),
                 task_id=task["task_id"],
                 rag_config=task["rag_config"]  # Del request, no del agente
             )
@@ -539,7 +551,11 @@ class IngestionService(BaseService):
                 "collection_id": task["collection_id"],
                 "document_id": str(task["document_id"]),
                 "document_name": task["request"].document_name,
-                "document_type": task["request"].document_type.value,
+                "document_type": (
+                    task["request"].document_type.value
+                    if hasattr(task["request"].document_type, "value")
+                    else task["request"].document_type
+                ),
                 
                 # Crítico: metadata de embeddings
                 "embedding_model": embedding_metadata["embedding_model"],

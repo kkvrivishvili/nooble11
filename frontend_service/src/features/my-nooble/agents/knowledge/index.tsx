@@ -138,6 +138,10 @@ export default function AgentsKnowledgePage() {
     queryFn: () => agentsApi.getUserAgents(),
   })
 
+  // Upload requirements: must have at least one agent
+  const hasAgents = Array.isArray(agents) && agents.length > 0
+  const defaultAgentId = hasAgents ? agents[0].id : undefined
+
   // Get knowledge stats
   const { data: stats } = useQuery({
     queryKey: ['knowledge-stats'],
@@ -275,17 +279,28 @@ export default function AgentsKnowledgePage() {
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault()
     setIsDragging(false)
-    
+    // Guard: require at least one agent
+    if (!hasAgents || !defaultAgentId) {
+      toast.error('You must create an agent before uploading documents.')
+      return
+    }
+
     const files = Array.from(e.dataTransfer.files)
     for (const file of files) {
-      uploadMutation.mutate({ file, agentIds: [] })
+      uploadMutation.mutate({ file, agentIds: [defaultAgentId] })
     }
   }
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Guard: require at least one agent
+    if (!hasAgents || !defaultAgentId) {
+      toast.error('You must create an agent before uploading documents.')
+      return
+    }
+
     const files = Array.from(e.target.files || [])
     for (const file of files) {
-      uploadMutation.mutate({ file, agentIds: [] })
+      uploadMutation.mutate({ file, agentIds: [defaultAgentId] })
     }
   }
 
@@ -351,7 +366,7 @@ export default function AgentsKnowledgePage() {
               isDragging
                 ? 'border-primary bg-primary/5'
                 : 'border-gray-300 dark:border-gray-700'
-            }`}
+            } ${!hasAgents ? 'opacity-60 pointer-events-none' : ''}`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
@@ -369,17 +384,29 @@ export default function AgentsKnowledgePage() {
               accept=".pdf,.txt,.doc,.docx,.html,.md"
               onChange={handleFileSelect}
             />
-            <label htmlFor="file-upload">
-              <Button variant="outline" asChild>
-                <span>
-                  <IconPlus size={16} className="mr-2" />
-                  Select files
-                </span>
+            {hasAgents ? (
+              <label htmlFor="file-upload">
+                <Button variant="outline" asChild>
+                  <span>
+                    <IconPlus size={16} className="mr-2" />
+                    Select files
+                  </span>
+                </Button>
+              </label>
+            ) : (
+              <Button variant="outline" disabled>
+                <IconPlus size={16} className="mr-2" />
+                Select files
               </Button>
-            </label>
+            )}
             <p className="text-xs text-gray-500 mt-4">
               Supported formats: PDF, TXT, DOC, DOCX, HTML, Markdown
             </p>
+            {!hasAgents && (
+              <p className="text-sm text-yellow-600 mt-2">
+                Create an agent first to upload knowledge.
+              </p>
+            )}
           </div>
 
           {/* Upload Progress */}

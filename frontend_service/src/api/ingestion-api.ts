@@ -89,7 +89,11 @@ class IngestionAPI {
     formData.append('file', file);
     
     if (collectionId) formData.append('collection_id', collectionId);
-    formData.append('agent_ids', JSON.stringify(agentIds));
+    // FastAPI expects multiple fields named 'agent_ids' for List[str] in multipart.
+    // Do NOT JSON.stringify here; append each id separately. If empty, omit the field.
+    if (agentIds && agentIds.length > 0) {
+      agentIds.forEach((id) => formData.append('agent_ids', id));
+    }
     
     // Add RAG config parameters
     if (ragConfig?.embedding_model) {

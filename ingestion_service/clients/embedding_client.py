@@ -30,6 +30,15 @@ class EmbeddingClient:
         Envía batch de textos para generar embeddings.
         La respuesta llegará vía callback.
         """
+        # Asegurar valor string del modelo (soporta Enum o str)
+        model_value = (
+            rag_config.embedding_model.value
+            if hasattr(rag_config, "embedding_model") and hasattr(rag_config.embedding_model, "value")
+            else getattr(rag_config, "embedding_model", None)
+        )
+        if not isinstance(model_value, str):
+            model_value = str(model_value)
+
         action = DomainAction(
             action_type="embedding.batch_process",
             tenant_id=uuid.UUID(metadata["tenant_id"]),
@@ -37,12 +46,11 @@ class EmbeddingClient:
             task_id=uuid.UUID(task_id),
             session_id=uuid.uuid4(),  # No hay sesión real
             origin_service="ingestion-service",
-            rag_config=rag_config,
             callback_action_type="ingestion.embedding_callback",
             data={
                 "texts": texts,
                 "chunk_ids": chunk_ids,
-                "model": rag_config.embedding_model.value
+                "model": model_value
             },
             metadata=metadata
         )

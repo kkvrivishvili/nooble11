@@ -6,6 +6,7 @@ from datetime import datetime
 from enum import Enum
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, HttpUrl
+from common.models.config_models import EmbeddingModel
 
 
 class IngestionStatus(str, Enum):
@@ -31,7 +32,7 @@ class DocumentType(str, Enum):
 
 class RAGConfigRequest(BaseModel):
     """Configuración RAG que viene en cada request."""
-    embedding_model: str = Field(default="text-embedding-3-small")
+    embedding_model: EmbeddingModel = Field(default=EmbeddingModel.TEXT_EMBEDDING_3_SMALL)
     embedding_dimensions: int = Field(default=1536)
     encoding_format: str = Field(default="float")
     chunk_size: int = Field(default=512)

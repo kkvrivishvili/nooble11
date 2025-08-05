@@ -49,6 +49,16 @@ class DocumentHandler(BaseHandler):
             # Parsear en chunks
             nodes = self.chunk_parser.get_nodes_from_documents([document])
             
+            # Normalizar document_type a string por si viene como str
+            try:
+                doc_type_value = (
+                    request.document_type.value
+                    if hasattr(request, "document_type") and hasattr(request.document_type, "value")
+                    else str(getattr(request, "document_type", ""))
+                )
+            except Exception:
+                doc_type_value = str(getattr(request, "document_type", ""))
+
             # Convertir a ChunkModel
             chunks = []
             for idx, node in enumerate(nodes):
@@ -62,7 +72,7 @@ class DocumentHandler(BaseHandler):
                     metadata={
                         **request.metadata,
                         "document_name": request.document_name,
-                        "document_type": request.document_type.value,
+                        "document_type": doc_type_value,
                         "start_char_idx": getattr(node, 'start_char_idx', None),
                         "end_char_idx": getattr(node, 'end_char_idx', None)
                     }
@@ -79,14 +89,20 @@ class DocumentHandler(BaseHandler):
     async def _load_document(self, request: DocumentIngestionRequest) -> Document:
         """Carga documento desde diferentes fuentes."""
         content = None
-        metadata = {"source": request.document_type.value}
+        # Normalizar document_type a string por si viene como str
+        source_value = (
+            request.document_type.value
+            if hasattr(request, "document_type") and hasattr(request.document_type, "value")
+            else str(getattr(request, "document_type", ""))
+        )
+        metadata = {"source": source_value}
         
         if request.file_path:
             file_path = Path(request.file_path)
             if not file_path.exists():
                 raise FileNotFoundError(f"File not found: {request.file_path}")
             
-            if request.document_type in [DocumentType.PDF, DocumentType.DOCX]:
+            if source_value in [DocumentType.PDF.value, DocumentType.DOCX.value]:
                 reader = SimpleDirectoryReader(input_files=[str(file_path)])
                 docs = reader.load_data()
                 content = "\n\n".join([doc.text for doc in docs])
