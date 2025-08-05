@@ -12,22 +12,22 @@ export function YouTubeEditor({
   data: initialData,
   onSave,
   onCancel,
-  isLoading = false,
+  is_loading = false,
 }: WidgetEditorProps<YouTubeWidgetData>) {
   const [formData, setFormData] = useState<YouTubeWidgetData>({
-    videoUrl: initialData?.videoUrl || '',
+    video_url: initialData?.video_url || '',
     title: initialData?.title || '',
     autoplay: initialData?.autoplay ?? false,
-    showControls: initialData?.showControls ?? true,
+    show_controls: initialData?.show_controls ?? true,
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isSaving, setIsSaving] = useState(false);
+  const [is_saving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
     const validation = validateYouTubeData(formData);
     
-    if (!validation.isValid) {
+    if (!validation.is_valid) {
       setErrors(validation.errors);
       return;
     }
@@ -50,8 +50,8 @@ export function YouTubeEditor({
       icon={IconBrandYoutube}
       onSave={handleSave}
       onCancel={onCancel}
-      isLoading={isLoading}
-      isSaving={isSaving}
+      is_loading={is_loading}
+      is_saving={is_saving}
       error={errors.general}
     >
       {/* Video URL input */}
@@ -62,22 +62,22 @@ export function YouTubeEditor({
         <Input
           type="url"
           placeholder="https://www.youtube.com/watch?v=..."
-          value={formData.videoUrl}
+          value={formData.video_url}
           onChange={(e) => {
-            setFormData({ ...formData, videoUrl: e.target.value });
-            if (errors.videoUrl) {
+            setFormData({ ...formData, video_url: e.target.value });
+            if (errors.video_url) {
               const newErrors = { ...errors };
-              delete newErrors.videoUrl;
+              delete newErrors.video_url;
               setErrors(newErrors);
             }
           }}
-          className={errors.videoUrl ? 'border-red-300' : ''}
-          disabled={isSaving || isLoading}
+          className={errors.video_url ? 'border-red-300' : ''}
+          disabled={is_saving || is_loading}
         />
-        {errors.videoUrl && (
+        {errors.video_url && (
           <p className="text-xs text-red-500 flex items-center gap-1">
             <IconAlertCircle size={12} />
-            {errors.videoUrl}
+            {errors.video_url}
           </p>
         )}
       </div>
@@ -91,7 +91,7 @@ export function YouTubeEditor({
           placeholder="Ej: Mi último video"
           value={formData.title}
           onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-          disabled={isSaving || isLoading}
+          disabled={is_saving || is_loading}
           maxLength={100}
         />
       </div>
@@ -108,7 +108,7 @@ export function YouTubeEditor({
             onCheckedChange={(checked) => 
               setFormData({ ...formData, autoplay: checked })
             }
-            disabled={isSaving || isLoading}
+            disabled={is_saving || is_loading}
           />
         </div>
         
@@ -118,14 +118,14 @@ export function YouTubeEditor({
           </Label>
           <Switch
             id="show-controls"
-            checked={formData.showControls}
+            checked={formData.show_controls}
             onCheckedChange={(checked) => 
-              setFormData({ ...formData, showControls: checked })
+              setFormData({ ...formData, show_controls: checked })
             }
-            disabled={isSaving || isLoading}
+            disabled={is_saving || is_loading}
           />
         </div>
       </div>
     </WidgetEditor>
   );
-}
+}

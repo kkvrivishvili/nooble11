@@ -6,13 +6,13 @@ export function validateYouTubeData(data: YouTubeWidgetData): ValidationResult {
   const errors: Record<string, string> = {};
   
   // Validate video URL
-  if (!data.videoUrl?.trim()) {
-    errors.videoUrl = 'La URL del video es requerida';
+  if (!data.video_url?.trim()) {
+    errors.video_url = 'La URL del video es requerida';
   } else {
     // Basic YouTube URL validation
-    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|embed\/)|youtu\.be\/)[\w-]+/;
-    if (!youtubeRegex.test(data.videoUrl)) {
-      errors.videoUrl = 'URL de YouTube inválida';
+    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|embed\/)|youtu\.be\/)\w[\w-]*/;
+    if (!youtubeRegex.test(data.video_url)) {
+      errors.video_url = 'URL de YouTube inválida';
     }
   }
   
@@ -22,7 +22,7 @@ export function validateYouTubeData(data: YouTubeWidgetData): ValidationResult {
   }
   
   return {
-    isValid: Object.keys(errors).length === 0,
+    is_valid: Object.keys(errors).length === 0,
     errors
   };
 }
@@ -33,10 +33,10 @@ export const youtubeWidgetConfig: WidgetConfig<YouTubeWidgetData> = {
   description: 'Inserta un video de YouTube',
   icon: IconBrandYoutube,
   defaultData: {
-    videoUrl: '',
+    video_url: '',
     title: '',
     autoplay: false,
-    showControls: true
+    show_controls: true
   },
   validator: validateYouTubeData
 };

@@ -6,13 +6,13 @@ export function validateSpotifyData(data: SpotifyWidgetData): ValidationResult {
   const errors: Record<string, string> = {};
   
   // Validate Spotify URL
-  if (!data.spotifyUrl?.trim()) {
-    errors.spotifyUrl = 'La URL de Spotify es requerida';
+  if (!data.spotify_url?.trim()) {
+    errors.spotify_url = 'La URL de Spotify es requerida';
   } else {
     // Basic Spotify URL validation
     const spotifyRegex = /^(https?:\/\/)?(open\.)?spotify\.com\/(track|playlist|album|artist|show|episode)\/[a-zA-Z0-9]+/;
-    if (!spotifyRegex.test(data.spotifyUrl)) {
-      errors.spotifyUrl = 'URL de Spotify inválida';
+    if (!spotifyRegex.test(data.spotify_url)) {
+      errors.spotify_url = 'URL de Spotify inválida';
     }
   }
   
@@ -22,12 +22,12 @@ export function validateSpotifyData(data: SpotifyWidgetData): ValidationResult {
   }
   
   // Validate embed type
-  if (!['track', 'playlist', 'album', 'artist'].includes(data.embedType)) {
-    errors.embedType = 'Tipo de contenido inválido';
+  if (!['track', 'playlist', 'album', 'artist'].includes(data.embed_type)) {
+    errors.embed_type = 'Tipo de contenido inválido';
   }
   
   return {
-    isValid: Object.keys(errors).length === 0,
+    is_valid: Object.keys(errors).length === 0,
     errors
   };
 }
@@ -38,8 +38,8 @@ export const spotifyWidgetConfig: WidgetConfig<SpotifyWidgetData> = {
   description: 'Comparte tu música favorita de Spotify',
   icon: IconBrandSpotify,
   defaultData: {
-    spotifyUrl: '',
-    embedType: 'playlist',
+    spotify_url: '',
+    embed_type: 'playlist',
     height: 380,
     theme: 'dark'
   },

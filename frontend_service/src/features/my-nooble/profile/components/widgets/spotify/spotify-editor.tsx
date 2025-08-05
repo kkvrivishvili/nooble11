@@ -14,38 +14,38 @@ export function SpotifyEditor({
   data: initialData,
   onSave,
   onCancel,
-  isLoading = false,
+  is_loading = false,
 }: WidgetEditorProps<SpotifyWidgetData>) {
   const [formData, setFormData] = useState<SpotifyWidgetData>({
-    spotifyUrl: initialData?.spotifyUrl || '',
-    embedType: initialData?.embedType || 'playlist',
+    spotify_url: initialData?.spotify_url || '',
+    embed_type: initialData?.embed_type || 'playlist',
     height: initialData?.height || 380,
     theme: initialData?.theme || 'dark',
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isSaving, setIsSaving] = useState(false);
+  const [is_saving, setIsSaving] = useState(false);
 
   // Auto-detect embed type from URL
   useEffect(() => {
-    if (formData.spotifyUrl) {
-      const url = formData.spotifyUrl;
+    if (formData.spotify_url) {
+      const url = formData.spotify_url;
       if (url.includes('/track/')) {
-        setFormData(prev => ({ ...prev, embedType: 'track' }));
+        setFormData(prev => ({ ...prev, embed_type: 'track' }));
       } else if (url.includes('/playlist/')) {
-        setFormData(prev => ({ ...prev, embedType: 'playlist' }));
+        setFormData(prev => ({ ...prev, embed_type: 'playlist' }));
       } else if (url.includes('/album/')) {
-        setFormData(prev => ({ ...prev, embedType: 'album' }));
+        setFormData(prev => ({ ...prev, embed_type: 'album' }));
       } else if (url.includes('/artist/')) {
-        setFormData(prev => ({ ...prev, embedType: 'artist' }));
+        setFormData(prev => ({ ...prev, embed_type: 'artist' }));
       }
     }
-  }, [formData.spotifyUrl]);
+  }, [formData.spotify_url]);
 
   const handleSave = async () => {
     const validation = validateSpotifyData(formData);
     
-    if (!validation.isValid) {
+    if (!validation.is_valid) {
       setErrors(validation.errors);
       return;
     }
@@ -64,7 +64,7 @@ export function SpotifyEditor({
 
   // Get recommended heights based on embed type
   const getRecommendedHeight = () => {
-    switch (formData.embedType) {
+    switch (formData.embed_type) {
       case 'track':
         return { min: 80, recommended: 152, max: 200 };
       case 'playlist':
@@ -85,8 +85,8 @@ export function SpotifyEditor({
       icon={IconBrandSpotify}
       onSave={handleSave}
       onCancel={onCancel}
-      isLoading={isLoading}
-      isSaving={isSaving}
+      is_loading={is_loading}
+      is_saving={is_saving}
       error={errors.general}
     >
       {/* Spotify URL input */}
@@ -97,22 +97,22 @@ export function SpotifyEditor({
         <Input
           type="url"
           placeholder="https://open.spotify.com/playlist/..."
-          value={formData.spotifyUrl}
+          value={formData.spotify_url}
           onChange={(e) => {
-            setFormData({ ...formData, spotifyUrl: e.target.value });
-            if (errors.spotifyUrl) {
+            setFormData({ ...formData, spotify_url: e.target.value });
+            if (errors.spotify_url) {
               const newErrors = { ...errors };
-              delete newErrors.spotifyUrl;
+              delete newErrors.spotify_url;
               setErrors(newErrors);
             }
           }}
-          className={errors.spotifyUrl ? 'border-red-300' : ''}
-          disabled={isSaving || isLoading}
+          className={errors.spotify_url ? 'border-red-300' : ''}
+          disabled={is_saving || is_loading}
         />
-        {errors.spotifyUrl && (
+        {errors.spotify_url && (
           <p className="text-xs text-red-500 flex items-center gap-1">
             <IconAlertCircle size={12} />
-            {errors.spotifyUrl}
+            {errors.spotify_url}
           </p>
         )}
         <p className="text-xs text-gray-500">
@@ -126,11 +126,11 @@ export function SpotifyEditor({
           Tipo de contenido
         </label>
         <Select
-          value={formData.embedType}
+          value={formData.embed_type}
           onValueChange={(value: 'track' | 'playlist' | 'album' | 'artist') => 
-            setFormData({ ...formData, embedType: value })
+            setFormData({ ...formData, embed_type: value })
           }
-          disabled={isSaving || isLoading}
+          disabled={is_saving || is_loading}
         >
           <SelectTrigger>
             <SelectValue />
@@ -183,7 +183,7 @@ export function SpotifyEditor({
           max={heights.max}
           step={10}
           className="w-full"
-          disabled={isSaving || isLoading}
+          disabled={is_saving || is_loading}
         />
         <div className="flex justify-between text-xs text-gray-500">
           <span>Compacto ({heights.min}px)</span>
@@ -201,4 +201,4 @@ export function SpotifyEditor({
       </div>
     </WidgetEditor>
   );
-}
+}

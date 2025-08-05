@@ -110,12 +110,11 @@ export class BaseWidget {
   /**
    * Text component with consistent theming
    */
-  static Text = React.forwardRef<HTMLSpanElement, BaseWidgetProps & { 
+  static Text = ({ theme, className, children, variant = 'primary', as: Component = 'span', style, ...props }: BaseWidgetProps & { 
     children: ReactNode
     variant?: 'primary' | 'secondary' | 'muted'
     as?: 'span' | 'p' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'
-  }>(
-    ({ theme, className, children, variant = 'primary', as: Component = 'span', style, ...props }, ref) => {
+  }) => {
       const getTextColor = () => {
         if (!theme) return undefined
         
@@ -139,7 +138,6 @@ export class BaseWidget {
 
       return (
         <Component
-          ref={ref as React.Ref<HTMLSpanElement>}
           className={cn("transition-colors duration-200", className)}
           style={textStyles}
           {...props}
@@ -147,8 +145,7 @@ export class BaseWidget {
           {children}
         </Component>
       )
-    }
-  )
+  }
 
   /**
    * Link component with consistent theming
