@@ -52,11 +52,27 @@ class SupabaseClient:
         service_name = app_settings.service_name if app_settings else "supabase"
         self.logger = logging.getLogger(f"{service_name}.SupabaseClient")
         
-        # Create clients
-        self.client = create_client(url, anon_key)
-        self.admin_client = None
-        if service_key:
-            self.admin_client = create_client(url, service_key)
+        # Create clients with error handling
+        try:
+            # Configure client options for better error handling
+            client_options = ClientOptions(
+                auto_refresh_token=False,
+                persist_session=False
+            )
+            
+            self.client = create_client(url, anon_key, client_options)
+            self.admin_client = None
+            if service_key:
+                self.admin_client = create_client(url, service_key, client_options)
+            
+            self.logger.info(f"Supabase client initialized with URL: {url}")
+        except Exception as e:
+            self.logger.warning(f"Supabase client initialization warning: {e}")
+            # Create a minimal client that might still work for auth verification
+            self.client = create_client(url, anon_key)
+            self.admin_client = None
+            if service_key:
+                self.admin_client = create_client(url, service_key)
         
         self.logger.info("Supabase client initialized")
     

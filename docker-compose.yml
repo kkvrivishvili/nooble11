@@ -630,15 +630,24 @@ services:
     ports:
       - "8002:8002"
     environment:
+      # Supabase configuration
+      - SUPABASE_URL=http://kong:8000
+      - SUPABASE_ANON_KEY=${ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      # Redis configuration
       - REDIS_HOST=redis_database
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD}
+      # Qdrant configuration
       - QDRANT_URL=http://${QDRANT_HOST:-qdrant_database}:${QDRANT_HTTP_PORT:-6333}
       - QDRANT_API_KEY=${QDRANT_API_KEY}
     depends_on:
       redis_database:
         condition: service_healthy
       qdrant_database:
+        condition: service_healthy
+      kong:
         condition: service_healthy
     volumes:
       - ./common:/app/common:ro

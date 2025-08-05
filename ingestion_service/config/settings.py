@@ -47,5 +47,5 @@ class IngestionSettings(CommonAppSettings):
     embedding_timeout: int = Field(default=60, description="Timeout para embeddings (segundos)")
     
     class Config:
-        env_prefix = "INGESTION_"
+        env_prefix = ""
         case_sensitive = False
