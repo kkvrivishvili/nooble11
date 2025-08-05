@@ -92,7 +92,7 @@ function ProfileContent({ profile, isPreview }: { profile: ProfileWithAgents; is
         {layout.socialPosition === 'bottom' && (
           <div className="mt-6 profile-animate-in" style={{ animationDelay: '0.2s' }}>
             <SocialLinks 
-              socialLinks={profile.socialLinks || []}
+              social_links={profile.social_links || []}
               isPreview={isPreview}
               position="bottom"
               iconSize={20}

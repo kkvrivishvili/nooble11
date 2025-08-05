@@ -1,6 +1,5 @@
 // src/features/my-nooble/profile/components/widgets/widget-manager.tsx
 import { useState, useEffect, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   IconPlus,
@@ -71,7 +70,7 @@ export function WidgetManager({ initialShowAddNew = false }: WidgetManagerProps)
 
   // Get active widgets sorted by position
   const activeWidgets = profile.widgets
-    .filter(w => w.isActive)
+    .filter(w => w.is_active)
     .sort((a, b) => a.position - b.position);
 
   // Map widgets to their data
@@ -374,11 +373,11 @@ export function WidgetManager({ initialShowAddNew = false }: WidgetManagerProps)
   };
 
   const renderWidget = (widget: BaseWidget, data: any, type: WidgetType) => {
-    const isEditing = editingWidgetId === widget.id;
+    const is_editing = editingWidgetId === widget.id;
     
     switch (type) {
       case WidgetType.Link:
-        return isEditing ? (
+        return is_editing ? (
           <LinkEditor
             key={widget.id}
             data={data as LinkWidgetData}
@@ -390,14 +389,14 @@ export function WidgetManager({ initialShowAddNew = false }: WidgetManagerProps)
             key={widget.id}
             widget={widget}
             data={data as LinkWidgetData}
-            isEditing={false}
+            is_editing={false}
             onEdit={() => handleStartEdit(widget.id)}
             onDelete={() => handleDeleteWidget(widget.id, widget.type)}
           />
         );
         
       case WidgetType.Agents:
-        return isEditing ? (
+        return is_editing ? (
           <AgentsEditor
             key={widget.id}
             data={data as AgentsWidgetData}
@@ -409,14 +408,14 @@ export function WidgetManager({ initialShowAddNew = false }: WidgetManagerProps)
             key={widget.id}
             widget={widget}
             data={data as AgentsWidgetData}
-            isEditing={false}
+            is_editing={false}
             onEdit={() => handleStartEdit(widget.id)}
             onDelete={() => handleDeleteWidget(widget.id, widget.type)}
           />
         );
         
       case WidgetType.Gallery:
-        return isEditing ? (
+        return is_editing ? (
           <GalleryEditor
             key={widget.id}
             data={data as GalleryWidgetData}
@@ -428,14 +427,14 @@ export function WidgetManager({ initialShowAddNew = false }: WidgetManagerProps)
             key={widget.id}
             widget={widget}
             data={data as GalleryWidgetData}
-            isEditing={false}
+            is_editing={false}
             onEdit={() => handleStartEdit(widget.id)}
             onDelete={() => handleDeleteWidget(widget.id, widget.type)}
           />
         );
 
       case WidgetType.YouTube:
-        return isEditing ? (
+        return is_editing ? (
           <YouTubeEditor
             key={widget.id}
             data={data as YouTubeWidgetData}
@@ -447,14 +446,14 @@ export function WidgetManager({ initialShowAddNew = false }: WidgetManagerProps)
             key={widget.id}
             widget={widget}
             data={data as YouTubeWidgetData}
-            isEditing={false}
+            is_editing={false}
             onEdit={() => handleStartEdit(widget.id)}
             onDelete={() => handleDeleteWidget(widget.id, widget.type)}
           />
         );
 
       case WidgetType.Maps:
-        return isEditing ? (
+        return is_editing ? (
           <MapsEditor
             key={widget.id}
             data={data as MapsWidgetData}
@@ -466,14 +465,14 @@ export function WidgetManager({ initialShowAddNew = false }: WidgetManagerProps)
             key={widget.id}
             widget={widget}
             data={data as MapsWidgetData}
-            isEditing={false}
+            is_editing={false}
             onEdit={() => handleStartEdit(widget.id)}
             onDelete={() => handleDeleteWidget(widget.id, widget.type)}
           />
         );
 
       case WidgetType.Spotify:
-        return isEditing ? (
+        return is_editing ? (
           <SpotifyEditor
             key={widget.id}
             data={data as SpotifyWidgetData}
@@ -485,14 +484,14 @@ export function WidgetManager({ initialShowAddNew = false }: WidgetManagerProps)
             key={widget.id}
             widget={widget}
             data={data as SpotifyWidgetData}
-            isEditing={false}
+            is_editing={false}
             onEdit={() => handleStartEdit(widget.id)}
             onDelete={() => handleDeleteWidget(widget.id, widget.type)}
           />
         );
 
       case WidgetType.Calendar:
-        return isEditing ? (
+        return is_editing ? (
           <CalendarEditor
             key={widget.id}
             data={data as CalendarWidgetData}
@@ -504,14 +503,14 @@ export function WidgetManager({ initialShowAddNew = false }: WidgetManagerProps)
             key={widget.id}
             widget={widget}
             data={data as CalendarWidgetData}
-            isEditing={false}
+            is_editing={false}
             onEdit={() => handleStartEdit(widget.id)}
             onDelete={() => handleDeleteWidget(widget.id, widget.type)}
           />
         );
 
       case WidgetType.Separator:
-        return isEditing ? (
+        return is_editing ? (
           <SeparatorEditor
             key={widget.id}
             data={data as SeparatorWidgetData}
@@ -523,14 +522,14 @@ export function WidgetManager({ initialShowAddNew = false }: WidgetManagerProps)
             key={widget.id}
             widget={widget}
             data={data as SeparatorWidgetData}
-            isEditing={false}
+            is_editing={false}
             onEdit={() => handleStartEdit(widget.id)}
             onDelete={() => handleDeleteWidget(widget.id, widget.type)}
           />
         );
 
       case WidgetType.Title:
-        return isEditing ? (
+        return is_editing ? (
           <TitleEditor
             key={widget.id}
             data={data as TitleWidgetData}
@@ -542,7 +541,7 @@ export function WidgetManager({ initialShowAddNew = false }: WidgetManagerProps)
             key={widget.id}
             widget={widget}
             data={data as TitleWidgetData}
-            isEditing={false}
+            is_editing={false}
             onEdit={() => handleStartEdit(widget.id)}
             onDelete={() => handleDeleteWidget(widget.id, widget.type)}
           />
@@ -601,8 +600,8 @@ export function WidgetManager({ initialShowAddNew = false }: WidgetManagerProps)
         <AgentsEditor
           data={{
             title: 'Chat con nuestros agentes',
-            agentIds: [],
-            displayStyle: 'card'
+            agent_ids: [],
+            display_style: 'card'
           }}
           onSave={handleSaveNewAgents}
           onCancel={handleCancelEdit}
@@ -614,8 +613,8 @@ export function WidgetManager({ initialShowAddNew = false }: WidgetManagerProps)
           data={{
             title: '',
             products: [],
-            showPrice: true,
-            showDescription: true,
+            show_price: true,
+            show_description: true,
             columns: 3
           }}
           onSave={handleSaveNewGallery}
@@ -626,10 +625,10 @@ export function WidgetManager({ initialShowAddNew = false }: WidgetManagerProps)
       {isAddingNew && selectedWidgetType === WidgetType.YouTube && (
         <YouTubeEditor
           data={{
-            videoUrl: '',
+            video_url: '',
             title: '',
             autoplay: false,
-            showControls: true
+            show_controls: true
           }}
           onSave={handleSaveNewYouTube}
           onCancel={handleCancelEdit}
@@ -642,8 +641,8 @@ export function WidgetManager({ initialShowAddNew = false }: WidgetManagerProps)
             address: '',
             latitude: undefined,
             longitude: undefined,
-            zoomLevel: 15,
-            mapStyle: 'roadmap'
+            zoom_level: 15,
+            map_style: 'roadmap'
           }}
           onSave={handleSaveNewMaps}
           onCancel={handleCancelEdit}
@@ -653,8 +652,8 @@ export function WidgetManager({ initialShowAddNew = false }: WidgetManagerProps)
       {isAddingNew && selectedWidgetType === WidgetType.Spotify && (
         <SpotifyEditor
           data={{
-            spotifyUrl: '',
-            embedType: 'playlist',
+            spotify_url: '',
+            embed_type: 'playlist',
             height: 380,
             theme: 'dark'
           }}
@@ -666,10 +665,10 @@ export function WidgetManager({ initialShowAddNew = false }: WidgetManagerProps)
       {isAddingNew && selectedWidgetType === WidgetType.Calendar && (
         <CalendarEditor
           data={{
-            calendlyUrl: '',
+            calendly_url: '',
             title: 'Agenda una reunión',
-            hideEventDetails: false,
-            hideCookieBanner: true
+            hide_event_details: false,
+            hide_cookie_banner: true
           }}
           onSave={handleSaveNewCalendar}
           onCancel={handleCancelEdit}
@@ -682,8 +681,8 @@ export function WidgetManager({ initialShowAddNew = false }: WidgetManagerProps)
             style: 'solid',
             thickness: 1,
             color: '#cccccc',
-            marginTop: 20,
-            marginBottom: 20
+            margin_top: 20,
+            margin_bottom: 20
           }}
           onSave={handleSaveNewSeparator}
           onCancel={handleCancelEdit}
@@ -694,9 +693,9 @@ export function WidgetManager({ initialShowAddNew = false }: WidgetManagerProps)
         <TitleEditor
           data={{
             text: '',
-            fontSize: 'xl',
-            textAlign: 'center',
-            fontWeight: 'bold'
+            font_size: 'xl',
+            text_align: 'center',
+            font_weight: 'bold'
           }}
           onSave={handleSaveNewTitle}
           onCancel={handleCancelEdit}

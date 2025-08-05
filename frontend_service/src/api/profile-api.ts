@@ -221,7 +221,7 @@ class ProfileAPI {
   /**
    * Create a new link widget
    */
-  async createLinkWidget(profileId: string, link: Omit<ProfileLink, 'id' | 'created_at'>): Promise<string> {
+  async createLinkWidget(profileId: string, link: Omit<ProfileLink, 'id' | 'created_at' | 'profile_id'>): Promise<string> {
     const { data: widgetId, error } = await supabase
       .rpc('create_widget', {
         p_profile_id: profileId,

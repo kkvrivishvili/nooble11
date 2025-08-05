@@ -104,7 +104,7 @@ export const ProfileProvider = ({ children }: ProfileProviderProps) => {
   };
 
   // Link widget management
-  const addLinkWidget = async (link: Omit<ProfileLink, 'id' | 'createdAt'>) => {
+  const addLinkWidget = async (link: Omit<ProfileLink, 'id' | 'created_at' | 'profile_id'>) => {
     if (!profile) return;
     
     await profileApi.createLinkWidget(profile.id, link);
@@ -136,24 +136,24 @@ export const ProfileProvider = ({ children }: ProfileProviderProps) => {
   // Social link management (still embedded in profile)
   const addSocialLink = (socialLink: Omit<SocialLink, 'icon'>) => {
     if (!profile) return;
-    const updatedSocials = [...(profile.socialLinks || []), socialLink as SocialLink];
-    updateProfileMutation.mutate({ socialLinks: updatedSocials });
+    const updatedSocials = [...(profile.social_links || []), socialLink as SocialLink];
+    updateProfileMutation.mutate({ social_links: updatedSocials });
   };
 
   const updateSocialLink = (platform: string, data: Partial<Omit<SocialLink, 'platform'>>) => {
     if (!profile) return;
-    const updatedSocials = profile.socialLinks.map((sl: SocialLink) => 
+    const updatedSocials = profile.social_links.map((sl: SocialLink) => 
       sl.platform === platform ? { ...sl, ...data } : sl
     );
-    updateProfileMutation.mutate({ socialLinks: updatedSocials });
+    updateProfileMutation.mutate({ social_links: updatedSocials });
   };
 
   const removeSocialLink = (platform: string) => {
     if (!profile) return;
-    const updatedSocials = profile.socialLinks.filter((sl: SocialLink) => 
+    const updatedSocials = profile.social_links.filter((sl: SocialLink) => 
       sl.platform !== platform
     );
-    updateProfileMutation.mutate({ socialLinks: updatedSocials });
+    updateProfileMutation.mutate({ social_links: updatedSocials });
   };
 
   // Agent management
