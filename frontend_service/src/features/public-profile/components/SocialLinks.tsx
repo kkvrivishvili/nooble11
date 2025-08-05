@@ -26,7 +26,8 @@ const socialIcons: Record<string, ComponentType<{ size: number; strokeWidth: num
 }
 
 interface SocialLinksProps {
-  socialLinks: SocialLink[]
+  socialLinks?: SocialLink[]
+  social_links?: SocialLink[]
   isPreview?: boolean
   position?: 'top' | 'bottom'
   className?: string
@@ -35,6 +36,7 @@ interface SocialLinksProps {
 
 export default function SocialLinks({ 
   socialLinks, 
+  social_links,
   isPreview = false, 
   position = 'top',
   className = '',
@@ -45,15 +47,16 @@ export default function SocialLinks({
   // Get social button styles using theme utility
   const socialButtonStyles = getButtonStyles(theme, 'secondary')
   
-  if (!socialLinks?.length) return null
+  const links = socialLinks ?? social_links ?? []
+  if (!links.length) return null
 
   return (
     <div className={cn(
       "flex gap-3 transition-all duration-300",
-      position === 'bottom' && layout.socialPosition === 'bottom' && 'justify-center',
+      position === 'bottom' && layout.social_position === 'bottom' && 'justify-center',
       className
     )}>
-      {socialLinks.map((link) => {
+      {links.map((link) => {
         const Icon = socialIcons[link.platform] || IconLink
         return (
           <a
@@ -68,10 +71,10 @@ export default function SocialLinks({
             style={socialButtonStyles}
             onClick={isPreview ? (e) => e.preventDefault() : undefined}
             onMouseEnter={(e) => {
-              if (theme.buttonFill === 'outline') {
-                e.currentTarget.style.backgroundColor = theme.primaryColor
-                e.currentTarget.style.color = theme.buttonTextColor || '#ffffff'
-              } else if (theme.buttonFill === 'glass') {
+              if (theme.button_fill === 'outline') {
+                e.currentTarget.style.backgroundColor = theme.primary_color
+                e.currentTarget.style.color = theme.button_text_color || '#ffffff'
+              } else if (theme.button_fill === 'glass') {
                 e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
               } else {
                 e.currentTarget.style.transform = 'scale(1.1)'

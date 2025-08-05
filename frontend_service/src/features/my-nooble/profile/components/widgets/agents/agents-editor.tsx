@@ -15,7 +15,7 @@ export function AgentsEditor({
   data: initialData,
   onSave,
   onCancel,
-  isLoading = false,
+  is_loading = false,
 }: WidgetEditorProps<AgentsWidgetData>) {
   const { profile } = useProfile();
   const [formData, setFormData] = useState<AgentsWidgetData>({
@@ -25,15 +25,15 @@ export function AgentsEditor({
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isSaving, setIsSaving] = useState(false);
+  const [is_saving, setIsSaving] = useState(false);
 
   // Get available agents
-  const availableAgents = profile?.agentDetails.filter(agent => agent.isActive) || [];
+  const availableAgents = profile?.agentDetails.filter(agent => agent.is_active) || [];
 
   const handleSave = async () => {
     const validation = validateAgentsData(formData);
     
-    if (!validation.isValid) {
+    if (!validation.is_valid) {
       setErrors(validation.errors);
       return;
     }
@@ -71,8 +71,8 @@ export function AgentsEditor({
       icon={IconUsers}
       onSave={handleSave}
       onCancel={onCancel}
-      isLoading={isLoading}
-      isSaving={isSaving}
+      is_loading={is_loading}
+      is_saving={is_saving}
       error={errors.general}
     >
       {/* Title input */}
@@ -92,7 +92,7 @@ export function AgentsEditor({
             }
           }}
           className={errors.title ? 'border-red-300' : ''}
-          disabled={isSaving || isLoading}
+          disabled={is_saving || is_loading}
           maxLength={100}
         />
         <div className="flex justify-between">

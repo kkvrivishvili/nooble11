@@ -26,7 +26,7 @@ export default function PublicContentComponent({
 
   // Get active widgets with their data
   const activeWidgets = profile.widgets
-    .filter(widget => widget.isActive)
+    .filter(widget => widget.is_active)
     .map(widget => {
       switch (widget.type) {
         case 'link': {
@@ -36,7 +36,7 @@ export default function PublicContentComponent({
         case 'agents': {
           const agentData = profile.agentWidgets?.find(w => w.id === widget.id);
           if (agentData) {
-            const agents = agentData.agentIds
+            const agents = agentData.agent_ids
               .map(id => profile.agentDetails.find(a => a.id === id))
               .filter(Boolean)
               .map(agent => ({
@@ -94,17 +94,17 @@ export default function PublicContentComponent({
   // Definir estilos de contenedor basados en el tema
   const getContainerStyles = () => {
     return {
-      borderRadius: theme.borderRadius === 'sharp' ? '0.5rem' :
-                   theme.borderRadius === 'curved' ? '0.75rem' : '1rem',
+      borderRadius: theme.border_radius === 'sharp' ? '0.5rem' :
+                   theme.border_radius === 'curved' ? '0.75rem' : '1rem',
     };
   };
 
   return (
     <div className={cn(
       "w-full mx-auto px-4",
-      layout.contentWidth === 'narrow' && 'max-w-md',
-      layout.contentWidth === 'normal' && 'max-w-xl',
-      layout.contentWidth === 'wide' && 'max-w-3xl'
+      layout.content_width === 'narrow' && 'max-w-md',
+      layout.content_width === 'normal' && 'max-w-xl',
+      layout.content_width === 'wide' && 'max-w-3xl'
     )}>
       {/* Contenido de Widgets - Always compact spacing */}
       <div className="space-y-2" style={getContainerStyles()}>

@@ -75,7 +75,7 @@ function ProfileHeader() {
               <span>•</span>
               <span>{totalActiveAgents} agente{totalActiveAgents !== 1 ? 's' : ''}</span>
               <span>•</span>
-              <span>{(profile.social_links ?? []).length} red{(profile.social_links ?? []).length !== 1 ? 'es' : ''} social{(profile.socialLinks ?? []).length !== 1 ? 'es' : ''}</span>
+              <span>{(profile.social_links ?? []).length} red{(profile.social_links ?? []).length !== 1 ? 'es' : ''} social{(profile.social_links ?? []).length !== 1 ? 'es' : ''}</span>
               <span>•</span>
               <span>@{profile.username}</span>
             </div>

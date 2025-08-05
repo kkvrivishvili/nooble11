@@ -331,7 +331,7 @@ export function SocialLinksEditor() {
   const [isAdding, setIsAdding] = useState(false);
   const [_error, _setError] = useState<string>('');
 
-  const socialLinks = profile?.socialLinks || [];
+  const socialLinks = profile?.social_links || [];
 
   const availablePlatforms = getAvailableSocialPlatforms(
     socialLinks.map(link => link.platform)
