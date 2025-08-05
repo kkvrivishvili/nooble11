@@ -1,3 +1,5 @@
+// src/features/my-nooble/agents/knowledge/index.tsx
+import { Progress } from '@/components/ui/progress'
 import { useEffect, useCallback, useState } from 'react'
 import { useLocation } from '@tanstack/react-router'
 import { usePageContext } from '@/context/page-context'
@@ -28,6 +30,16 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { 
   IconUpload, 
   IconFile, 
@@ -37,73 +49,40 @@ import {
   IconEdit,
   IconSearch,
   IconPlus,
-  IconCheck
+  IconCheck,
+  IconLoader2,
 } from '@tabler/icons-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { ingestionApi, type DocumentRecord } from '@/api/ingestion-api'
+import { agentsApi } from '@/api/agents-api'
+import { supabase } from '@/lib/supabase'
 
-interface Knowledge {
-  id: string
-  name: string
-  type: 'pdf' | 'text' | 'doc' | 'link'
-  size?: number
-  url?: string
-  uploadedAt: Date
-  agentIds: string[]
+interface UploadProgress {
+  taskId: string
+  fileName: string
+  status: string
+  percentage: number
+  message: string
 }
-
-interface Agent {
-  id: string
-  name: string
-  template: string
-}
-
-// Mock data
-const mockKnowledge: Knowledge[] = [
-  {
-    id: '1',
-    name: 'Manual de Usuario.pdf',
-    type: 'pdf',
-    size: 2048000,
-    uploadedAt: new Date('2024-01-15'),
-    agentIds: ['1', '3'],
-  },
-  {
-    id: '2',
-    name: 'Preguntas Frecuentes',
-    type: 'text',
-    size: 15000,
-    uploadedAt: new Date('2024-01-20'),
-    agentIds: ['3'],
-  },
-  {
-    id: '3',
-    name: 'Documentación API',
-    type: 'link',
-    url: 'https://docs.example.com',
-    uploadedAt: new Date('2024-01-22'),
-    agentIds: ['2', '3'],
-  },
-]
-
-const mockAgents: Agent[] = [
-  { id: '1', name: 'Receptor', template: 'receptor' },
-  { id: '2', name: 'Vendedor', template: 'vendedor' },
-  { id: '3', name: 'Soporte', template: 'soporte' },
-]
 
 export default function AgentsKnowledgePage() {
   const { setSubPages } = usePageContext()
   const location = useLocation()
-  const [knowledge, setKnowledge] = useState<Knowledge[]>(mockKnowledge)
-  const [agents] = useState<Agent[]>(mockAgents)
+  const queryClient = useQueryClient()
+  
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState<string>('all')
   const [filterAgent, setFilterAgent] = useState<string>('all')
   const [isDragging, setIsDragging] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [editingKnowledge, setEditingKnowledge] = useState<Knowledge | null>(null)
+  const [editingDocument, setEditingDocument] = useState<DocumentRecord | null>(null)
   const [selectedAgentIds, setSelectedAgentIds] = useState<string[]>([])
+  const [deleteConfirmDoc, setDeleteConfirmDoc] = useState<DocumentRecord | null>(null)
+  const [uploadProgress, setUploadProgress] = useState<Record<string, UploadProgress>>({})
+  const [websockets, setWebsockets] = useState<Record<string, WebSocket>>({})
 
   const updateSubPages = useCallback(() => {
     const currentPath = location.pathname
@@ -136,8 +115,135 @@ export default function AgentsKnowledgePage() {
     updateSubPages()
     return () => {
       setSubPages([])
+      // Clean up websockets
+      Object.values(websockets).forEach(ws => ws.close())
     }
-  }, [updateSubPages, setSubPages])
+  }, [updateSubPages, setSubPages, websockets])
+
+  // Get user's documents
+  const { data: documents = [], isLoading: documentsLoading } = useQuery({
+    queryKey: ['user-documents'],
+    queryFn: () => ingestionApi.getUserDocuments(),
+    refetchInterval: (data) => {
+      // Refetch every 5 seconds if any document is processing
+      const hasProcessing = data?.some(doc => doc.status === 'processing')
+      return hasProcessing ? 5000 : false
+    }
+  })
+
+  // Get user's agents
+  const { data: agents = [], isLoading: agentsLoading } = useQuery({
+    queryKey: ['user-agents'],
+    queryFn: () => agentsApi.getUserAgents(),
+  })
+
+  // Get knowledge stats
+  const { data: stats } = useQuery({
+    queryKey: ['knowledge-stats'],
+    queryFn: () => ingestionApi.getKnowledgeStats(),
+    refetchInterval: 30000 // Every 30 seconds
+  })
+
+  // Upload document mutation
+  const uploadMutation = useMutation({
+    mutationFn: async ({ file, agentIds }: { file: File; agentIds: string[] }) => {
+      return ingestionApi.uploadDocument(file, agentIds)
+    },
+    onSuccess: async (response, variables) => {
+      // Set initial progress
+      setUploadProgress(prev => ({
+        ...prev,
+        [response.task_id]: {
+          taskId: response.task_id,
+          fileName: variables.file.name,
+          status: 'processing',
+          percentage: 10,
+          message: 'Processing document...'
+        }
+      }))
+      
+      // Create WebSocket for progress
+      const token = await getAuthToken()
+      const ws = ingestionApi.createProgressWebSocket(response.task_id, token)
+      
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data)
+        if (data.type === 'ingestion_progress') {
+          const progress = data.data
+          setUploadProgress(prev => ({
+            ...prev,
+            [progress.task_id]: {
+              taskId: progress.task_id,
+              fileName: variables.file.name,
+              status: progress.status,
+              percentage: progress.percentage,
+              message: progress.message
+            }
+          }))
+          
+          if (progress.status === 'completed' || progress.status === 'failed') {
+            // Close websocket and refresh data
+            ws.close()
+            queryClient.invalidateQueries({ queryKey: ['user-documents'] })
+            queryClient.invalidateQueries({ queryKey: ['knowledge-stats'] })
+            
+            // Show notification
+            if (progress.status === 'completed') {
+              toast.success(`Document uploaded successfully: ${variables.file.name}`)
+            } else {
+              toast.error(`Failed to upload document: ${progress.error || 'Unknown error'}`)
+            }
+            
+            // Remove from progress after 3 seconds
+            setTimeout(() => {
+              setUploadProgress(prev => {
+                const newProgress = { ...prev }
+                delete newProgress[progress.task_id]
+                return newProgress
+              })
+            }, 3000)
+          }
+        }
+      }
+      
+      setWebsockets(prev => ({ ...prev, [response.task_id]: ws }))
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to upload document: ' + error.message)
+    }
+  })
+
+  // Delete document mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (doc: DocumentRecord) => {
+      return ingestionApi.deleteDocument(doc.document_id, doc.collection_id)
+    },
+    onSuccess: () => {
+      toast.success('Document deleted successfully')
+      queryClient.invalidateQueries({ queryKey: ['user-documents'] })
+      queryClient.invalidateQueries({ queryKey: ['knowledge-stats'] })
+      setDeleteConfirmDoc(null)
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to delete document: ' + error.message)
+    }
+  })
+
+  // Update document agents mutation
+  const updateAgentsMutation = useMutation({
+    mutationFn: async ({ documentId, agentIds }: { documentId: string; agentIds: string[] }) => {
+      return ingestionApi.updateDocumentAgents(documentId, agentIds, 'set')
+    },
+    onSuccess: () => {
+      toast.success('Agent assignments updated')
+      queryClient.invalidateQueries({ queryKey: ['user-documents'] })
+      setIsEditDialogOpen(false)
+      setEditingDocument(null)
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to update agents: ' + error.message)
+    }
+  })
 
   const formatFileSize = (bytes?: number) => {
     if (!bytes) return '-'
@@ -149,11 +255,12 @@ export default function AgentsKnowledgePage() {
   const getFileIcon = (type: string) => {
     switch (type) {
       case 'pdf':
-      case 'doc':
+      case 'docx':
         return IconFileText
-      case 'text':
+      case 'txt':
+      case 'markdown':
         return IconFile
-      case 'link':
+      case 'url':
         return IconLink
       default:
         return IconFile
@@ -170,47 +277,39 @@ export default function AgentsKnowledgePage() {
     setIsDragging(false)
   }
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault()
     setIsDragging(false)
     
     const files = Array.from(e.dataTransfer.files)
-    files.forEach(file => {
-      // Aquí procesaríamos el archivo
-      const newKnowledge: Knowledge = {
-        id: Date.now().toString(),
-        name: file.name,
-        type: file.type.includes('pdf') ? 'pdf' : 'text',
-        size: file.size,
-        uploadedAt: new Date(),
-        agentIds: [],
-      }
-      setKnowledge(prev => [...prev, newKnowledge])
-    })
+    for (const file of files) {
+      uploadMutation.mutate({ file, agentIds: [] })
+    }
   }
 
-  const handleEdit = (item: Knowledge) => {
-    setEditingKnowledge(item)
-    setSelectedAgentIds(item.agentIds)
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    for (const file of files) {
+      uploadMutation.mutate({ file, agentIds: [] })
+    }
+  }
+
+  const handleEdit = (doc: DocumentRecord) => {
+    setEditingDocument(doc)
+    setSelectedAgentIds(doc.metadata?.agent_ids || [])
     setIsEditDialogOpen(true)
   }
 
   const handleSaveEdit = () => {
-    if (!editingKnowledge) return
-    
-    const updatedKnowledge = knowledge.map(item =>
-      item.id === editingKnowledge.id
-        ? { ...item, agentIds: selectedAgentIds }
-        : item
-    )
-    setKnowledge(updatedKnowledge)
-    setIsEditDialogOpen(false)
-    setEditingKnowledge(null)
-    setSelectedAgentIds([])
+    if (!editingDocument) return
+    updateAgentsMutation.mutate({
+      documentId: editingDocument.document_id,
+      agentIds: selectedAgentIds
+    })
   }
 
-  const handleDelete = (id: string) => {
-    setKnowledge(prev => prev.filter(item => item.id !== id))
+  const handleDelete = (doc: DocumentRecord) => {
+    setDeleteConfirmDoc(doc)
   }
 
   const toggleAgentSelection = (agentId: string) => {
@@ -221,11 +320,17 @@ export default function AgentsKnowledgePage() {
     )
   }
 
-  // Filtrado
-  const filteredKnowledge = knowledge.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesType = filterType === 'all' || item.type === filterType
-    const matchesAgent = filterAgent === 'all' || item.agentIds.includes(filterAgent)
+  const getAuthToken = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    return session?.access_token || ''
+  }
+
+  // Filtering
+  const filteredDocuments = documents.filter(doc => {
+    const matchesSearch = doc.document_name.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesType = filterType === 'all' || doc.document_type === filterType
+    const matchesAgent = filterAgent === 'all' || 
+      (doc.metadata?.agent_ids || []).includes(filterAgent)
     return matchesSearch && matchesType && matchesAgent
   })
 
@@ -233,7 +338,16 @@ export default function AgentsKnowledgePage() {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Knowledge Base</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Knowledge Base</CardTitle>
+            {stats && (
+              <div className="flex gap-4 text-sm text-muted-foreground">
+                <span>{stats.total_documents} documents</span>
+                <span>{stats.total_chunks} chunks</span>
+                <span>{stats.agents_with_knowledge} agents with knowledge</span>
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Upload Zone */}
@@ -252,14 +366,47 @@ export default function AgentsKnowledgePage() {
             <p className="text-sm text-gray-500 mb-4">
               or click to select files
             </p>
-            <Button variant="outline">
-              <IconPlus size={16} className="mr-2" />
-              Select files
-            </Button>
+            <input
+              type="file"
+              id="file-upload"
+              className="hidden"
+              multiple
+              accept=".pdf,.txt,.doc,.docx,.html,.md"
+              onChange={handleFileSelect}
+            />
+            <label htmlFor="file-upload">
+              <Button variant="outline" asChild>
+                <span>
+                  <IconPlus size={16} className="mr-2" />
+                  Select files
+                </span>
+              </Button>
+            </label>
             <p className="text-xs text-gray-500 mt-4">
-              Supported formats: PDF, TXT, DOC, DOCX, HTML
+              Supported formats: PDF, TXT, DOC, DOCX, HTML, Markdown
             </p>
           </div>
+
+          {/* Upload Progress */}
+          {Object.values(uploadProgress).length > 0 && (
+            <div className="space-y-2">
+              {Object.values(uploadProgress).map(progress => (
+                <div key={progress.taskId} className="border rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">{progress.fileName}</span>
+                    <Badge variant={
+                      progress.status === 'completed' ? 'default' :
+                      progress.status === 'failed' ? 'destructive' : 'secondary'
+                    }>
+                      {progress.status}
+                    </Badge>
+                  </div>
+                  <Progress value={progress.percentage} className="h-2 mb-1" />
+                  <p className="text-xs text-muted-foreground">{progress.message}</p>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Filters */}
           <div className="flex gap-4 flex-wrap">
@@ -267,7 +414,7 @@ export default function AgentsKnowledgePage() {
               <div className="relative">
                 <IconSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                 <Input
-                  placeholder="Search knowledge..."
+                  placeholder="Search documents..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -281,9 +428,10 @@ export default function AgentsKnowledgePage() {
               <SelectContent>
                 <SelectItem value="all">All types</SelectItem>
                 <SelectItem value="pdf">PDF</SelectItem>
-                <SelectItem value="text">Text</SelectItem>
-                <SelectItem value="doc">Document</SelectItem>
-                <SelectItem value="link">Link</SelectItem>
+                <SelectItem value="txt">Text</SelectItem>
+                <SelectItem value="docx">Document</SelectItem>
+                <SelectItem value="url">URL</SelectItem>
+                <SelectItem value="markdown">Markdown</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterAgent} onValueChange={setFilterAgent}>
@@ -301,80 +449,100 @@ export default function AgentsKnowledgePage() {
             </Select>
           </div>
 
-          {/* Knowledge Table */}
+          {/* Documents Table */}
           <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead>Size</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Chunks</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Assigned agents</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredKnowledge.map((item) => {
-                  const FileIcon = getFileIcon(item.type)
-                  return (
-                    <TableRow key={item.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <FileIcon size={20} className="text-gray-500" />
-                          <span className="font-medium">{item.name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{item.type.toUpperCase()}</Badge>
-                      </TableCell>
-                      <TableCell>{formatFileSize(item.size)}</TableCell>
-                      <TableCell>
-                        {format(item.uploadedAt, 'dd/MM/yyyy', { locale: es })}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1 flex-wrap">
-                          {item.agentIds.map((agentId) => {
-                            const agent = agents.find(a => a.id === agentId)
-                            return agent ? (
-                              <Badge key={agentId} variant="outline" className="text-xs">
-                                {agent.name}
-                              </Badge>
-                            ) : null
-                          })}
-                          {item.agentIds.length === 0 && (
-                            <span className="text-sm text-gray-500">Not assigned</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex gap-1 justify-end">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(item)}
-                          >
-                            <IconEdit size={16} />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-red-500 hover:text-red-600"
-                            onClick={() => handleDelete(item.id)}
-                          >
-                            <IconTrash size={16} />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-                {filteredKnowledge.length === 0 && (
+                {documentsLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                      No results found
+                    <TableCell colSpan={7} className="text-center py-8">
+                      <IconLoader2 className="animate-spin mx-auto" size={24} />
                     </TableCell>
                   </TableRow>
+                ) : filteredDocuments.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                      {searchTerm ? 'No results found' : 'No documents uploaded yet'}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredDocuments.map((doc) => {
+                    const FileIcon = getFileIcon(doc.document_type)
+                    const agentIds = doc.metadata?.agent_ids || []
+                    return (
+                      <TableRow key={doc.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <FileIcon size={20} className="text-gray-500" />
+                            <span className="font-medium">{doc.document_name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{doc.document_type.toUpperCase()}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={
+                            doc.status === 'completed' ? 'default' :
+                            doc.status === 'failed' ? 'destructive' : 'secondary'
+                          }>
+                            {doc.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {doc.processed_chunks}/{doc.total_chunks}
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(doc.created_at), 'dd/MM/yyyy', { locale: es })}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1 flex-wrap">
+                            {agentIds.map((agentId) => {
+                              const agent = agents.find(a => a.id === agentId)
+                              return agent ? (
+                                <Badge key={agentId} variant="outline" className="text-xs">
+                                  {agent.name}
+                                </Badge>
+                              ) : null
+                            })}
+                            {agentIds.length === 0 && (
+                              <span className="text-sm text-gray-500">Not assigned</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex gap-1 justify-end">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEdit(doc)}
+                              disabled={doc.status !== 'completed'}
+                            >
+                              <IconEdit size={16} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-red-500 hover:text-red-600"
+                              onClick={() => handleDelete(doc)}
+                            >
+                              <IconTrash size={16} />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
                 )}
               </TableBody>
             </Table>
@@ -388,7 +556,7 @@ export default function AgentsKnowledgePage() {
           <DialogHeader>
             <DialogTitle>Assign agents</DialogTitle>
             <DialogDescription>
-              Select the agents that will have access to this knowledge.
+              Select the agents that will have access to this document.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -405,7 +573,7 @@ export default function AgentsKnowledgePage() {
                 >
                   <div>
                     <p className="font-medium">{agent.name}</p>
-                    <p className="text-sm text-gray-500">{agent.template}</p>
+                    <p className="text-sm text-gray-500">{agent.description}</p>
                   </div>
                   {selectedAgentIds.includes(agent.id) && (
                     <IconCheck size={20} className="text-primary" />
@@ -419,18 +587,49 @@ export default function AgentsKnowledgePage() {
               variant="outline"
               onClick={() => {
                 setIsEditDialogOpen(false)
-                setEditingKnowledge(null)
+                setEditingDocument(null)
                 setSelectedAgentIds([])
               }}
             >
               Cancel
             </Button>
-            <Button onClick={handleSaveEdit}>
-              Save changes
+            <Button onClick={handleSaveEdit} disabled={updateAgentsMutation.isPending}>
+              {updateAgentsMutation.isPending ? (
+                <>
+                  <IconLoader2 className="mr-2 animate-spin" size={16} />
+                  Saving...
+                </>
+              ) : (
+                'Save changes'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteConfirmDoc} onOpenChange={() => setDeleteConfirmDoc(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Document</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deleteConfirmDoc?.document_name}"? 
+              This will remove the document and all its chunks from the knowledge base.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteConfirmDoc && deleteMutation.mutate(deleteConfirmDoc)}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? 'Deleting...' : 'Delete Document'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
