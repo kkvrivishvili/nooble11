@@ -1,7 +1,7 @@
 # Core FastAPI and Pydantic
 fastapi==0.115.12
 uvicorn[standard]==0.34.0
-pydantic==2.10.6
+pydantic==2.11.7
 pydantic-settings==2.6.0
 python-multipart==0.0.12
 
@@ -20,9 +20,16 @@ supabase
 # Vector Database client
 qdrant-client==1.9.1
 
+# Document Processing - CORE
+PyMuPDF==1.24.12  # Para PDFs (librería fitz) - compatible con pymupdf4llm>=0.0.17
+pymupdf4llm==0.0.17  # Helper avanzado para extracción estructurada de PDFs
+python-docx==1.1.0  # Para archivos DOCX
+chardet==5.2.0  # Detección de encoding
+
 # Document Processing and NLP
-llama-index-core==0.12.42
-numpy==2.3.1 # Often a dependency for NLP/ML libraries
+llama-index-core==0.13.0
+llama-index-readers-file==0.5.0  # Compatible con core 0.13.x
+numpy==2.3.1
 spacy==3.8.7
 nltk==3.9.1
 
