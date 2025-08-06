@@ -237,11 +237,34 @@ class EmbeddingService(BaseService):
         return response.model_dump()
     
     async def _handle_batch_process(self, action: DomainAction) -> Dict[str, Any]:
-        """
-        Maneja la acción embedding.batch_process para procesamiento por lotes.
-        """
+        # Log detallado de entrada
+        self._logger.info(
+            f"[EmbeddingService] _handle_batch_process iniciado",
+            extra={
+                "action_id": str(action.action_id),
+                "task_id": str(action.task_id),
+                "tenant_id": str(action.tenant_id),
+                "agent_id": str(action.agent_id),
+                "correlation_id": str(action.correlation_id) if action.correlation_id else None
+            }
+        )
+        
         # Validar y parsear payload
-        payload = EmbeddingBatchPayload.model_validate(action.data)
+        try:
+            payload = EmbeddingBatchPayload.model_validate(action.data)
+            self._logger.debug(
+                f"[EmbeddingService] Payload validado: "
+                f"texts_count={len(payload.texts)}, "
+                f"model={payload.model}, "
+                f"dimensions={payload.dimensions}, "
+                f"chunk_ids_count={len(payload.chunk_ids) if payload.chunk_ids else 0}"
+            )
+        except ValidationError as e:
+            self._logger.error(
+                f"[EmbeddingService] Error validando payload: {e}",
+                extra={"action_id": str(action.action_id)}
+            )
+            raise
         
         try:
             # El modelo ahora es un campo obligatorio en el payload
@@ -249,6 +272,22 @@ class EmbeddingService(BaseService):
             
             # Extraer configuración RAG del DomainAction
             rag_config = action.rag_config.dict() if action.rag_config else None
+            
+            if rag_config:
+                self._logger.debug(
+                    f"[EmbeddingService] RAG config extraída: {list(rag_config.keys())}"
+                )
+            
+            # Log antes de generar embeddings
+            self._logger.info(
+                f"[EmbeddingService] Generando embeddings para {len(payload.texts)} textos",
+                extra={
+                    "model": model,
+                    "dimensions": payload.dimensions,
+                    "tenant_id": str(action.tenant_id),
+                    "task_id": str(action.task_id)
+                }
+            )
             
             # Generar embeddings con configuración dinámica
             result = await self.openai_handler.generate_embeddings(
@@ -261,7 +300,18 @@ class EmbeddingService(BaseService):
                 rag_config=rag_config
             )
             
-            # Construir respuesta de batch
+            self._logger.info(
+                f"[EmbeddingService] Embeddings generados exitosamente",
+                extra={
+                    "embeddings_count": len(result["embeddings"]),
+                    "model": result["model"],
+                    "dimensions": result["dimensions"],
+                    "total_tokens": result.get("total_tokens", 0),
+                    "processing_time_ms": result.get("processing_time_ms", 0)
+                }
+            )
+            
+            # Construir respuesta de batch con todos los IDs necesarios
             batch_result = EmbeddingBatchResult(
                 chunk_ids=payload.chunk_ids or [f"idx_{i}" for i in range(len(payload.texts))],
                 embeddings=result["embeddings"],
@@ -274,12 +324,52 @@ class EmbeddingService(BaseService):
                 metadata=payload.metadata
             )
             
-            return batch_result.model_dump()
+            # IMPORTANTE: Incluir IDs necesarios para el callback
+            response_data = batch_result.model_dump()
+            
+            # Agregar información crítica para el callback
+            response_data.update({
+                # IDs del contexto original
+                "task_id": str(action.task_id),
+                "tenant_id": str(action.tenant_id),
+                "agent_id": str(action.agent_id),  # FIX: Incluir agent_id
+                "session_id": str(action.session_id) if action.session_id else None,
+                
+                # Información del modelo usado
+                "embedding_model": result["model"],
+                "embedding_dimensions": result["dimensions"],
+                "encoding_format": "float",  # Por defecto
+                
+                # Métricas
+                "total_tokens": result.get("total_tokens", 0),
+                "processing_time_ms": result.get("processing_time_ms", 0)
+            })
+            
+            self._logger.info(
+                f"[EmbeddingService] Batch process completado exitosamente",
+                extra={
+                    "task_id": str(action.task_id),
+                    "chunks_processed": len(batch_result.chunk_ids),
+                    "status": "completed",
+                    "tokens_used": result.get("total_tokens", 0)
+                }
+            )
+            
+            return response_data
             
         except Exception as e:
-            self._logger.error(f"Error en batch process: {e}", exc_info=True)
+            self._logger.error(
+                f"[EmbeddingService] Error en batch process: {type(e).__name__}: {e}",
+                exc_info=True,
+                extra={
+                    "action_id": str(action.action_id),
+                    "task_id": str(action.task_id),
+                    "tenant_id": str(action.tenant_id),
+                    "error_type": type(e).__name__
+                }
+            )
             
-            # En caso de error, devolver resultado fallido
+            # En caso de error, devolver resultado fallido con contexto completo
             batch_result = EmbeddingBatchResult(
                 chunk_ids=payload.chunk_ids or [],
                 embeddings=[],
@@ -292,27 +382,19 @@ class EmbeddingService(BaseService):
                 metadata=payload.metadata
             )
             
-            return batch_result.model_dump()
-    
-    async def _track_metrics(self, action: DomainAction, response: Any):
-        """
-        Registra métricas del servicio.
-        """
-        if not self.direct_redis_conn or not self.app_settings.enable_embedding_tracking:
-            return
-        
-        try:
-            from datetime import datetime
-            today = datetime.now().date().isoformat()
+            # Incluir IDs incluso en caso de error para callback
+            error_response = batch_result.model_dump()
+            error_response.update({
+                "task_id": str(action.task_id),
+                "tenant_id": str(action.tenant_id),
+                "agent_id": str(action.agent_id),  # FIX: Incluir agent_id incluso en error
+                "error": str(e),
+                "error_type": type(e).__name__
+            })
             
-            # Clave de métricas por tenant
-            metrics_key = f"embedding_metrics:{action.tenant_id}:{today}"
+            self._logger.warning(
+                f"[EmbeddingService] Devolviendo resultado de error para callback",
+                extra={"task_id": str(action.task_id)}
+            )
             
-            # Incrementar contadores
-            await self.direct_redis_conn.hincrby(metrics_key, "total_requests", 1)
-            
-            # TTL de 7 días
-            await self.direct_redis_conn.expire(metrics_key, 86400 * 7)
-            
-        except Exception as e:
-            self._logger.error(f"Error tracking metrics: {e}")
+            return error_response

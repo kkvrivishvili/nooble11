@@ -1,8 +1,11 @@
 """
-Handler para la generación de embeddings usando OpenAI API.
+Handler para la generación de embeddings usando OpenAI API - CORREGIDO.
 
 Maneja la comunicación con la API de OpenAI y la generación
 de embeddings vectoriales.
+FIXES:
+- Manejo correcto de ExternalServiceError
+- Logging detallado
 """
 
 import logging
@@ -30,22 +33,17 @@ class OpenAIHandler(BaseHandler):
         
         Args:
             app_settings: Configuración global de la aplicación
+            openai_client: Cliente de OpenAI inyectado
             direct_redis_conn: Conexión Redis directa (opcional)
         """
         super().__init__(app_settings, direct_redis_conn)
         
-        # Validar que el cliente esté presente
         self.app_settings = app_settings
-        self.openai_client = OpenAIClient(
-            api_key=self.app_settings.openai_api_key,
-            timeout=self.app_settings.openai_timeout_seconds,
-            max_retries=self.app_settings.openai_max_retries,
-            base_url=self.app_settings.openai_base_url,
-        )
+        self.openai_client = openai_client
         
-
-        
-        self._logger.info("OpenAIHandler inicializado con inyección de cliente")
+        # Configurar logging detallado
+        self._logger.setLevel(logging.DEBUG)
+        self._logger.info("[OpenAIHandler] Inicializado con cliente inyectado")
     
     async def generate_embeddings(
         self,
@@ -53,55 +51,75 @@ class OpenAIHandler(BaseHandler):
         model: Optional[str] = None,
         dimensions: Optional[int] = None,
         encoding_format: Optional[str] = None,
-        tenant_id: Optional[str] = None,
-        agent_id: Optional[str] = None,
+        tenant_id: Optional[UUID] = None,
+        agent_id: Optional[UUID] = None,
         trace_id: Optional[UUID] = None,
         rag_config: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
         Genera embeddings para una lista de textos.
+        CORREGIDO: Manejo de errores y logging mejorado.
         
         Args:
             texts: Lista de textos
             model: Modelo específico a usar (string, no enum)
             dimensions: Dimensiones del embedding
             encoding_format: Formato de codificación
-            tenant_id: ID del tenant
-            agent_id: ID del agente
-            trace_id: ID de traza
+            tenant_id: ID del tenant (UUID)
+            agent_id: ID del agente (UUID)
+            trace_id: ID de traza (UUID)
             rag_config: Configuración RAG opcional con parámetros dinámicos
             
         Returns:
             Dict con embeddings y metadatos
         """
         # Configurar parámetros
-        model = model or self.default_model
+        model = model or self.app_settings.default_model
         encoding_format = encoding_format or "float"
         
-        # Las dimensiones siempre deben venir del EmbeddingRequest (RAGConfig centralizado)
-        # No usar fallbacks locales para mantener la centralización
-        
+        # Logging detallado de entrada
         self._logger.info(
-            f"Generando embeddings para {len(texts)} textos con modelo {model}",
+            f"[OpenAIHandler] generate_embeddings iniciado: "
+            f"texts_count={len(texts)}, model={model}, dimensions={dimensions}, "
+            f"tenant_id={tenant_id}, agent_id={agent_id}, trace_id={trace_id}",
             extra={
-                "tenant_id": tenant_id,
+                "tenant_id": str(tenant_id) if tenant_id else None,
+                "agent_id": str(agent_id) if agent_id else None,
                 "trace_id": str(trace_id) if trace_id else None,
                 "model": model,
-                "dimensions": dimensions
+                "dimensions": dimensions,
+                "texts_sample": texts[:2] if texts else []  # Solo log primeros 2 para debug
             }
         )
+        
+        # Log RAG config si existe
+        if rag_config:
+            self._logger.debug(
+                f"[OpenAIHandler] RAG config recibida: "
+                f"timeout={rag_config.get('timeout')}, "
+                f"max_retries={rag_config.get('max_retries')}, "
+                f"keys={list(rag_config.keys())}"
+            )
         
         try:
             request_timeout = None
             request_max_retries = None
 
             if rag_config:
-                request_timeout = rag_config.timeout
-                request_max_retries = rag_config.max_retries
+                request_timeout = rag_config.get('timeout')
+                request_max_retries = rag_config.get('max_retries')
                 self._logger.debug(
-                    f"Usando configuración de RAG para la solicitud: timeout={request_timeout}, max_retries={request_max_retries}"
+                    f"[OpenAIHandler] Usando configuración RAG: "
+                    f"timeout={request_timeout}, max_retries={request_max_retries}"
                 )
 
+            # Log antes de llamar al cliente
+            self._logger.debug(
+                f"[OpenAIHandler] Llamando a openai_client.generate_embeddings con "
+                f"tenant_id={tenant_id} (tipo: {type(tenant_id).__name__})"
+            )
+
+            # Llamar al cliente OpenAI - tenant_id se pasará como user
             result = await self.openai_client.generate_embeddings(
                 texts=texts,
                 model=model,
@@ -109,32 +127,51 @@ class OpenAIHandler(BaseHandler):
                 encoding_format=encoding_format,
                 timeout=request_timeout,
                 max_retries=request_max_retries,
-                user=tenant_id  # Usar tenant_id como user para tracking en OpenAI
+                user=tenant_id  # Pasamos el UUID directamente, el cliente lo serializará
             )
             
+            # Log de resultado exitoso
             self._logger.info(
-                f"Embeddings generados exitosamente en {result.get('processing_time_ms')}ms",
+                f"[OpenAIHandler] Embeddings generados exitosamente: "
+                f"processing_time={result.get('processing_time_ms')}ms, "
+                f"tokens={result.get('total_tokens', 0)}, "
+                f"dimensions={result.get('dimensions', 0)}",
                 extra={
-                    "tenant_id": tenant_id,
-                    "agent_id": agent_id,
+                    "tenant_id": str(tenant_id) if tenant_id else None,
+                    "agent_id": str(agent_id) if agent_id else None,
                     "model": model,
                     "text_count": len(texts),
                     "total_tokens": result.get("total_tokens", 0),
-                    "dimensions": result.get("dimensions", 0)
+                    "dimensions": result.get("dimensions", 0),
+                    "processing_time_ms": result.get("processing_time_ms", 0)
                 }
             )
             
             return result
             
-        except Exception as e:
+        except ExternalServiceError:
+            # Re-lanzar errores de servicio externo tal cual
             self._logger.error(
-                f"Error generando embeddings: {e}",
+                f"[OpenAIHandler] ExternalServiceError en generate_embeddings",
                 exc_info=True,
-                extra={"tenant_id": tenant_id, "model": model}
+                extra={"tenant_id": str(tenant_id) if tenant_id else None}
             )
+            raise
+            
+        except Exception as e:
+            # Capturar cualquier otro error
+            self._logger.error(
+                f"[OpenAIHandler] Error inesperado: {type(e).__name__}: {e}",
+                exc_info=True,
+                extra={
+                    "tenant_id": str(tenant_id) if tenant_id else None,
+                    "model": model,
+                    "error_type": type(e).__name__
+                }
+            )
+            # FIX: NO usar original_exception
             raise ExternalServiceError(
-                f"Error al generar embeddings con OpenAI: {str(e)}",
-                original_exception=e
+                f"Error al generar embeddings con OpenAI: {str(e)}"
             )
     
     async def validate_model(self, model: str) -> bool:
@@ -148,16 +185,27 @@ class OpenAIHandler(BaseHandler):
             True si el modelo está disponible
         """
         try:
-            # Por ahora, validamos contra una lista conocida
+            # Lista actualizada de modelos válidos
             valid_models = [
                 "text-embedding-3-small",
                 "text-embedding-3-large",
                 "text-embedding-ada-002"
             ]
-            return model in valid_models
+            
+            is_valid = model in valid_models
+            
+            self._logger.debug(
+                f"[OpenAIHandler] Validación de modelo '{model}': "
+                f"{'VÁLIDO' if is_valid else 'INVÁLIDO'}"
+            )
+            
+            return is_valid
             
         except Exception as e:
-            self._logger.error(f"Error validando modelo {model}: {e}")
+            self._logger.error(
+                f"[OpenAIHandler] Error validando modelo {model}: {e}",
+                exc_info=True
+            )
             return False
     
     def estimate_tokens(self, texts: List[str]) -> int:
@@ -173,6 +221,13 @@ class OpenAIHandler(BaseHandler):
         Returns:
             Número estimado de tokens
         """
-        # Estimación simple: ~4 caracteres por token
+        # Estimación simple: ~4 caracteres por token (promedio para inglés)
         total_chars = sum(len(text) for text in texts)
-        return max(1, total_chars // 4)
+        estimated_tokens = max(1, total_chars // 4)
+        
+        self._logger.debug(
+            f"[OpenAIHandler] Tokens estimados: {estimated_tokens} "
+            f"(para {len(texts)} textos, {total_chars} caracteres)"
+        )
+        
+        return estimated_tokens
