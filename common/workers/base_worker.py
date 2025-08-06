@@ -16,8 +16,6 @@ from common.clients.queue_manager import QueueManager
 from common.config.base_settings import CommonAppSettings
 from common.clients import BaseRedisClient
 
-logger = logging.getLogger(__name__)
-
 
 class BaseWorker(ABC):
     """

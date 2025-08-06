@@ -2,7 +2,6 @@
 Worker para procesar callbacks de otros servicios.
 Especializado en recibir respuestas del execution service.
 """
-import logging
 from typing import Optional, Dict, Any
 
 from common.workers.base_worker import BaseWorker
@@ -10,8 +9,6 @@ from common.models.actions import DomainAction
 
 from ..services.orchestration_service import OrchestrationService
 from ..config.settings import OrchestratorSettings
-
-logger = logging.getLogger(__name__)
 
 
 class CallbackWorker(BaseWorker):
@@ -52,7 +49,7 @@ class CallbackWorker(BaseWorker):
             Resultado del procesamiento o None
         """
         try:
-            self._logger.debug(
+            self.logger.debug(
                 f"Procesando callback: {action.action_type}",
                 extra={
                     "action_id": str(action.action_id),
@@ -66,7 +63,7 @@ class CallbackWorker(BaseWorker):
             return result
             
         except Exception as e:
-            self._logger.error(
+            self.logger.error(
                 f"Error procesando callback: {e}",
                 extra={
                     "action_type": action.action_type,

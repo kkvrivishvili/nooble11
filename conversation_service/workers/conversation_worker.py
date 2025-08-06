@@ -1,7 +1,6 @@
 """
 Worker para procesar DomainActions de conversaciones.
 """
-import logging
 from typing import Dict, Any, Optional
 
 import redis.asyncio as redis_async
@@ -12,8 +11,6 @@ from common.supabase import SupabaseClient
 
 from conversation_service.config.settings import ConversationSettings
 from conversation_service.services.persistence_service import PersistenceService
-
-logger = logging.getLogger(__name__)
 
 
 class ConversationWorker(BaseWorker):
@@ -31,7 +28,6 @@ class ConversationWorker(BaseWorker):
         self.settings: ConversationSettings = app_settings
         self.supabase_client = supabase_client
         self.persistence_service: Optional[PersistenceService] = None
-        self._logger = logging.getLogger(f"{__name__}.{self.consumer_name}")
     
     async def initialize(self):
         """Inicializa el worker y sus dependencias."""
@@ -54,7 +50,7 @@ class ConversationWorker(BaseWorker):
         # Inicializar servicio de persistencia
         self.persistence_service = PersistenceService(self.supabase_client)
         
-        self._logger.info(f"ConversationWorker inicializado")
+        self.logger.info(f"ConversationWorker inicializado")
     
     async def _handle_action(self, action: DomainAction) -> Optional[Dict[str, Any]]:
         """
@@ -74,7 +70,7 @@ class ConversationWorker(BaseWorker):
                 
                 missing_fields = [field for field in required_fields if not data.get(field)]
                 if missing_fields:
-                    self._logger.error(
+                    self.logger.error(
                         f"Campos faltantes en action.data: {missing_fields}",
                         extra={"action_id": str(action.action_id)}
                     )
@@ -93,7 +89,7 @@ class ConversationWorker(BaseWorker):
                 )
                 
                 if result.get("success"):
-                    self._logger.info(
+                    self.logger.info(
                         f"Mensajes guardados exitosamente",
                         extra={
                             "conversation_id": result.get("conversation_id"),
@@ -101,7 +97,7 @@ class ConversationWorker(BaseWorker):
                         }
                     )
                 else:
-                    self._logger.error(
+                    self.logger.error(
                         f"Error guardando mensajes: {result.get('error')}",
                         extra={"action_id": str(action.action_id)}
                     )
@@ -117,7 +113,7 @@ class ConversationWorker(BaseWorker):
                 )
                 
                 if success:
-                    self._logger.info(
+                    self.logger.info(
                         f"Sesión marcada como cerrada",
                         extra={
                             "session_id": str(action.session_id),
@@ -125,7 +121,7 @@ class ConversationWorker(BaseWorker):
                         }
                     )
                 else:
-                    self._logger.warning(
+                    self.logger.warning(
                         f"No se pudo marcar sesión como cerrada",
                         extra={
                             "session_id": str(action.session_id),
@@ -136,14 +132,14 @@ class ConversationWorker(BaseWorker):
                 return None  # Fire-and-forget
             
             else:
-                self._logger.warning(
+                self.logger.warning(
                     f"Acción no soportada: {action_type}",
                     extra={"action_id": str(action.action_id)}
                 )
                 return None
                 
         except Exception as e:
-            self._logger.error(
+            self.logger.error(
                 f"Error procesando {action_type}: {str(e)}",
                 extra={
                     "action_id": str(action.action_id),

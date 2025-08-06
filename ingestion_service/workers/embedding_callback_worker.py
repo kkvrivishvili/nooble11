@@ -1,7 +1,6 @@
 """
 Worker para procesar callbacks del embedding service.
 """
-import logging
 from typing import Optional, Dict, Any
 
 from common.workers.base_worker import BaseWorker
@@ -41,9 +40,9 @@ class EmbeddingCallbackWorker(BaseWorker):
             if action.action_type == "ingestion.embedding_callback":
                 return await self.ingestion_service.handle_embedding_callback(action)
             
-            self._logger.warning(f"Tipo de callback no reconocido: {action.action_type}")
+            self.logger.warning(f"Tipo de callback no reconocido: {action.action_type}")
             return None
             
         except Exception as e:
-            self._logger.error(f"Error procesando callback: {e}")
+            self.logger.error(f"Error procesando callback: {e}")
             return None

@@ -1,7 +1,6 @@
 """
 Worker para Agent Execution Service.
 """
-import logging
 from typing import Optional, Dict, Any
 
 from common.workers.base_worker import BaseWorker
@@ -11,8 +10,6 @@ import redis.asyncio as redis_async
 
 from ..services.execution_service import ExecutionService
 from common.config.service_settings.agent_execution import ExecutionServiceSettings
-
-logger = logging.getLogger(__name__)
 
 
 class ExecutionWorker(BaseWorker):
@@ -40,10 +37,10 @@ class ExecutionWorker(BaseWorker):
             # Llamar a la inicialización base
             await super().initialize()
             
-            logger.info(f"ExecutionWorker ({self.consumer_name}) inicializado correctamente")
+            self.logger.info(f"ExecutionWorker ({self.consumer_name}) inicializado correctamente")
             
         except Exception as e:
-            logger.error(f"Error inicializando ExecutionWorker: {e}")
+            self.logger.error(f"Error inicializando ExecutionWorker: {e}")
             raise
 
     async def _handle_action(self, action: DomainAction) -> Optional[Dict[str, Any]]:
@@ -63,7 +60,7 @@ class ExecutionWorker(BaseWorker):
             return result
 
         except Exception as e:
-            logger.error(
+            self.logger.error(
                 f"Error procesando {action.action_type}: {e}",
                 extra={
                     "action_id": str(action.action_id),
@@ -81,7 +78,7 @@ class ExecutionWorker(BaseWorker):
                 # se podrían liberar aquí
                 pass
                 
-            logger.info(f"ExecutionWorker ({self.consumer_name}) recursos liberados correctamente")
+            self.logger.info(f"ExecutionWorker ({self.consumer_name}) recursos liberados correctamente")
         except Exception as e:
-            logger.error(f"Error durante cleanup de ExecutionWorker: {e}")
+            self.logger.error(f"Error durante cleanup de ExecutionWorker: {e}")
             # No re-lanzamos la excepción para permitir que el proceso de apagado continúe

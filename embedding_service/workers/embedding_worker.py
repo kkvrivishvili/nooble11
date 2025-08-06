@@ -5,7 +5,6 @@ Implementa BaseWorker para consumir DomainActions del stream Redis
 y delegar el procesamiento al EmbeddingService.
 """
 
-import logging
 from typing import Optional, Dict, Any
 
 from common.workers import BaseWorker
@@ -53,8 +52,6 @@ class EmbeddingWorker(BaseWorker):
         
         # El servicio se inicializará en el método initialize
         self.embedding_service = None
-        
-        self.logger = logging.getLogger(f"{__name__}.{self.consumer_name}")
         
     async def initialize(self):
         """
