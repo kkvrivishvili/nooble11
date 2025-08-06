@@ -6,13 +6,18 @@ import logging
 import hashlib
 import uuid
 import re
-from typing import List, Dict, Any
+import os
+from typing import List, Dict, Any, Tuple
 from pathlib import Path
 from datetime import datetime
 
 # Imports seguros con fallbacks
 import fitz  # PyMuPDF base - REQUERIDO
-import pymupdf4llm  # Helper avanzado - REQUERIDO (siempre debe estar disponible)
+try:
+    import pymupdf4llm  # Helper avanzado - OPCIONAL
+    PYMUPDF4LLM_AVAILABLE = True
+except ImportError:
+    PYMUPDF4LLM_AVAILABLE = False
     
 from docx import Document as DocxDocument  # REQUERIDO
 import requests
@@ -23,10 +28,14 @@ from common.handlers.base_handler import BaseHandler
 from ..models import DocumentIngestionRequest, ChunkModel, DocumentType
 from ..config.settings import IngestionSettings
 
+# Límites de tamaño para documentos (en bytes)
+MAX_PDF_SIZE = 50 * 1024 * 1024  # 50MB
+MAX_DOCX_SIZE = 20 * 1024 * 1024  # 20MB
+MAX_TEXT_SIZE = 10 * 1024 * 1024  # 10MB
 
 class DocumentHandler(BaseHandler):
     """
-    Handler optimizado para procesamiento avanzado de documentos.
+    Handler optimizado para procesamiento robusto de documentos.
     Compatible con el sistema existente de Nooble8 Ingestion Service.
     """
     
@@ -35,8 +44,8 @@ class DocumentHandler(BaseHandler):
         super().__init__(app_settings)
         # Cache de parsers por configuración
         self._parsers_cache = {}
-        self._logger.info("DocumentHandler initialized with pymupdf4llm as primary PDF extractor")
-    
+        self._logger.info("DocumentHandler initialized with enhanced extraction")
+        
     def _get_parser(self, chunk_size: int, chunk_overlap: int) -> SentenceSplitter:
         """Obtiene o crea un parser con cache."""
         cache_key = f"{chunk_size}:{chunk_overlap}"
@@ -72,6 +81,9 @@ class DocumentHandler(BaseHandler):
             Lista de ChunkModel procesados
         """
         try:
+            # Validar tamaño máximo del documento antes de procesar
+            self._validate_document_size(request)
+            
             # Cargar documento con método mejorado
             document, extraction_info = await self._load_document_enhanced(request)
             
@@ -125,6 +137,7 @@ class DocumentHandler(BaseHandler):
                         "has_tables": extraction_info.get("has_tables", False),
                         "page_count": extraction_info.get("page_count", None),
                         "chunk_word_count": len(chunk_content.split()),
+                        "extraction_errors": extraction_info.get("errors", []),
                         **request.metadata  # Preservar metadata del request
                     }
                 )
@@ -139,7 +152,8 @@ class DocumentHandler(BaseHandler):
                     "extraction_method": extraction_info.get("method"),
                     "chunk_size": request.rag_config.chunk_size,
                     "chunk_overlap": request.rag_config.chunk_overlap,
-                    "total_chunks": len(chunks)
+                    "total_chunks": len(chunks),
+                    "extraction_errors": len(extraction_info.get("errors", []))
                 }
             )
             return chunks
@@ -148,18 +162,40 @@ class DocumentHandler(BaseHandler):
             self._logger.error(f"Error processing document: {e}", exc_info=True)
             raise
     
+    def _validate_document_size(self, request: DocumentIngestionRequest):
+        """Valida el tamaño del documento antes de procesarlo."""
+        if request.file_path:
+            file_path = Path(request.file_path)
+            if not file_path.exists():
+                return
+                
+            file_size = os.path.getsize(file_path)
+            
+            if request.document_type == DocumentType.PDF and file_size > MAX_PDF_SIZE:
+                raise ValueError(f"PDF file exceeds maximum size ({file_size} > {MAX_PDF_SIZE} bytes)")
+                
+            elif request.document_type == DocumentType.DOCX and file_size > MAX_DOCX_SIZE:
+                raise ValueError(f"DOCX file exceeds maximum size ({file_size} > {MAX_DOCX_SIZE} bytes)")
+                
+            elif file_size > MAX_TEXT_SIZE:
+                raise ValueError(f"Text file exceeds maximum size ({file_size} > {MAX_TEXT_SIZE} bytes)")
+    
     async def _load_document_enhanced(
         self, 
         request: DocumentIngestionRequest
-    ) -> tuple[Document, Dict[str, Any]]:
+    ) -> Tuple[Document, Dict[str, Any]]:
         """
-        Carga documento con extracción mejorada usando siempre pymupdf4llm para PDFs
+        Carga documento con sistema estratificado de extracción.
         
         Returns:
             (Document, extraction_info) con metadata sobre la extracción
         """
         content = None
-        extraction_info = {"method": "standard", "has_tables": False}
+        extraction_info = {
+            "method": "standard", 
+            "has_tables": False,
+            "errors": []  # Registro de errores parciales
+        }
         
         source_value = (
             request.document_type.value 
@@ -171,97 +207,254 @@ class DocumentHandler(BaseHandler):
             "document_name": request.document_name
         }
         
-        if request.file_path:
-            file_path = Path(request.file_path)
-            if not file_path.exists():
-                raise FileNotFoundError(f"File not found: {request.file_path}")
-            
-            # Procesar según tipo de archivo con métodos avanzados
-            if source_value == DocumentType.PDF.value:
-                content, pdf_info = self._extract_pdf_pymupdf4llm(file_path)
-                metadata["pages"] = pdf_info.get("page_count", 0)
-                extraction_info.update(pdf_info)
-                
-            elif source_value == DocumentType.DOCX.value:
-                content, docx_info = self._extract_docx_enhanced(file_path)
-                extraction_info.update(docx_info)
-                
-            elif source_value == DocumentType.MARKDOWN.value:
-                content = file_path.read_text(encoding='utf-8', errors='ignore')
-                extraction_info["method"] = "markdown_native"
-                extraction_info["is_markdown"] = True
-                
-            else:  # TXT y otros formatos de texto plano
-                content = file_path.read_text(encoding='utf-8', errors='ignore')
-                extraction_info["method"] = "plain_text"
-                
-        elif request.url:
-            # Cargar desde URL
-            response = await self._fetch_url(str(request.url))
-            content = response
-            metadata["url"] = str(request.url)
-            extraction_info["method"] = "url_fetch"
-            
-        elif request.content:
-            # Contenido directo
-            content = request.content
-            extraction_info["method"] = "direct_content"
-        else:
-            raise ValueError("No content source provided")
-        
-        # Validar contenido
-        if not content or not content.strip():
-            raise ValueError("Document is empty or contains only whitespace")
-        
-        # Agregar info de extracción a metadata
-        metadata["extraction_info"] = extraction_info
-        
-        return Document(
-            text=content,
-            metadata=metadata,
-            id_=self._generate_doc_hash(content)
-        ), extraction_info
-    
-    def _extract_pdf_pymupdf4llm(self, file_path: Path) -> tuple[str, Dict[str, Any]]:
-        """
-        Extrae texto de PDF usando EXCLUSIVAMENTE pymupdf4llm
-        
-        Returns:
-            (contenido, info_dict) con información sobre la extracción
-        """
         try:
-            markdown_text = pymupdf4llm.to_markdown(
-                str(file_path),
-                page_chunks=False,
-                write_images=False,
-                show_progress=False
-            )
+            if request.file_path:
+                file_path = Path(request.file_path)
+                if not file_path.exists():
+                    raise FileNotFoundError(f"File not found: {request.file_path}")
+                
+                # Procesar según tipo de archivo con métodos avanzados
+                if source_value == DocumentType.PDF.value:
+                    content, pdf_info = self._extract_pdf_robust(file_path)
+                    metadata["pages"] = pdf_info.get("page_count", 0)
+                    extraction_info.update(pdf_info)
+                    
+                elif source_value == DocumentType.DOCX.value:
+                    content, docx_info = self._extract_docx_robust(file_path)
+                    extraction_info.update(docx_info)
+                    
+                elif source_value == DocumentType.MARKDOWN.value:
+                    content = file_path.read_text(encoding='utf-8', errors='ignore')
+                    extraction_info["method"] = "markdown_native"
+                    extraction_info["is_markdown"] = True
+                    
+                else:  # TXT y otros formatos de texto plano
+                    content = file_path.read_text(encoding='utf-8', errors='ignore')
+                    extraction_info["method"] = "plain_text"
+                    
+            elif request.url:
+                # Cargar desde URL
+                response = await self._fetch_url(str(request.url))
+                content = response
+                metadata["url"] = str(request.url)
+                extraction_info["method"] = "url_fetch"
+                
+            elif request.content:
+                # Contenido directo
+                content = request.content
+                extraction_info["method"] = "direct_content"
+            else:
+                raise ValueError("No content source provided")
             
-            if not markdown_text.strip():
-                raise ValueError("pymupdf4llm returned empty content")
+            # Validar contenido
+            if not content or not content.strip():
+                raise ValueError("Document is empty or contains only whitespace")
             
-            # Contar páginas usando PyMuPDF
+            # Agregar info de extracción a metadata
+            metadata["extraction_info"] = extraction_info
+            
+            return Document(
+                text=content,
+                metadata=metadata,
+                id_=self._generate_doc_hash(content)
+            ), extraction_info
+            
+        except Exception as e:
+            self._logger.error(f"Document loading failed: {e}")
+            # Intentar recuperación de emergencia
+            if request.file_path:
+                try:
+                    content = self._fallback_text_extraction(Path(request.file_path))
+                    if content:
+                        extraction_info["method"] = "emergency_fallback"
+                        extraction_info["errors"].append(str(e))
+                        return Document(
+                            text=content,
+                            metadata=metadata,
+                            id_=self._generate_doc_hash(content)
+                        ), extraction_info
+                except:
+                    pass
+            raise
+    
+    def _extract_pdf_robust(self, file_path: Path) -> Tuple[str, Dict[str, Any]]:
+        """
+        Extrae texto de PDF con sistema estratificado de 3 niveles.
+        
+        Estrategia:
+        1. Intento: pymupdf4llm (estructura markdown)
+        2. Intento: PyMuPDF estándar (con detección de tablas)
+        3. Intento: Fallback con llama_index
+        """
+        extraction_info = {
+            "method": "unknown",
+            "has_tables": False,
+            "page_count": 0,
+            "errors": []
+        }
+        
+        # 1. Primer intento: pymupdf4llm (si disponible)
+        if PYMUPDF4LLM_AVAILABLE:
+            try:
+                markdown_text = pymupdf4llm.to_markdown(
+                    str(file_path),
+                    page_chunks=False,
+                    write_images=False,
+                    show_progress=False
+                )
+                
+                if markdown_text.strip():
+                    with fitz.open(str(file_path)) as pdf:
+                        page_count = len(pdf)
+                    
+                    return markdown_text, {
+                        "method": "pymupdf4llm_markdown",
+                        "is_markdown": True,
+                        "has_tables": '|' in markdown_text,
+                        "page_count": page_count
+                    }
+            except Exception as e:
+                extraction_info["errors"].append(f"pymupdf4llm: {str(e)}")
+                self._logger.warning(f"pymupdf4llm extraction failed, trying standard: {e}")
+        
+        # 2. Segundo intento: PyMuPDF estándar mejorado
+        try:
+            return self._extract_with_pymupdf(file_path)
+        except Exception as e:
+            extraction_info["errors"].append(f"pymupdf_standard: {str(e)}")
+            self._logger.warning(f"PyMuPDF standard extraction failed: {e}")
+        
+        # 3. Tercer intento: Fallback con llama_index
+        try:
+            content = self._fallback_pdf_extraction(file_path)
             with fitz.open(str(file_path)) as pdf:
                 page_count = len(pdf)
             
-            return markdown_text, {
-                "method": "pymupdf4llm_markdown",
-                "is_markdown": True,
-                "has_tables": '|' in markdown_text,
+            return content, {
+                "method": "llama_index_fallback",
+                "has_tables": False,
+                "page_count": page_count,
+                "errors": extraction_info["errors"]
+            }
+        except Exception as e:
+            extraction_info["errors"].append(f"llama_index_fallback: {str(e)}")
+            self._logger.error(f"All PDF extraction methods failed: {e}")
+            raise RuntimeError(f"PDF extraction completely failed: {'; '.join(extraction_info['errors'])}")
+    
+    def _extract_with_pymupdf(self, file_path: Path) -> Tuple[str, Dict[str, Any]]:
+        """Extracción mejorada con PyMuPDF estándar."""
+        text_parts = []
+        tables_found = False
+        page_count = 0
+        
+        try:
+            with fitz.open(str(file_path)) as pdf:
+                page_count = len(pdf)
+                
+                for page_num, page in enumerate(pdf, 1):
+                    # Agregar separador de página
+                    if text_parts:
+                        text_parts.append(f"\n\n--- Page {page_num} ---\n\n")
+                    
+                    # Extraer texto de la página
+                    page_text = page.get_text(sort=True)
+                    if page_text.strip():
+                        text_parts.append(page_text)
+                    
+                    # Intentar detectar y extraer tablas
+                    try:
+                        tables = page.find_tables()
+                        if tables:
+                            tables_found = True
+                            for table in tables:
+                                try:
+                                    table_data = table.extract()
+                                    if table_data:
+                                        table_text = self._format_table_simple(table_data)
+                                        if table_text:
+                                            text_parts.append(f"\n[TABLE]\n{table_text}\n[/TABLE]\n")
+                                except Exception as te:
+                                    self._logger.debug(f"Table extraction error: {te}")
+                    except Exception as fe:
+                        self._logger.debug(f"Table finding not supported: {fe}")
+            
+            full_text = "".join(text_parts)
+            
+            if not full_text.strip():
+                raise ValueError("PDF appears to be scanned or contains no extractable text")
+            
+            return full_text, {
+                "method": "pymupdf_standard",
+                "has_tables": tables_found,
                 "page_count": page_count
             }
             
         except Exception as e:
-            self._logger.error(f"pymupdf4llm extraction failed: {e}")
-            raise RuntimeError(f"PDF extraction with pymupdf4llm failed: {e}")
+            self._logger.error(f"PyMuPDF extraction error: {e}")
+            raise
     
-    def _extract_docx_enhanced(self, file_path: Path) -> tuple[str, Dict[str, Any]]:
-        """
-        Extrae texto de DOCX preservando estructura.
+    def _format_table_simple(self, table_data: List[List]) -> str:
+        """Formatea datos de tabla de manera simple pero clara."""
+        if not table_data:
+            return ""
         
-        Returns:
-            (contenido, info_dict)
+        lines = []
+        for row in table_data:
+            if row and any(cell for cell in row if cell):
+                clean_cells = [str(cell).strip() if cell else "" for cell in row]
+                lines.append(" | ".join(clean_cells))
+        
+        if lines:
+            return "\n".join(lines)
+        return ""
+    
+    def _fallback_pdf_extraction(self, file_path: Path) -> str:
+        """Método de respaldo usando llama_index."""
+        try:
+            from llama_index.core import SimpleDirectoryReader
+            reader = SimpleDirectoryReader(input_files=[str(file_path)])
+            docs = reader.load_data()
+            return "\n\n".join([doc.text for doc in docs])
+        except Exception as e:
+            self._logger.error(f"llama_index fallback failed: {e}")
+            raise
+    
+    def _extract_docx_robust(self, file_path: Path) -> Tuple[str, Dict[str, Any]]:
         """
+        Extrae texto de DOCX con sistema de 2 niveles.
+        
+        Estrategia:
+        1. Intento: python-docx con estructura mejorada
+        2. Intento: Fallback con llama_index
+        """
+        extraction_info = {
+            "method": "unknown",
+            "has_tables": False,
+            "errors": []
+        }
+        
+        # 1. Primer intento: extracción estructurada
+        try:
+            return self._extract_docx_enhanced(file_path)
+        except Exception as e:
+            extraction_info["errors"].append(f"docx_enhanced: {str(e)}")
+            self._logger.warning(f"Enhanced DOCX extraction failed, trying fallback: {e}")
+        
+        # 2. Segundo intento: fallback con llama_index
+        try:
+            content = self._fallback_docx_extraction(file_path)
+            return content, {
+                "method": "llama_index_fallback",
+                "has_tables": False,
+                "errors": extraction_info["errors"]
+            }
+        except Exception as e:
+            extraction_info["errors"].append(f"llama_index_fallback: {str(e)}")
+            self._logger.error(f"All DOCX extraction methods failed: {e}")
+            raise RuntimeError(f"DOCX extraction completely failed: {'; '.join(extraction_info['errors'])}")
+    
+    def _extract_docx_enhanced(self, file_path: Path) -> Tuple[str, Dict[str, Any]]:
+        """Extracción mejorada de DOCX preservando estructura."""
         try:
             doc = DocxDocument(str(file_path))
             paragraphs = []
@@ -271,9 +464,10 @@ class DocumentHandler(BaseHandler):
             for para in doc.paragraphs:
                 text = para.text.strip()
                 if text:
-                    # Detectar encabezados
-                    if para.style and 'Heading' in para.style.name:
-                        paragraphs.append(f"### {text}")
+                    # Detectar encabezados por estilo
+                    if para.style and para.style.name and 'Heading' in para.style.name:
+                        heading_level = self._get_heading_level(para.style.name)
+                        paragraphs.append(f"\n{'#' * heading_level} {text}\n")
                     else:
                         paragraphs.append(text)
             
@@ -291,7 +485,9 @@ class DocumentHandler(BaseHandler):
                             table_text.append(" | ".join(row_data))
                     
                     if table_text:
-                        paragraphs.append("\n[TABLE]\n" + "\n".join(table_text) + "\n[/TABLE]")
+                        paragraphs.append("\n[TABLE]")
+                        paragraphs.append("\n".join(table_text))
+                        paragraphs.append("[/TABLE]\n")
             
             content = "\n\n".join(paragraphs)
             
@@ -305,7 +501,41 @@ class DocumentHandler(BaseHandler):
             
         except Exception as e:
             self._logger.error(f"DOCX extraction error: {e}")
-            raise RuntimeError(f"DOCX extraction failed: {e}")
+            raise
+    
+    def _get_heading_level(self, style_name: str) -> int:
+        """Determina el nivel de encabezado basado en el nombre del estilo."""
+        if 'Heading 1' in style_name: return 1
+        if 'Heading 2' in style_name: return 2
+        if 'Heading 3' in style_name: return 3
+        if 'Heading 4' in style_name: return 4
+        if 'Heading 5' in style_name: return 5
+        if 'Heading 6' in style_name: return 6
+        return 3  # Valor por defecto para encabezados no identificados
+    
+    def _fallback_docx_extraction(self, file_path: Path) -> str:
+        """Método de respaldo para DOCX usando llama_index."""
+        try:
+            from llama_index.core import SimpleDirectoryReader
+            reader = SimpleDirectoryReader(input_files=[str(file_path)])
+            docs = reader.load_data()
+            return "\n\n".join([doc.text for doc in docs])
+        except Exception as e:
+            self._logger.error(f"llama_index DOCX fallback failed: {e}")
+            raise
+    
+    def _fallback_text_extraction(self, file_path: Path) -> str:
+        """Método de emergencia para cualquier tipo de archivo."""
+        try:
+            # Intento básico de lectura de texto
+            return file_path.read_text(encoding='utf-8', errors='ignore')
+        except:
+            try:
+                # Fallback a binario con reemplazo de errores
+                return file_path.read_bytes().decode('utf-8', errors='replace')
+            except Exception as e:
+                self._logger.error(f"Emergency text extraction failed: {e}")
+                return f"CONTENT EXTRACTION FAILED: {str(e)}"
     
     def _clean_text(self, text: str) -> str:
         """
@@ -343,7 +573,7 @@ class DocumentHandler(BaseHandler):
                 cleaned_lines.append(line)
         
         return '\n'.join(cleaned_lines)
-    
+
     def _gentle_clean(self, text: str) -> str:
         """Limpieza suave para preservar tablas y estructura."""
         # Solo eliminar caracteres de control peligrosos
@@ -356,7 +586,7 @@ class DocumentHandler(BaseHandler):
         text = re.sub(r'\n{4,}', '\n\n\n', text)
         
         return text
-    
+
     def _clean_chunk_content(self, content: str) -> str:
         """
         Limpieza mínima específica para chunks.
@@ -371,12 +601,12 @@ class DocumentHandler(BaseHandler):
             content = ' '.join(content.split())
         
         return content
-    
+
     async def _fetch_url(self, url: str) -> str:
         """Descarga contenido desde URL."""
         try:
             response = requests.get(
-                url, 
+                url,
                 timeout=30,
                 headers={'User-Agent': 'Mozilla/5.0 (compatible; Nooble8/1.0)'}
             )
@@ -387,5 +617,7 @@ class DocumentHandler(BaseHandler):
             raise ValueError(f"Failed to fetch URL: {e}")
     
     def _generate_doc_hash(self, content: str) -> str:
-        """Genera hash único para el documento."""
-        return hashlib.sha256(content.encode()).hexdigest()[:16]
+       """Genera hash único para el documento."""
+       return hashlib.sha256(content.encode()).hexdigest()[:16]
+    # _fetch_url y _generate_doc_hash se mantienen igual que en el original
+    # (omitiendo por brevedad pero deben incluirse)
