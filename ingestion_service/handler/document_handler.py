@@ -6,17 +6,13 @@ import logging
 import hashlib
 import uuid
 import re
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from pathlib import Path
 from datetime import datetime
 
 # Imports seguros con fallbacks
 import fitz  # PyMuPDF base - REQUERIDO
-try:
-    import pymupdf4llm  # Helper avanzado - OPCIONAL
-    PYMUPDF4LLM_AVAILABLE = True
-except ImportError:
-    PYMUPDF4LLM_AVAILABLE = False
+import pymupdf4llm  # Helper avanzado - REQUERIDO (siempre debe estar disponible)
     
 from docx import Document as DocxDocument  # REQUERIDO
 import requests
@@ -39,11 +35,7 @@ class DocumentHandler(BaseHandler):
         super().__init__(app_settings)
         # Cache de parsers por configuración
         self._parsers_cache = {}
-        self._logger.info("DocumentHandler initialized with enhanced extraction")
-        if PYMUPDF4LLM_AVAILABLE:
-            self._logger.info("Advanced PDF extraction with pymupdf4llm available")
-        else:
-            self._logger.info("Using standard PDF extraction (pymupdf4llm not available)")
+        self._logger.info("DocumentHandler initialized with pymupdf4llm as primary PDF extractor")
     
     def _get_parser(self, chunk_size: int, chunk_overlap: int) -> SentenceSplitter:
         """Obtiene o crea un parser con cache."""
@@ -83,6 +75,16 @@ class DocumentHandler(BaseHandler):
             # Cargar documento con método mejorado
             document, extraction_info = await self._load_document_enhanced(request)
             
+            # Limpieza avanzada de texto (excepto markdown)
+            if not extraction_info.get("is_markdown", False):
+                cleaned_text = self._clean_text(document.text)
+                # Reconstruir documento con texto limpio
+                document = Document(
+                    text=cleaned_text,
+                    metadata=document.metadata,
+                    id_=document.id_
+                )
+            
             # Obtener parser con cache
             parser = self._get_parser(
                 request.rag_config.chunk_size,
@@ -102,12 +104,15 @@ class DocumentHandler(BaseHandler):
             # Convertir a ChunkModel manteniendo estructura compatible
             chunks = []
             for idx, node in enumerate(nodes):
+                # Limpieza específica del chunk
+                chunk_content = self._clean_chunk_content(node.get_content())
+                
                 # Crear ChunkModel con estructura compatible
                 chunk = ChunkModel(
                     chunk_id=str(uuid.uuid4()),
                     document_id=document_id,
                     tenant_id=tenant_id,
-                    content=node.get_content(),
+                    content=chunk_content,
                     chunk_index=idx,
                     collection_id=collection_id,
                     agent_ids=agent_ids if agent_ids else [],
@@ -119,7 +124,7 @@ class DocumentHandler(BaseHandler):
                         "extraction_method": extraction_info.get("method", "standard"),
                         "has_tables": extraction_info.get("has_tables", False),
                         "page_count": extraction_info.get("page_count", None),
-                        "chunk_word_count": len(node.get_content().split()),
+                        "chunk_word_count": len(chunk_content.split()),
                         **request.metadata  # Preservar metadata del request
                     }
                 )
@@ -148,7 +153,7 @@ class DocumentHandler(BaseHandler):
         request: DocumentIngestionRequest
     ) -> tuple[Document, Dict[str, Any]]:
         """
-        Carga documento con extracción mejorada manteniendo compatibilidad.
+        Carga documento con extracción mejorada usando siempre pymupdf4llm para PDFs
         
         Returns:
             (Document, extraction_info) con metadata sobre la extracción
@@ -173,7 +178,7 @@ class DocumentHandler(BaseHandler):
             
             # Procesar según tipo de archivo con métodos avanzados
             if source_value == DocumentType.PDF.value:
-                content, pdf_info = self._extract_pdf_enhanced(file_path)
+                content, pdf_info = self._extract_pdf_pymupdf4llm(file_path)
                 metadata["pages"] = pdf_info.get("page_count", 0)
                 extraction_info.update(pdf_info)
                 
@@ -217,89 +222,38 @@ class DocumentHandler(BaseHandler):
             id_=self._generate_doc_hash(content)
         ), extraction_info
     
-    def _extract_pdf_enhanced(self, file_path: Path) -> tuple[str, Dict[str, Any]]:
+    def _extract_pdf_pymupdf4llm(self, file_path: Path) -> tuple[str, Dict[str, Any]]:
         """
-        Extrae texto de PDF con métodos mejorados.
+        Extrae texto de PDF usando EXCLUSIVAMENTE pymupdf4llm
         
         Returns:
             (contenido, info_dict) con información sobre la extracción
         """
-        info = {"method": "standard", "has_tables": False, "page_count": 0}
-        
-        # Intentar extracción avanzada si está disponible
-        if PYMUPDF4LLM_AVAILABLE:
-            try:
-                markdown_text = pymupdf4llm.to_markdown(
-                    str(file_path),
-                    page_chunks=False,
-                    write_images=False,
-                    show_progress=False
-                )
-                
-                if markdown_text and markdown_text.strip():
-                    info["method"] = "pymupdf4llm_markdown"
-                    info["is_markdown"] = True
-                    info["has_tables"] = '|' in markdown_text
-                    with fitz.open(str(file_path)) as pdf:
-                        info["page_count"] = len(pdf)
-                    return markdown_text, info
-                    
-            except Exception as e:
-                self._logger.debug(f"pymupdf4llm extraction failed: {e}")
-        
-        # Extracción estándar con PyMuPDF
-        text_parts = []
-        tables_found = False
-        
         try:
+            markdown_text = pymupdf4llm.to_markdown(
+                str(file_path),
+                page_chunks=False,
+                write_images=False,
+                show_progress=False
+            )
+            
+            if not markdown_text.strip():
+                raise ValueError("pymupdf4llm returned empty content")
+            
+            # Contar páginas usando PyMuPDF
             with fitz.open(str(file_path)) as pdf:
-                info["page_count"] = len(pdf)
-                
-                for page_num, page in enumerate(pdf, 1):
-                    page_text = page.get_text(sort=True)
-                    
-                    if page_text.strip():
-                        text_parts.append(page_text)
-                    
-                    # Detección básica de tablas
-                    try:
-                        tables = page.find_tables()
-                        if tables:
-                            tables_found = True
-                    except:
-                        pass
+                page_count = len(pdf)
             
-            full_text = "\n\n".join(text_parts)
-            
-            if not full_text.strip():
-                # Último fallback
-                return self._fallback_pdf_extraction(file_path), {
-                    "method": "llama_index_fallback",
-                    "error": "No extractable text found"
-                }
-            
-            info["method"] = "pymupdf_standard"
-            info["has_tables"] = tables_found
-            
-            return full_text, info
-            
-        except Exception as e:
-            self._logger.error(f"PDF extraction error: {e}")
-            return self._fallback_pdf_extraction(file_path), {
-                "method": "llama_index_fallback",
-                "error": str(e)
+            return markdown_text, {
+                "method": "pymupdf4llm_markdown",
+                "is_markdown": True,
+                "has_tables": '|' in markdown_text,
+                "page_count": page_count
             }
-    
-    def _fallback_pdf_extraction(self, file_path: Path) -> str:
-        """Método de respaldo usando llama_index."""
-        try:
-            from llama_index.core import SimpleDirectoryReader
-            reader = SimpleDirectoryReader(input_files=[str(file_path)])
-            docs = reader.load_data()
-            return "\n\n".join([doc.text for doc in docs])
+            
         except Exception as e:
-            self._logger.error(f"All PDF extraction methods failed: {e}")
-            raise ValueError(f"Could not extract text from PDF: {e}")
+            self._logger.error(f"pymupdf4llm extraction failed: {e}")
+            raise RuntimeError(f"PDF extraction with pymupdf4llm failed: {e}")
     
     def _extract_docx_enhanced(self, file_path: Path) -> tuple[str, Dict[str, Any]]:
         """
@@ -308,24 +262,24 @@ class DocumentHandler(BaseHandler):
         Returns:
             (contenido, info_dict)
         """
-        info = {"method": "python-docx", "has_tables": False}
-        
         try:
             doc = DocxDocument(str(file_path))
             paragraphs = []
             has_tables = False
             
-            # Extraer párrafos
+            # Extraer párrafos con detección de encabezados
             for para in doc.paragraphs:
                 text = para.text.strip()
                 if text:
-                    paragraphs.append(text)
+                    # Detectar encabezados
+                    if para.style and 'Heading' in para.style.name:
+                        paragraphs.append(f"### {text}")
+                    else:
+                        paragraphs.append(text)
             
             # Extraer tablas
             if doc.tables:
                 has_tables = True
-                info["has_tables"] = True
-                
                 for table in doc.tables:
                     table_text = []
                     for row in table.rows:
@@ -344,18 +298,79 @@ class DocumentHandler(BaseHandler):
             if not content.strip():
                 raise ValueError("DOCX file appears to be empty")
             
-            return content, info
+            return content, {
+                "method": "python-docx",
+                "has_tables": has_tables
+            }
             
         except Exception as e:
             self._logger.error(f"DOCX extraction error: {e}")
-            try:
-                from llama_index.core import SimpleDirectoryReader
-                reader = SimpleDirectoryReader(input_files=[str(file_path)])
-                docs = reader.load_data()
-                content = "\n\n".join([doc.text for doc in docs])
-                return content, {"method": "llama_index_fallback", "error": str(e)}
-            except Exception as e2:
-                raise ValueError(f"Could not extract text from DOCX: {e2}")
+            raise RuntimeError(f"DOCX extraction failed: {e}")
+    
+    def _clean_text(self, text: str) -> str:
+        """
+        Limpia y normaliza el texto extraído.
+        Preserva marcadores estructurales importantes.
+        """
+        # Preservar marcadores de tabla si existen
+        if "[TABLE]" in text or "[/TABLE]" in text:
+            # No limpiar agresivamente si hay tablas
+            return self._gentle_clean(text)
+        
+        # Limpieza estándar
+        # Eliminar caracteres de control excepto newlines y tabs
+        text = ''.join(char for char in text if char == '\n' or char == '\t' or ord(char) >= 32)
+        
+        # Normalizar espacios múltiples
+        text = re.sub(r' +', ' ', text)
+        
+        # Normalizar saltos de línea múltiples (máximo 2)
+        text = re.sub(r'\n{3,}', '\n\n', text)
+        
+        # Eliminar espacios al inicio y final de líneas
+        lines = text.split('\n')
+        lines = [line.strip() for line in lines]
+        text = '\n'.join(lines)
+        
+        # Eliminar líneas que solo contienen caracteres especiales repetidos
+        lines = text.split('\n')
+        cleaned_lines = []
+        for line in lines:
+            # Preservar líneas con contenido real
+            if line and not all(c in '.-_=*~`#' for c in line):
+                cleaned_lines.append(line)
+            elif not line:  # Preservar líneas vacías para mantener párrafos
+                cleaned_lines.append(line)
+        
+        return '\n'.join(cleaned_lines)
+    
+    def _gentle_clean(self, text: str) -> str:
+        """Limpieza suave para preservar tablas y estructura."""
+        # Solo eliminar caracteres de control peligrosos
+        text = ''.join(char for char in text if ord(char) >= 32 or char in '\n\t')
+        
+        # Normalizar solo espacios excesivos (más de 3)
+        text = re.sub(r'    +', '  ', text)
+        
+        # Normalizar saltos excesivos (más de 3)
+        text = re.sub(r'\n{4,}', '\n\n\n', text)
+        
+        return text
+    
+    def _clean_chunk_content(self, content: str) -> str:
+        """
+        Limpieza mínima específica para chunks.
+        Preserva formato importante.
+        """
+        # Eliminar espacios al inicio y final
+        content = content.strip()
+        
+        # Si no hay indicadores de tabla, normalizar espacios
+        if '[TABLE]' not in content and '|' not in content:
+            # Normalizar espacios múltiples a uno solo
+            content = ' '.join(content.split())
+        
+        return content
     
     async def _fetch_url(self, url: str) -> str:
         """Descarga contenido desde URL."""
