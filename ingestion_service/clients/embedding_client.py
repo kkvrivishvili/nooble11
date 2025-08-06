@@ -62,8 +62,11 @@ class EmbeddingClient:
                 "texts": texts,
                 "chunk_ids": chunk_ids,
                 "model": metadata.get("embedding_model"),
-                "dimensions": metadata.get("embedding_dimensions", 1536)
-            }
+                "dimensions": metadata.get("embedding_dimensions", 1536),
+               #"encoding_format": metadata.get("encoding_format", "float"),
+                "task_id": task_id
+            },
+            metadata=metadata
         )
         
         # Log detallado de la acción que se va a enviar
