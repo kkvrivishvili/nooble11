@@ -1,5 +1,5 @@
 """
-Modelos corregidos para Ingestion Service.
+Modelos para Ingestion Service.
 """
 import uuid
 from datetime import datetime
@@ -30,13 +30,16 @@ class DocumentType(str, Enum):
     URL = "url"
 
 
-class RAGConfigRequest(BaseModel):
-    """Configuración RAG que viene en cada request."""
+class RAGIngestionConfig(BaseModel):
+    """Configuración RAG específica para ingestion."""
     embedding_model: EmbeddingModel = Field(default=EmbeddingModel.TEXT_EMBEDDING_3_SMALL)
     embedding_dimensions: int = Field(default=1536)
     encoding_format: str = Field(default="float")
     chunk_size: int = Field(default=512)
     chunk_overlap: int = Field(default=50)
+    
+    class Config:
+        use_enum_values = False  # Mantener enum objects
 
 
 class DocumentIngestionRequest(BaseModel):
@@ -45,8 +48,8 @@ class DocumentIngestionRequest(BaseModel):
     document_type: DocumentType = Field(..., description="Tipo de documento")
     
     # RAG config - si no viene, usa defaults
-    rag_config: Optional[RAGConfigRequest] = Field(
-        default_factory=RAGConfigRequest,
+    rag_config: Optional[RAGIngestionConfig] = Field(
+        default_factory=RAGIngestionConfig,
         description="Configuración RAG para este documento"
     )
     
@@ -113,3 +116,8 @@ class ChunkModel(BaseModel):
     # Metadata
     metadata: Dict[str, Any] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }

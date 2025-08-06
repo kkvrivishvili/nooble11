@@ -1,6 +1,6 @@
 """
-Servicio principal de ingestion corregido.
-Cambios clave: RAG config desde request, no del agente.
+Servicio principal de ingestion simplificado.
+Estado solo en Redis, sin agent_id en embeddings.
 """
 import asyncio
 import json
@@ -12,8 +12,8 @@ from pathlib import Path
 import tempfile
 
 import aiofiles
-
 from fastapi import UploadFile
+
 from common.services.base_service import BaseService
 from common.models.actions import DomainAction
 from common.clients.base_redis_client import BaseRedisClient
@@ -23,9 +23,9 @@ from ..models import (
     DocumentIngestionRequest,
     IngestionStatus,
     ChunkModel,
-    RAGConfigRequest
+    RAGIngestionConfig
 )
-from ..handler import DocumentHandler, QdrantHandler
+from ..handler import DocumentHandler, QdrantHandler, EmbeddingHandler
 from ..config.settings import IngestionSettings
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,10 @@ logger = logging.getLogger(__name__)
 
 class IngestionService(BaseService):
     """
-    Servicio principal de ingestion corregido.
+    Servicio principal de ingestion simplificado.
+    - Estado solo en Redis
+    - Sin agent_id para embeddings
+    - Flujo linear y robusto
     """
     
     def __init__(
@@ -56,88 +59,11 @@ class IngestionService(BaseService):
         # Handlers se inicializan en initialize()
         self.document_handler = None
         self.qdrant_handler = None
+        self.embedding_handler = None
         self.websocket_manager = None
         
-        # Cache de tareas en progreso
-        self._tasks = {}
-    
-    async def process_action(self, action: DomainAction) -> Optional[Dict[str, Any]]:
-        """
-        Procesa una DomainAction de ingestion.
-        
-        Tipos de acciones soportadas:
-        - ingestion.document.process: Procesar un documento
-        - ingestion.document.status: Obtener estado de procesamiento
-        - ingestion.document.agents.update: Actualizar agentes de un documento
-        """
-        try:
-            action_type = action.action_type
-            self._logger.info(
-                f"Procesando acción: {action_type}",
-                extra={
-                    "action_id": str(action.action_id),
-                    "tenant_id": action.tenant_id,
-                    "session_id": action.session_id
-                }
-            )
-
-            # Validar acción
-            if not action.data:
-                raise ValueError("El campo data está vacío")
-            if not action.task_id:
-                raise ValueError("task_id es requerido")
-
-            # Enrutar según tipo de acción
-            if action_type == "ingestion.document.process":
-                return await self._handle_document_process(action)
-            elif action_type == "ingestion.document.status":
-                return await self._handle_document_status(action)
-            elif action_type == "ingestion.document.agents.update":
-                return await self._handle_agents_update(action)
-            else:
-                raise ValueError(f"Tipo de acción no soportado: {action_type}")
-
-        except Exception as e:
-            self._logger.error(f"Error procesando acción: {e}", exc_info=True)
-            raise
-    
-    async def _handle_document_process(self, action: DomainAction) -> Dict[str, Any]:
-        """Maneja el procesamiento de documentos."""
-        # TODO: Implementar lógica de procesamiento de documentos
-        return {
-            "status": "processing",
-            "task_id": action.task_id,
-            "message": "Document processing started"
-        }
-    
-    async def _handle_document_status(self, action: DomainAction) -> Dict[str, Any]:
-        """Maneja consultas de estado de documentos."""
-        task_id = action.data.get("task_id")
-        if task_id and task_id in self._tasks:
-            task = self._tasks[task_id]
-            return {
-                "task_id": task_id,
-                "status": task["status"].value if hasattr(task["status"], 'value') else task["status"],
-                "progress": {
-                    "total_chunks": task.get("total_chunks", 0),
-                    "processed_chunks": task.get("processed_chunks", 0)
-                }
-            }
-        else:
-            return {
-                "task_id": task_id,
-                "status": "not_found",
-                "message": "Task not found"
-            }
-    
-    async def _handle_agents_update(self, action: DomainAction) -> Dict[str, Any]:
-        """Maneja actualización de agentes de documentos."""
-        # TODO: Implementar lógica de actualización de agentes
-        return {
-            "status": "updated",
-            "task_id": action.task_id,
-            "message": "Agents updated successfully"
-        }
+        # TTL para estados en Redis
+        self.task_ttl = 3600  # 1 hora
     
     async def initialize(self):
         """Inicializa handlers y componentes del servicio."""
@@ -154,10 +80,9 @@ class IngestionService(BaseService):
                     app_settings=self.app_settings,
                     qdrant_client=self.qdrant_client
                 )
+                await self.qdrant_handler.initialize()
             
-            # NUEVO: Inicializar embedding handler
             if self.embedding_client:
-                from ..handler import EmbeddingHandler
                 self.embedding_handler = EmbeddingHandler(
                     app_settings=self.app_settings,
                     embedding_client=self.embedding_client
@@ -174,6 +99,332 @@ class IngestionService(BaseService):
         self.websocket_manager = websocket_manager
         self._logger.info("WebSocket manager configurado")
     
+    async def process_action(self, action: DomainAction) -> Optional[Dict[str, Any]]:
+        """
+        Procesa una DomainAction de ingestion.
+        
+        Tipos de acciones soportadas:
+        - ingestion.embedding_callback: Callback con embeddings generados
+        """
+        try:
+            action_type = action.action_type
+            self._logger.info(
+                f"Procesando acción: {action_type}",
+                extra={
+                    "action_id": str(action.action_id),
+                    "tenant_id": str(action.tenant_id)
+                }
+            )
+
+            # Enrutar según tipo de acción
+            if action_type == "ingestion.embedding_callback":
+                return await self.handle_embedding_callback(action)
+            else:
+                self._logger.warning(f"Tipo de acción no soportado: {action_type}")
+                return None
+
+        except Exception as e:
+            self._logger.error(f"Error procesando acción: {e}", exc_info=True)
+            raise
+    
+    # === Estado en Redis ===
+    
+    async def get_task_state(self, task_id: uuid.UUID) -> Optional[Dict[str, Any]]:
+        """Obtiene estado de tarea desde Redis."""
+        try:
+            key = f"ingestion:task:{task_id}"
+            data = await self.direct_redis_conn.get(key)
+            return json.loads(data) if data else None
+        except Exception as e:
+            self._logger.error(f"Error obteniendo estado de tarea {task_id}: {e}")
+            return None
+    
+    async def update_task_state(
+        self, 
+        task_id: uuid.UUID, 
+        updates: Dict[str, Any],
+        ttl: Optional[int] = None
+    ) -> None:
+        """Actualiza estado de tarea en Redis."""
+        try:
+            # Obtener estado actual
+            task = await self.get_task_state(task_id)
+            if not task:
+                task = {"task_id": str(task_id)}
+            
+            # Actualizar campos
+            task.update(updates)
+            task["updated_at"] = datetime.utcnow().isoformat()
+            
+            # Guardar en Redis
+            key = f"ingestion:task:{task_id}"
+            ttl = ttl or self.task_ttl
+            await self.direct_redis_conn.setex(
+                key, ttl, json.dumps(task, default=str)
+            )
+            
+            # Notificar por WebSocket si está configurado
+            if self.websocket_manager and "status" in updates:
+                await self.websocket_manager.send_progress_update(
+                    task_id=task_id,
+                    status=updates.get("status"),
+                    message=updates.get("message", ""),
+                    percentage=updates.get("percentage", 0),
+                    total_chunks=task.get("total_chunks"),
+                    processed_chunks=task.get("processed_chunks"),
+                    error=updates.get("error")
+                )
+            
+        except Exception as e:
+            self._logger.error(f"Error actualizando estado de tarea {task_id}: {e}")
+    
+    async def get_task_status(
+        self, 
+        task_id: uuid.UUID, 
+        user_id: uuid.UUID
+    ) -> Optional[Dict[str, Any]]:
+        """Obtiene estado de tarea para un usuario."""
+        try:
+            task = await self.get_task_state(task_id)
+            if not task:
+                return None
+            
+            # Verificar que el usuario tiene acceso
+            if task.get("user_id") != str(user_id):
+                self._logger.warning(f"Usuario {user_id} intentó acceder a tarea {task_id}")
+                return None
+            
+            return {
+                "task_id": str(task_id),
+                "status": task.get("status", "unknown"),
+                "message": task.get("message", ""),
+                "percentage": task.get("percentage", 0),
+                "total_chunks": task.get("total_chunks", 0),
+                "processed_chunks": task.get("processed_chunks", 0),
+                "error": task.get("error")
+            }
+            
+        except Exception as e:
+            self._logger.error(f"Error obteniendo estado de tarea: {e}")
+            return None
+    
+    # === Ingestion Principal ===
+    
+    async def ingest_document(
+        self,
+        tenant_id: uuid.UUID,
+        user_id: uuid.UUID,
+        request: DocumentIngestionRequest
+    ) -> Dict[str, Any]:
+        """
+        Procesa la ingestion de un documento.
+        
+        - RAG config viene del request
+        - collection_id se genera si no viene
+        - document_id siempre se genera aquí
+        - agent_ids es opcional (lista vacía por defecto)
+        """
+        # Generar IDs
+        task_id = uuid.uuid4()
+        document_id = uuid.uuid4()
+        
+        # Generar collection_id si no viene
+        if not request.collection_id:
+            request.collection_id = f"col_{uuid.uuid4().hex[:8]}"
+            logger.info(f"Generated collection_id: {request.collection_id}")
+        
+        # Usar RAG config del request o defaults
+        rag_config = request.rag_config or RAGIngestionConfig()
+        
+        # Asegurar que agent_ids es lista
+        if not isinstance(request.agent_ids, list):
+            request.agent_ids = []
+        
+        # Validar consistencia del modelo en la collection
+        await self._validate_collection_consistency(
+            tenant_id=str(tenant_id),
+            collection_id=request.collection_id,
+            rag_config=rag_config
+        )
+        
+        # Crear estado inicial en Redis
+        initial_state = {
+            "task_id": str(task_id),
+            "document_id": str(document_id),
+            "tenant_id": str(tenant_id),
+            "user_id": str(user_id),
+            "collection_id": request.collection_id,
+            "agent_ids": request.agent_ids,
+            "status": IngestionStatus.PROCESSING.value,
+            "percentage": 0,
+            "message": "Starting ingestion",
+            "created_at": datetime.utcnow().isoformat(),
+            "request": request.model_dump(mode='json'),
+            "rag_config": rag_config.model_dump(mode='json'),
+            "total_chunks": 0,
+            "processed_chunks": 0
+        }
+        
+        await self.update_task_state(task_id, initial_state)
+        
+        # Iniciar procesamiento asíncrono
+        asyncio.create_task(
+            self._process_document_async(task_id)
+        )
+        
+        return {
+            "task_id": str(task_id),
+            "document_id": str(document_id),
+            "collection_id": request.collection_id,
+            "agent_ids": request.agent_ids,
+            "status": IngestionStatus.PROCESSING.value,
+            "message": "Document ingestion started"
+        }
+    
+    async def _process_document_async(self, task_id: uuid.UUID):
+        """Procesamiento asíncrono del documento."""
+        try:
+            # Obtener estado
+            task = await self.get_task_state(task_id)
+            if not task:
+                raise ValueError(f"Task {task_id} not found")
+            
+            # Reconstruir request y config
+            request = DocumentIngestionRequest(**task["request"])
+            rag_config = RAGIngestionConfig(**task["rag_config"])
+            
+            # 1. CHUNKING
+            await self.update_task_state(task_id, {
+                "status": IngestionStatus.CHUNKING.value,
+                "percentage": 20,
+                "message": "Processing document"
+            })
+            
+            chunks = await self.document_handler.process_document(
+                request=request,
+                document_id=task["document_id"],
+                tenant_id=task["tenant_id"],
+                collection_id=task["collection_id"],
+                agent_ids=task["agent_ids"]
+            )
+            
+            # Guardar chunks en Redis temporalmente
+            chunks_key = f"ingestion:chunks:{task_id}"
+            chunks_data = [chunk.model_dump(mode='json') for chunk in chunks]
+            await self.direct_redis_conn.setex(
+                chunks_key, 
+                self.task_ttl, 
+                json.dumps(chunks_data, default=str)
+            )
+            
+            await self.update_task_state(task_id, {
+                "status": IngestionStatus.EMBEDDING.value,
+                "percentage": 40,
+                "message": f"Created {len(chunks)} chunks",
+                "total_chunks": len(chunks),
+                "processed_chunks": 0
+            })
+            
+            # 2. EMBEDDINGS - Sin agent_id real
+            await self.embedding_handler.generate_embeddings(
+                chunks=chunks,
+                tenant_id=uuid.UUID(task["tenant_id"]),
+                task_id=task_id,
+                rag_config=rag_config
+            )
+            
+            # El callback manejará el resto...
+            
+        except Exception as e:
+            logger.error(f"Document processing error: {e}", exc_info=True)
+            await self.update_task_state(task_id, {
+                "status": IngestionStatus.FAILED.value,
+                "percentage": 0,
+                "message": "Processing failed",
+                "error": str(e)
+            })
+    
+    async def handle_embedding_callback(
+        self,
+        action: DomainAction
+    ) -> Dict[str, Any]:
+        """Maneja callback con embeddings del embedding service."""
+        data = action.data
+        task_id = uuid.UUID(data["task_id"])
+        
+        # Obtener estado de Redis
+        task = await self.get_task_state(task_id)
+        if not task:
+            logger.error(f"Task not found: {task_id}")
+            return {"error": "Task not found"}
+        
+        try:
+            # Obtener chunks de Redis
+            chunks_key = f"ingestion:chunks:{task_id}"
+            chunks_data = await self.direct_redis_conn.get(chunks_key)
+            if not chunks_data:
+                raise ValueError("Chunks not found in Redis")
+            
+            chunks = [
+                ChunkModel(**chunk_dict) 
+                for chunk_dict in json.loads(chunks_data)
+            ]
+            
+            # Actualizar chunks con embeddings
+            chunk_embeddings = data["embeddings"]
+            for i, chunk in enumerate(chunks):
+                if i < len(chunk_embeddings):
+                    chunk.embedding = chunk_embeddings[i]["embedding"]
+            
+            await self.update_task_state(task_id, {
+                "status": IngestionStatus.STORING.value,
+                "percentage": 80,
+                "message": "Storing vectors",
+                "processed_chunks": len(chunk_embeddings)
+            })
+            
+            # Metadata de embedding
+            embedding_metadata = {
+                "embedding_model": data.get("embedding_model"),
+                "embedding_dimensions": data.get("embedding_dimensions"),
+                "encoding_format": data.get("encoding_format", "float")
+            }
+            
+            # Almacenar en Qdrant
+            result = await self.qdrant_handler.store_chunks(
+                chunks=chunks,
+                tenant_id=task["tenant_id"],
+                collection_id=task["collection_id"],
+                agent_ids=task["agent_ids"],
+                embedding_metadata=embedding_metadata
+            )
+            
+            # Persistir en Supabase
+            await self._persist_document_metadata(task, embedding_metadata)
+            
+            # Completar
+            await self.update_task_state(task_id, {
+                "status": IngestionStatus.COMPLETED.value,
+                "percentage": 100,
+                "message": "Ingestion completed",
+                "processed_chunks": result["stored"]
+            })
+            
+            # Limpiar chunks de Redis
+            await self.direct_redis_conn.delete(chunks_key)
+            
+            return {"status": "completed", "processed_chunks": result["stored"]}
+            
+        except Exception as e:
+            logger.error(f"Callback error: {e}", exc_info=True)
+            await self.update_task_state(task_id, {
+                "status": IngestionStatus.FAILED.value,
+                "error": str(e)
+            })
+            return {"error": str(e)}
+    
+    # === Helpers ===
+    
     async def save_uploaded_file(self, file: UploadFile) -> Path:
         """Guarda archivo temporal para procesamiento."""
         temp_dir = Path(tempfile.gettempdir()) / "ingestion_uploads"
@@ -187,179 +438,11 @@ class IngestionService(BaseService):
         
         return file_path
     
-    async def _update_progress(
-        self, 
-        task: Dict[str, Any],
-        status: IngestionStatus,
-        message: str,
-        percentage: float,
-        error: Optional[str] = None
-    ):
-        """Actualiza progreso y notifica via WebSocket."""
-        task["status"] = status
-        task["message"] = message
-        task["percentage"] = percentage
-        if error:
-            task["error"] = error
-        
-        # Guardar estado en Redis
-        await self._save_task_state(task)
-        
-        # Notificar via WebSocket
-        if self.websocket_manager:
-            await self.websocket_manager.send_progress_update(
-                task_id=task["task_id"],
-                status=(status.value if hasattr(status, "value") else status),
-                message=message,
-                percentage=percentage,
-                total_chunks=task.get("total_chunks"),
-                processed_chunks=task.get("processed_chunks"),
-                error=error
-            )
-    
-    async def _save_task_state(self, task: Dict[str, Any]):
-        """Guarda estado en Redis con TTL."""
-        try:
-            await self.direct_redis_conn.setex(
-                f"ingestion:task:{task['task_id']}",
-                3600,  # 1 hora TTL
-                json.dumps(task, default=str)
-            )
-        except Exception as e:
-            self._logger.warning(f"Error guardando estado en Redis: {e}")
-    
-    async def get_task_status(
-        self, 
-        task_id: uuid.UUID, 
-        user_id: uuid.UUID
-    ) -> Optional[Dict[str, Any]]:
-        """Recupera estado desde Redis."""
-        try:
-            # Primero intentar desde memoria
-            if task_id in self._tasks:
-                task = self._tasks[task_id]
-                if task.get("user_id") == str(user_id):
-                    return {
-                        "task_id": str(task_id),
-                        "status": task["status"].value if hasattr(task["status"], 'value') else task["status"],
-                        "message": task.get("message", ""),
-                        "percentage": task.get("percentage", 0),
-                        "total_chunks": task.get("total_chunks", 0),
-                        "processed_chunks": task.get("processed_chunks", 0),
-                        "error": task.get("error")
-                    }
-            
-            # Fallback a Redis
-            task_data = await self.direct_redis_conn.get(f"ingestion:task:{task_id}")
-            if task_data:
-                task = json.loads(task_data)
-                # Verificar que el usuario tiene acceso
-                if task.get("user_id") == str(user_id):
-                    return {
-                        "task_id": str(task_id),
-                        "status": task.get("status", "unknown"),
-                        "message": task.get("message", ""),
-                        "percentage": task.get("percentage", 0),
-                        "total_chunks": task.get("total_chunks", 0),
-                        "processed_chunks": task.get("processed_chunks", 0),
-                        "error": task.get("error")
-                    }
-            
-            return None
-            
-        except Exception as e:
-            self._logger.error(f"Error obteniendo estado de tarea: {e}")
-            return None
-
-    async def ingest_document(
-        self,
-        tenant_id: uuid.UUID,
-        user_id: uuid.UUID,
-        request: DocumentIngestionRequest
-    ) -> Dict[str, Any]:
-        """
-        Procesa la ingestion de un documento.
-        
-        CAMBIOS:
-        - RAG config viene del request, no del agente
-        - collection_id se genera si no viene
-        - document_id siempre se genera aquí
-        
-        TODO: Implementar extracción real de tenant_id del JWT
-        MVP: tenant_id = user_id (modo single-tenant)
-        """
-        # Generar IDs
-        task_id = uuid.uuid4()
-        document_id = uuid.uuid4()  # Siempre generado por el servicio
-        
-        # Generar collection_id si no viene
-        if not request.collection_id:
-            request.collection_id = f"col_{uuid.uuid4().hex[:8]}"
-            logger.info(f"Generated collection_id: {request.collection_id}")
-        
-        # Usar RAG config del request o defaults
-        rag_config = request.rag_config or RAGConfigRequest()
-        
-        # Normalizar agent_ids cuando llegan como cadena JSON (p.ej. "[]" o "[\"id\"]")
-        try:
-            if isinstance(request.agent_ids, list) and len(request.agent_ids) == 1 and isinstance(request.agent_ids[0], str):
-                raw = request.agent_ids[0].strip()
-                if raw in ("", "[]", "null", "None"):
-                    request.agent_ids = []
-                elif (raw.startswith("[") and raw.endswith("]")):
-                    parsed = json.loads(raw)
-                    if isinstance(parsed, list):
-                        request.agent_ids = [str(x) for x in parsed if x]
-        except Exception as _e:
-            # Si falla el parseo, dejar agent_ids tal como vino y continuar
-            pass
-        
-        # Validar consistencia del modelo en la collection
-        await self._validate_collection_consistency(
-            tenant_id=str(tenant_id),
-            collection_id=request.collection_id,
-            rag_config=rag_config
-        )
-        
-        # Crear tarea
-        task = {
-            "task_id": task_id,
-            "document_id": document_id,
-            "tenant_id": str(tenant_id),
-            "user_id": str(user_id),
-            "collection_id": request.collection_id,
-            "agent_ids": request.agent_ids,
-            "status": IngestionStatus.PROCESSING,
-            "request": request,
-            "rag_config": rag_config,  # Guardar config usada
-            "created_at": datetime.utcnow(),
-            "total_chunks": 0,
-            "processed_chunks": 0
-        }
-        
-        # Guardar en memoria y Redis
-        self._tasks[task_id] = task
-        await self._save_task_state(task)
-        
-        # Iniciar procesamiento asíncrono
-        asyncio.create_task(
-            self._process_document_async(task)
-        )
-        
-        return {
-            "task_id": str(task_id),
-            "document_id": str(document_id),
-            "collection_id": request.collection_id,
-            "agent_ids": request.agent_ids,
-            "status": IngestionStatus.PROCESSING.value,
-            "message": "Document ingestion started"
-        }
-    
     async def _validate_collection_consistency(
         self,
         tenant_id: str,
         collection_id: str,
-        rag_config: RAGConfigRequest
+        rag_config: RAGIngestionConfig
     ):
         """Valida que todos los docs en una collection usen el mismo modelo."""
         try:
@@ -380,160 +463,24 @@ class IngestionService(BaseService):
                 existing_model = existing.data[0]["embedding_model"]
                 existing_dims = existing.data[0]["embedding_dimensions"]
                 
-                # Asegurar valor string del modelo del request (Enum o str)
+                # Obtener valor string del modelo
                 req_model_value = (
-                    rag_config.embedding_model.value
-                    if hasattr(rag_config, "embedding_model") and hasattr(rag_config.embedding_model, "value")
-                    else getattr(rag_config, "embedding_model", None)
+                    rag_config.embedding_model.value 
+                    if hasattr(rag_config.embedding_model, 'value')
+                    else str(rag_config.embedding_model)
                 )
-                if not isinstance(req_model_value, str):
-                    req_model_value = str(req_model_value)
 
                 if (existing_model != req_model_value or 
                     existing_dims != rag_config.embedding_dimensions):
                     raise ValueError(
-                        f"Collection '{collection_id}' ya usa modelo '{existing_model}' "
-                        f"con {existing_dims} dimensiones. No se pueden mezclar modelos."
+                        f"Collection '{collection_id}' already uses model '{existing_model}' "
+                        f"with {existing_dims} dimensions. Cannot mix models in same collection."
                     )
             
         except Exception as e:
-            if "No se pueden mezclar modelos" in str(e):
+            if "Cannot mix models" in str(e):
                 raise
-            self._logger.warning(f"Error validando collection: {e}")
-    
-    async def _process_document_async(self, task: Dict[str, Any]):
-        """Procesa documento de forma asíncrona."""
-        try:
-            await self._update_progress(
-                task,
-                IngestionStatus.PROCESSING,
-                "Procesando documento",
-                10
-            )
-            
-            # 1. Procesar documento en chunks
-            chunks = await self.document_handler.process_document(
-                request=task["request"],
-                document_id=str(task["document_id"]),
-                tenant_id=task["tenant_id"],
-                collection_id=task["collection_id"],
-                agent_ids=task.get("agent_ids") or []
-            )
-            
-            task["total_chunks"] = len(chunks)
-            task["chunks"] = chunks
-            
-            await self._update_progress(
-                task,
-                IngestionStatus.CHUNKING,
-                f"Creados {len(chunks)} chunks",
-                30
-            )
-            
-            # 2. Enviar para embeddings con RAG config del request
-            await self._update_progress(
-                task,
-                IngestionStatus.EMBEDDING,
-                "Generando embeddings",
-                50
-            )
-            
-            # Determinar un único agent_id para el servicio de embeddings
-            agent_ids = task.get("agent_ids") or []
-            if not agent_ids:
-                raise ValueError("No agent_id provided for embedding generation")
-            agent_id_str = str(agent_ids[0])
-
-            # Usar RAG config guardada en la task
-            await self.embedding_handler.generate_embeddings(
-                chunks=chunks,
-                tenant_id=uuid.UUID(task["tenant_id"]),
-                agent_id=uuid.UUID(agent_id_str),
-                task_id=task["task_id"],
-                rag_config=task["rag_config"]  # Del request, no del agente
-            )
-            
-        except Exception as e:
-            self._logger.error(f"Error procesando documento: {e}")
-            await self._update_progress(
-                task,
-                IngestionStatus.FAILED,
-                "Error en procesamiento",
-                0,
-                error=str(e)
-            )
-    
-    async def handle_embedding_callback(
-        self,
-        action: DomainAction
-    ) -> Dict[str, Any]:
-        """Maneja callback con embeddings del embedding service."""
-        data = action.data
-        task_id = uuid.UUID(data["task_id"])
-        
-        task = self._tasks.get(task_id)
-        if not task:
-            self._logger.error(f"Tarea no encontrada: {task_id}")
-            return {"error": "Task not found"}
-        
-        try:
-            # Actualizar chunks con embeddings
-            chunk_embeddings = data["embeddings"]
-            chunks = task.get("chunks", [])
-            
-            for i, chunk in enumerate(chunks):
-                if i < len(chunk_embeddings):
-                    chunk.embedding = chunk_embeddings[i]["embedding"]
-            
-            await self._update_progress(
-                task,
-                IngestionStatus.STORING,
-                "Almacenando vectores",
-                80
-            )
-            
-            # Metadata de embedding desde el callback
-            embedding_metadata = {
-                "embedding_model": data.get("embedding_model"),
-                "embedding_dimensions": data.get("embedding_dimensions"),
-                "encoding_format": data.get("encoding_format", "float")
-            }
-            
-            # Almacenar en Qdrant con jerarquía correcta
-            result = await self.qdrant_handler.store_chunks(
-                chunks=chunks,
-                tenant_id=task["tenant_id"],
-                collection_id=task["collection_id"],
-                agent_ids=task["agent_ids"],
-                embedding_metadata=embedding_metadata
-            )
-            
-            task["processed_chunks"] = result["stored"]
-            
-            # Persistir metadata en Supabase
-            await self._persist_document_metadata(task, embedding_metadata)
-            
-            # Completar tarea
-            task["status"] = IngestionStatus.COMPLETED
-            await self._update_progress(
-                task,
-                IngestionStatus.COMPLETED,
-                "Ingestion completada",
-                100
-            )
-            
-            return {"status": "completed", "processed_chunks": result["stored"]}
-            
-        except Exception as e:
-            self._logger.error(f"Error en callback: {e}")
-            await self._update_progress(
-                task,
-                IngestionStatus.FAILED,
-                "Error en procesamiento",
-                80,
-                error=str(e)
-            )
-            return {"error": str(e)}
+            self._logger.warning(f"Error validating collection: {e}")
     
     async def _persist_document_metadata(
         self,
@@ -542,22 +489,22 @@ class IngestionService(BaseService):
     ):
         """Persiste metadata en tabla documents_rag."""
         try:
-            # Mapear agent_ids a JSON array
+            # agent_ids como array JSON
             agent_ids_json = task["agent_ids"] if task["agent_ids"] else []
             
+            # Obtener tipo de documento
+            request = task.get("request", {})
+            doc_type = request.get("document_type", "unknown")
+            
             document_data = {
-                "profile_id": task["user_id"],  # Usuario que creó
+                "profile_id": task["user_id"],
                 "tenant_id": task["tenant_id"],
                 "collection_id": task["collection_id"],
                 "document_id": str(task["document_id"]),
-                "document_name": task["request"].document_name,
-                "document_type": (
-                    task["request"].document_type.value
-                    if hasattr(task["request"].document_type, "value")
-                    else task["request"].document_type
-                ),
+                "document_name": request.get("document_name", "Unknown"),
+                "document_type": doc_type,
                 
-                # Crítico: metadata de embeddings
+                # Metadata de embeddings
                 "embedding_model": embedding_metadata["embedding_model"],
                 "embedding_dimensions": embedding_metadata["embedding_dimensions"],
                 "encoding_format": embedding_metadata.get("encoding_format", "float"),
@@ -565,27 +512,17 @@ class IngestionService(BaseService):
                 # Estado
                 "status": "completed",
                 "total_chunks": task["total_chunks"],
-                "processed_chunks": task["processed_chunks"],
+                "processed_chunks": task.get("processed_chunks", task["total_chunks"]),
                 
-                # Metadata adicional incluyendo agent_ids
+                # Metadata adicional
                 "metadata": {
-                    **task["request"].metadata,
-                    "agent_ids": agent_ids_json  # Guardar en metadata JSON
-                }
+                    **request.get("metadata", {}),
+                    "agent_ids": agent_ids_json
+                },
+                
+                # Campo legacy agent_id (single)
+                "agent_id": agent_ids_json[0] if agent_ids_json else str(uuid.uuid4())
             }
-            
-            # Manejo temporal de agent_ids:
-            # - Se almacena el primer agente en el campo "agent_id" para cumplir con la constraint NOT NULL.
-            # - La lista completa de agentes se almacena en el campo "metadata.agent_ids" en formato JSON.
-            # En futuras versiones, se planea migrar a solo usar el campo "metadata.agent_ids" para almacenar los agent_ids.
-            # TODO: En v2, migrar a solo usar metadata JSON para agent_ids
-            # Por ahora: agent_id (primer agente) + metadata.agent_ids (lista completa)
-            # Si hay al menos un agent_id, usar el primero para cumplir NOT NULL
-            if task["agent_ids"]:
-                document_data["agent_id"] = task["agent_ids"][0]
-            else:
-                # Generar un UUID dummy para cumplir constraint
-                document_data["agent_id"] = str(uuid.uuid4())
             
             def _insert_document():
                 return (
@@ -597,12 +534,12 @@ class IngestionService(BaseService):
             response = await asyncio.to_thread(_insert_document)
             
             self._logger.info(
-                f"Metadata persistida para documento {task['document_id']} "
+                f"Metadata persisted for document {task['document_id']} "
                 f"(model: {embedding_metadata['embedding_model']})"
             )
             
         except Exception as e:
-            self._logger.error(f"Error persistiendo metadata: {e}")
+            self._logger.error(f"Error persisting metadata: {e}")
     
     async def delete_document(
         self,
@@ -641,10 +578,9 @@ class IngestionService(BaseService):
             }
             
         except Exception as e:
-            self._logger.error(f"Error eliminando documento: {e}")
+            self._logger.error(f"Error deleting document: {e}")
             raise
     
-    # NUEVO: Método para actualizar agentes de un documento
     async def update_document_agents(
         self,
         tenant_id: uuid.UUID,
@@ -665,7 +601,7 @@ class IngestionService(BaseService):
             if not success:
                 raise ValueError("Failed to update agents in Qdrant")
             
-            # 2. Actualizar en Supabase (metadata JSON)
+            # 2. Actualizar en Supabase
             def _select_doc():
                 return (
                     self.supabase_client.client
@@ -715,5 +651,5 @@ class IngestionService(BaseService):
             }
             
         except Exception as e:
-            self._logger.error(f"Error actualizando agentes: {e}")
+            self._logger.error(f"Error updating agents: {e}")
             raise

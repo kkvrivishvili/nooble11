@@ -174,8 +174,8 @@ class BaseWorker(ABC):
                 if not message_list:
                     continue
                 
-                message_id_bytes, message_payload_dict = message_list[0]
-                message_id_to_ack = message_id_bytes.decode('utf-8')
+                message_id, message_payload_dict = message_list[0]
+                message_id_to_ack = message_id
 
                 message_json_bytes = message_payload_dict.get(b'data')
                 if message_json_bytes is None:

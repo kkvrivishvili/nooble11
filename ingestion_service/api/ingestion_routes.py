@@ -6,13 +6,13 @@ import logging
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Request, Body
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Request, Body, Form
 
 from ..models import (
     DocumentIngestionRequest,
     IngestionResponse,
     IngestionStatus,
-    RAGConfigRequest,
+    RAGIngestionConfig,
     DocumentType
 )
 from ..services.ingestion_service import IngestionService
@@ -47,12 +47,11 @@ async def ingest_document(
             "POST /ingest - user_id=%s tenant_id=%s doc_name=%s type=%s",
             user_auth.get("user_id"),
             user_auth.get("app_metadata", {}).get("tenant_id"),
-            getattr(request, "document_name", None),
-            getattr(request, "document_type", None),
+            request.document_name,
+            request.document_type.value
         )
         
         # Extraer tenant_id del JWT
-        # Por ahora usamos user_id como tenant_id hasta resolver JWT
         tenant_id = user_auth.get("app_metadata", {}).get("tenant_id")
         if not tenant_id:
             # Fallback: usar user_id como tenant_id temporalmente
@@ -79,8 +78,8 @@ async def ingest_document(
         websocket_url += f"/ws/ingestion/{result['task_id']}"
         
         return IngestionResponse(
-            task_id=result["task_id"],
-            document_id=result["document_id"],
+            task_id=uuid.UUID(result["task_id"]),
+            document_id=uuid.UUID(result["document_id"]),
             collection_id=result["collection_id"],
             agent_ids=result["agent_ids"],
             status=IngestionStatus.PROCESSING,
@@ -89,87 +88,9 @@ async def ingest_document(
         )
         
     except ValueError as e:
-        # Errores de validación (ej: modelos inconsistentes)
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error en ingestion: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/batch-ingest")
-async def batch_ingest_documents(
-    documents: List[DocumentIngestionRequest],
-    collection_id: Optional[str] = Body(None),
-    agent_ids: Optional[List[str]] = Body(default_factory=list),
-    default_rag_config: Optional[RAGConfigRequest] = Body(None),
-    user_auth: Dict[str, Any] = Depends(verify_jwt_token),
-    ingestion_service: IngestionService = Depends(get_ingestion_service)
-) -> Dict[str, Any]:
-    """
-    Ingesta múltiples documentos en lote.
-    
-    - Si collection_id se provee, todos los docs van a esa collection
-    - Si agent_ids se provee, se aplica a todos los docs
-    - default_rag_config se usa si un doc no tiene su propia config
-    """
-    try:
-        tenant_id = user_auth.get("app_metadata", {}).get("tenant_id")
-        if not tenant_id:
-            tenant_id = user_auth["user_id"]
-        
-        # Si no hay collection_id, generar uno para todo el batch
-        batch_collection_id = collection_id or f"batch_{uuid.uuid4().hex[:8]}"
-        
-        results = []
-        errors = []
-        
-        for idx, doc_request in enumerate(documents):
-            try:
-                # Aplicar defaults del batch
-                if not doc_request.rag_config and default_rag_config:
-                    doc_request.rag_config = default_rag_config
-                
-                # Usar collection del batch si el doc no tiene
-                if not doc_request.collection_id:
-                    doc_request.collection_id = batch_collection_id
-                
-                # Aplicar agent_ids del batch si el doc no tiene
-                if agent_ids and not doc_request.agent_ids:
-                    doc_request.agent_ids = agent_ids
-                
-                # Procesar documento
-                result = await ingestion_service.ingest_document(
-                    tenant_id=uuid.UUID(str(tenant_id)),
-                    user_id=uuid.UUID(str(user_auth["user_id"])),
-                    request=doc_request
-                )
-                
-                results.append({
-                    "index": idx,
-                    "document_name": doc_request.document_name,
-                    **result
-                })
-                
-            except Exception as e:
-                logger.error(f"Error procesando documento {idx}: {e}")
-                errors.append({
-                    "index": idx,
-                    "document_name": doc_request.document_name,
-                    "error": str(e)
-                })
-        
-        return {
-            "batch_id": str(uuid.uuid4()),
-            "collection_id": batch_collection_id,
-            "total_documents": len(documents),
-            "succeeded": len(results),
-            "failed": len(errors),
-            "results": results,
-            "errors": errors
-        }
-        
-    except Exception as e:
-        logger.error(f"Error en batch ingestion: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -177,28 +98,38 @@ async def batch_ingest_documents(
 async def upload_and_ingest(
     http_request: Request,
     file: UploadFile = File(...),
-    collection_id: Optional[str] = Body(None),
-    agent_ids: Optional[List[str]] = Body(default_factory=list),
-    embedding_model: str = Body(default="text-embedding-3-small"),
-    chunk_size: int = Body(default=512),
-    chunk_overlap: int = Body(default=50),
     user_auth: Dict[str, Any] = Depends(verify_jwt_token),
     ingestion_service: IngestionService = Depends(get_ingestion_service),
-    settings: IngestionSettings = Depends(get_settings)
+    settings: IngestionSettings = Depends(get_settings),
+    # Form fields opcionales
+    collection_id: Optional[str] = Form(None),
+    embedding_model: str = Form("text-embedding-3-small"),
+    chunk_size: int = Form(512),
+    chunk_overlap: int = Form(50),
+    # agent_ids como campos repetidos (FastAPI lo convierte en lista)
+    agent_ids: List[str] = Form(default=[])
 ) -> IngestionResponse:
-    """Upload y procesa un archivo."""
+    """
+    Upload y procesa un archivo.
+    
+    Nota: agent_ids debe enviarse como campos repetidos en multipart:
+    - agent_ids=id1
+    - agent_ids=id2
+    FastAPI automáticamente los convierte en lista.
+    """
     try:
         logger.info(
-            "POST /upload - user_id=%s tenant_id=%s filename=%s size=%s content_type=%s",
+            "POST /upload - user_id=%s tenant_id=%s filename=%s size=%s content_type=%s agent_ids=%s",
             user_auth.get("user_id"),
             user_auth.get("app_metadata", {}).get("tenant_id"),
-            getattr(file, "filename", None),
-            getattr(file, "size", None),
-            getattr(file, "content_type", None),
+            file.filename,
+            file.size,
+            file.content_type,
+            agent_ids
         )
         
         # Validar tamaño
-        if file.size > settings.max_file_size_mb * 1024 * 1024:
+        if file.size and file.size > settings.max_file_size_mb * 1024 * 1024:
             raise HTTPException(
                 status_code=413,
                 detail=f"File too large. Max size: {settings.max_file_size_mb}MB"
@@ -206,32 +137,48 @@ async def upload_and_ingest(
         
         # Validar tipo
         file_extension = file.filename.split('.')[-1].lower()
-        if file_extension not in ['pdf', 'docx', 'txt', 'md']:
+        if file_extension not in ['pdf', 'docx', 'txt', 'md', 'html']:
             raise HTTPException(
                 status_code=400,
-                detail="Unsupported file type"
+                detail=f"Unsupported file type: {file_extension}"
             )
-        # Normalizar extensión a Enum DocumentType (md -> markdown)
-        normalized_ext = 'markdown' if file_extension == 'md' else file_extension
+        
+        # Normalizar extensión
+        if file_extension == 'md':
+            doc_type = DocumentType.MARKDOWN
+        else:
+            doc_type = DocumentType(file_extension)
         
         # Guardar archivo temporalmente
         temp_path = await ingestion_service.save_uploaded_file(file)
         
         # Crear RAG config
-        rag_config = RAGConfigRequest(
-            embedding_model=embedding_model,
+        from common.models.config_models import EmbeddingModel
+        try:
+            embedding_model_enum = EmbeddingModel(embedding_model)
+        except ValueError:
+            embedding_model_enum = EmbeddingModel.TEXT_EMBEDDING_3_SMALL
+        
+        rag_config = RAGIngestionConfig(
+            embedding_model=embedding_model_enum,
+            embedding_dimensions=1536,  # Default para text-embedding-3-small
+            encoding_format="float",
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap
         )
         
-        # Crear request de ingestion (asegurar Enum DocumentType)
+        # Crear request de ingestion
         request = DocumentIngestionRequest(
             document_name=file.filename,
-            document_type=DocumentType(normalized_ext),
+            document_type=doc_type,
             file_path=str(temp_path),
             collection_id=collection_id,
-            agent_ids=agent_ids or [],
-            rag_config=rag_config
+            agent_ids=agent_ids or [],  # Ya es lista
+            rag_config=rag_config,
+            metadata={
+                "file_size": file.size,
+                "content_type": file.content_type
+            }
         )
         
         # Delegar a ingest_document
@@ -245,14 +192,14 @@ async def upload_and_ingest(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error en upload: {e}")
+        logger.error(f"Error en upload: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.delete("/document/{document_id}")
 async def delete_document(
     document_id: uuid.UUID,
-    collection_id: str = Body(..., description="Collection ID del documento"),
+    collection_id: str = Body(..., embed=True, description="Collection ID del documento"),
     user_auth: Dict[str, Any] = Depends(verify_jwt_token),
     ingestion_service: IngestionService = Depends(get_ingestion_service)
 ) -> Dict[str, Any]:
@@ -281,8 +228,8 @@ async def delete_document(
 @router.put("/document/{document_id}/agents")
 async def update_document_agents(
     document_id: uuid.UUID,
-    agent_ids: List[str] = Body(..., description="Lista de agent IDs"),
-    operation: str = Body(default="set", description="Operación: set, add, remove"),
+    agent_ids: List[str] = Body(..., embed=True, description="Lista de agent IDs"),
+    operation: str = Body("set", embed=True, description="Operación: set, add, remove"),
     user_auth: Dict[str, Any] = Depends(verify_jwt_token),
     ingestion_service: IngestionService = Depends(get_ingestion_service)
 ) -> Dict[str, Any]:

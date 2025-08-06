@@ -75,7 +75,7 @@ const getAuthToken = async (): Promise<string> => {
 class IngestionAPI {
   /**
    * Upload and ingest a single document
-   * Note: tenant_id = user_id (used internally by backend)
+   * IMPORTANTE: agent_ids debe enviarse como campos repetidos en FormData
    */
   async uploadDocument(
     file: File,
@@ -88,21 +88,27 @@ class IngestionAPI {
     const formData = new FormData();
     formData.append('file', file);
     
-    if (collectionId) formData.append('collection_id', collectionId);
-    // FastAPI expects multiple fields named 'agent_ids' for List[str] in multipart.
-    // Do NOT JSON.stringify here; append each id separately. If empty, omit the field.
-    if (agentIds && agentIds.length > 0) {
-      agentIds.forEach((id) => formData.append('agent_ids', id));
+    if (collectionId) {
+      formData.append('collection_id', collectionId);
     }
     
-    // Add RAG config parameters
+    // IMPORTANTE: Para List[str] en FastAPI, cada valor debe ser un campo separado
+    // NO usar JSON.stringify
+    if (agentIds && agentIds.length > 0) {
+      agentIds.forEach((id) => {
+        formData.append('agent_ids', id);
+      });
+    }
+    // Si no hay agent_ids, FastAPI recibirá una lista vacía por defecto
+    
+    // Add RAG config parameters as individual fields
     if (ragConfig?.embedding_model) {
       formData.append('embedding_model', ragConfig.embedding_model);
     }
-    if (ragConfig?.chunk_size) {
+    if (ragConfig?.chunk_size !== undefined) {
       formData.append('chunk_size', ragConfig.chunk_size.toString());
     }
-    if (ragConfig?.chunk_overlap) {
+    if (ragConfig?.chunk_overlap !== undefined) {
       formData.append('chunk_overlap', ragConfig.chunk_overlap.toString());
     }
     
@@ -110,6 +116,7 @@ class IngestionAPI {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`
+        // NO incluir 'Content-Type' - el browser lo establecerá con boundary correcto
       },
       body: formData
     });
@@ -138,7 +145,7 @@ class IngestionAPI {
       document_name: documentName,
       document_type: 'url',
       url,
-      agent_ids: agentIds,
+      agent_ids: agentIds || [],  // Asegurar que es array
       collection_id: collectionId,
       rag_config: ragConfig,
       metadata: {
@@ -158,65 +165,6 @@ class IngestionAPI {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.detail || 'Failed to ingest from URL');
-    }
-    
-    return response.json();
-  }
-
-  /**
-   * Batch upload multiple documents
-   */
-  async batchUploadDocuments(
-    files: File[],
-    agentIds: string[] = [],
-    collectionId?: string,
-    ragConfig?: RAGConfig
-  ): Promise<{
-    batch_id: string;
-    collection_id: string;
-    results: Array<{
-      document_name: string;
-      task_id?: string;
-      error?: string;
-    }>;
-  }> {
-    const token = await getAuthToken();
-    
-    // Convert files to requests
-    const documents: DocumentIngestionRequest[] = await Promise.all(
-      files.map(async (file) => {
-        const base64 = await this.fileToBase64(file);
-        return {
-          document_name: file.name,
-          document_type: this.getDocumentType(file.name),
-          content: base64,
-          agent_ids: agentIds,
-          rag_config: ragConfig,
-          metadata: {
-            file_size: file.size,
-            mime_type: file.type
-          }
-        };
-      })
-    );
-    
-    const response = await fetch(`${INGESTION_SERVICE_URL}/api/v1/batch-ingest`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        documents,
-        collection_id: collectionId,
-        agent_ids: agentIds,
-        default_rag_config: ragConfig
-      })
-    });
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to batch upload documents');
     }
     
     return response.json();
@@ -288,7 +236,7 @@ class IngestionAPI {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        agent_ids: agentIds,
+        agent_ids: agentIds || [],  // Asegurar que es array
         operation
       })
     });
@@ -416,30 +364,6 @@ class IngestionAPI {
       collections_count: uniqueCollections.size,
       agents_with_knowledge: uniqueAgents.size
     };
-  }
-
-  // Helper methods
-  private async fileToBase64(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = error => reject(error);
-    });
-  }
-
-  private getDocumentType(filename: string): DocumentIngestionRequest['document_type'] {
-    const ext = filename.split('.').pop()?.toLowerCase();
-    const typeMap: Record<string, DocumentIngestionRequest['document_type']> = {
-      'pdf': 'pdf',
-      'docx': 'docx',
-      'doc': 'docx',
-      'txt': 'txt',
-      'html': 'html',
-      'htm': 'html',
-      'md': 'markdown'
-    };
-    return typeMap[ext || ''] || 'txt';
   }
 }
 

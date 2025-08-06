@@ -5,7 +5,7 @@ Modelos para Ingestion Service.
 from .ingestion_models import (
     IngestionStatus,
     DocumentType,
-    RAGConfigRequest,
+    RAGIngestionConfig,  # Renombrado de RAGConfigRequest
     DocumentIngestionRequest,
     IngestionResponse,
     IngestionProgress,
@@ -15,7 +15,7 @@ from .ingestion_models import (
 __all__ = [
     "IngestionStatus",
     "DocumentType", 
-    "RAGConfigRequest",
+    "RAGIngestionConfig",
     "DocumentIngestionRequest",
     "IngestionResponse",
     "IngestionProgress",

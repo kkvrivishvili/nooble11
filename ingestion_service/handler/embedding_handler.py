@@ -1,5 +1,6 @@
 """
 Handler para coordinar con el servicio de embeddings.
+Sin dependencia de agent_id real.
 """
 import logging
 import uuid
@@ -7,15 +8,14 @@ from typing import List, Dict, Any
 
 from common.handlers.base_handler import BaseHandler
 from common.models.actions import DomainAction
-from common.models.config_models import RAGConfig
 
 from ..clients.embedding_client import EmbeddingClient
-from ..models import ChunkModel
+from ..models import ChunkModel, RAGIngestionConfig
 from ..config.settings import IngestionSettings
 
 
 class EmbeddingHandler(BaseHandler):
-    """Handler para gestionar embeddings de chunks."""
+    """Handler para gestionar embeddings de chunks sin agent_id."""
     
     def __init__(
         self,
@@ -29,13 +29,14 @@ class EmbeddingHandler(BaseHandler):
         self,
         chunks: List[ChunkModel],
         tenant_id: uuid.UUID,
-        agent_id: uuid.UUID,
         task_id: uuid.UUID,
-        rag_config: RAGConfig
+        rag_config: RAGIngestionConfig
     ) -> None:
         """
         Envía chunks para generar embeddings.
         La respuesta llegará asíncronamente via callback.
+        
+        NO requiere agent_id real.
         """
         if not chunks:
             return
@@ -44,25 +45,49 @@ class EmbeddingHandler(BaseHandler):
         texts = [chunk.content for chunk in chunks]
         chunk_ids = [chunk.chunk_id for chunk in chunks]
         
+        # Obtener valor string del modelo
+        model_value = (
+            rag_config.embedding_model.value 
+            if hasattr(rag_config.embedding_model, 'value')
+            else str(rag_config.embedding_model)
+        )
+        
         # Metadata adicional
         metadata = {
             "task_id": str(task_id),
             "tenant_id": str(tenant_id),
-            "agent_id": str(agent_id),
-            "total_chunks": len(chunks)
+            "total_chunks": len(chunks),
+            "embedding_model": model_value,
+            "embedding_dimensions": rag_config.embedding_dimensions,
+            "encoding_format": rag_config.encoding_format
         }
         
-        # Enviar a embedding service
-        await self.embedding_client.generate_embeddings_batch(
-            texts=texts,
-            chunk_ids=chunk_ids,
-            agent_id=str(agent_id),
-            task_id=str(task_id),
-            rag_config=rag_config,
+        # Crear DomainAction sin agent_id específico
+        action = DomainAction(
+            action_type="embedding.batch_process",
+            tenant_id=tenant_id,
+            agent_id=uuid.uuid4(),  # UUID dummy para cumplir el modelo base
+            task_id=task_id,
+            session_id=uuid.uuid4(),  # Session dummy
+            origin_service="ingestion-service",
+            callback_action_type="ingestion.embedding_callback",
+            data={
+                "texts": texts,
+                "chunk_ids": chunk_ids,
+                "model": model_value,
+                "dimensions": rag_config.embedding_dimensions,
+                "encoding_format": rag_config.encoding_format
+            },
             metadata=metadata
         )
         
+        # Enviar con callback
+        await self.embedding_client.redis_client.send_action_async_with_callback(
+            action=action,
+            callback_event_name="ingestion.embedding_callback"
+        )
+        
         self._logger.info(
-            f"Enviados {len(chunks)} chunks para embeddings",
-            extra={"task_id": str(task_id)}
+            f"Sent {len(chunks)} chunks for embeddings",
+            extra={"task_id": str(task_id), "tenant_id": str(tenant_id)}
         )
