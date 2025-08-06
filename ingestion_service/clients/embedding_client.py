@@ -53,7 +53,7 @@ class EmbeddingClient:
         action = DomainAction(
             action_type="embedding.batch_process",
             tenant_id=uuid.UUID(metadata["tenant_id"]),
-            agent_id=uuid.uuid4(),  # UUID dummy - no usado por embedding service
+            agent_id=None,
             task_id=uuid.UUID(task_id),
             session_id=uuid.uuid4(),  # Session dummy
             origin_service="ingestion-service",
@@ -63,8 +63,7 @@ class EmbeddingClient:
                 "chunk_ids": chunk_ids,
                 "model": metadata.get("embedding_model"),
                 "dimensions": metadata.get("embedding_dimensions", 1536),
-               #"encoding_format": metadata.get("encoding_format", "float"),
-               #"task_id": task_id // se manda en el header
+              
             },
             metadata=metadata
         )

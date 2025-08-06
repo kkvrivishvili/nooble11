@@ -340,6 +340,7 @@ class BaseWorker(ABC):
             action_type=original_action.callback_action_type,
             tenant_id=original_action.tenant_id, # Campo requerido
             task_id=original_action.task_id,
+            agent_id=original_action.agent_id,  
             correlation_id=original_action.correlation_id,
             trace_id=original_action.trace_id,
             session_id=original_action.session_id,

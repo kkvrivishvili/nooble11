@@ -57,7 +57,7 @@ class EmbeddingHandler(BaseHandler):
         action = DomainAction(
             action_type="embedding.batch_process",
             tenant_id=tenant_id,
-            agent_id=uuid.uuid4(),  # UUID dummy para cumplir el modelo base
+            agent_id=None,
             task_id=task_id,
             session_id=uuid.uuid4(),  # Session dummy
             origin_service="ingestion-service",
