@@ -64,7 +64,7 @@ class EmbeddingClient:
                 "model": metadata.get("embedding_model"),
                 "dimensions": metadata.get("embedding_dimensions", 1536),
                #"encoding_format": metadata.get("encoding_format", "float"),
-               #"task_id": task_id
+               #"task_id": task_id // se manda en el header
             },
             metadata=metadata
         )
