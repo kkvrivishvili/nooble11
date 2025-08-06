@@ -177,14 +177,15 @@ class BaseWorker(ABC):
                 message_id, message_payload_dict = message_list[0]
                 message_id_to_ack = message_id
 
-                message_json_bytes = message_payload_dict.get(b'data')
-                if message_json_bytes is None:
+                # Debido a REDIS_DECODE_RESPONSES=True, la clave llega como string.
+                message_json = message_payload_dict.get('data')
+                if message_json is None:
                     logger.error(f"[{self.service_name}][{self.consumer_name}] Mensaje {message_id_to_ack} del stream {self.action_stream_name} no tiene campo 'data'. Descartando y ACK.")
                     await self.async_redis_conn.xack(self.action_stream_name, self.consumer_group_name, message_id_to_ack)
                     message_id_to_ack = None
                     continue
                 
-                message_json = message_json_bytes.decode('utf-8')
+                # No es necesario decodificar, REDIS_DECODE_RESPONSES=True ya devuelve un string.
                 action = DomainAction.model_validate_json(message_json)
                 # Crear contexto de logging manualmente
                 log_extra = {
@@ -239,7 +240,11 @@ class BaseWorker(ABC):
                 except Exception as e:
                     # Error durante _handle_action o envío de respuesta/callback
                     # NO HACER ACK. El mensaje permanecerá en PEL para ser reprocesado o reclamado.
-                    logger.error(f"[{self.service_name}][{self.consumer_name}] Error en handler para '{action.action_type}' (MsgID: {message_id_to_ack}): {e}", extra=action.get_log_extra() if action else None)
+                    log_extra = {
+                        "action_id": action.action_id,
+                        "correlation_id": action.correlation_id
+                    } if action else None
+                    logger.error(f"[{self.service_name}][{self.consumer_name}] Error en handler para '{action.action_type}' (MsgID: {message_id_to_ack}): {e}", extra=log_extra)
                     traceback.print_exc()
                     if action and action.callback_queue_name: # Solo intentar enviar error si es posible
                         error_code = "HANDLER_EXECUTION_ERROR"

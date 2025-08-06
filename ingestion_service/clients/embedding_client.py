@@ -8,6 +8,7 @@ from typing import List, Dict, Any
 
 from common.clients.base_redis_client import BaseRedisClient
 from common.models.actions import DomainAction
+from ingestion_service.models import RAGIngestionConfig
 
 
 class EmbeddingClient:
@@ -61,13 +62,16 @@ class EmbeddingClient:
                 "texts": texts,
                 "chunk_ids": chunk_ids,
                 "model": metadata.get("embedding_model"),
-                "dimensions": metadata.get("embedding_dimensions", 1536),
-                "encoding_format": metadata.get("encoding_format", "float"),
-                "task_id": task_id  # Incluir task_id en data para el callback
-            },
-            metadata=metadata
+                "dimensions": metadata.get("embedding_dimensions", 1536)
+            }
         )
         
+        # Log detallado de la acción que se va a enviar
+        self._logger.info(
+            "[EmbeddingClient] Preparing to send action.",
+            extra={"action_payload": action.model_dump()}
+        )
+
         # Enviar con callback
         await self.redis_client.send_action_async_with_callback(
             action=action,

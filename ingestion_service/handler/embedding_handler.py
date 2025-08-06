@@ -53,15 +53,6 @@ class EmbeddingHandler(BaseHandler):
         )
         
         # Metadata adicional
-        metadata = {
-            "task_id": str(task_id),
-            "tenant_id": str(tenant_id),
-            "total_chunks": len(chunks),
-            "embedding_model": model_value,
-            "embedding_dimensions": rag_config.embedding_dimensions,
-            "encoding_format": rag_config.encoding_format
-        }
-        
         # Crear DomainAction sin agent_id específico
         action = DomainAction(
             action_type="embedding.batch_process",
@@ -75,10 +66,8 @@ class EmbeddingHandler(BaseHandler):
                 "texts": texts,
                 "chunk_ids": chunk_ids,
                 "model": model_value,
-                "dimensions": rag_config.embedding_dimensions,
-                "encoding_format": rag_config.encoding_format
-            },
-            metadata=metadata
+                "dimensions": rag_config.embedding_dimensions
+            }
         )
         
         # Enviar con callback
