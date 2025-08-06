@@ -25,7 +25,7 @@ class EmbeddingWorker(BaseWorker):
     
     def __init__(
         self, 
-        app_settings=None,
+        app_settings: Optional[EmbeddingServiceSettings] = None,
         async_redis_conn=None,
         consumer_id_suffix: Optional[str] = None
     ):
@@ -33,13 +33,13 @@ class EmbeddingWorker(BaseWorker):
         Inicializa el EmbeddingWorker.
         
         Args:
-            app_settings: EmbeddingServiceSettings (si no se proporciona, se carga)
+            app_settings: EmbeddingServiceSettings (si no se proporciona, se crea uno por defecto)
             async_redis_conn: Conexión Redis asíncrona
             consumer_id_suffix: Sufijo para el ID del consumidor
         """
         # Cargar settings si no se proporcionan
         if app_settings is None:
-            app_settings = get_settings()
+            app_settings = EmbeddingServiceSettings()
         
         if async_redis_conn is None:
             raise ValueError("async_redis_conn es requerido para EmbeddingWorker")
