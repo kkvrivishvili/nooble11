@@ -52,6 +52,24 @@ class DomainAction(BaseModel):
     data: Dict[str, Any] = Field(..., description="Payload específico de la acción, serializado como un diccionario. El servicio receptor es responsable de deserializar y validar este diccionario en un modelo Pydantic específico basado en el 'action_type'. Este campo contiene los datos primarios necesarios para ejecutar la acción.")
     metadata: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Metadatos adicionales opcionales para la acción. Puede usarse para pasar parámetros de configuración específicos de la solicitud (ej. selección de modelo de IA, flags de características) que pueden anular los valores predeterminados del servicio. Los servicios deben estar diseñados para funcionar con sus propios valores predeterminados si 'metadata' o claves específicas dentro de él no se proporcionan.")
 
+    def get_log_extra(self) -> Dict[str, Any]:
+        """
+        Retorna un diccionario con campos relevantes para logging estructurado.
+        Convierte UUIDs a strings para compatibilidad con sistemas de logging.
+        """
+        return {
+            "action_id": str(self.action_id) if self.action_id else None,
+            "action_type": self.action_type,
+            "tenant_id": str(self.tenant_id) if self.tenant_id else None,
+            "agent_id": str(self.agent_id) if self.agent_id else None,  # Ya es Optional
+            "user_id": str(self.user_id) if self.user_id else None,
+            "task_id": str(self.task_id) if self.task_id else None,
+            "session_id": str(self.session_id) if self.session_id else None,
+            "correlation_id": str(self.correlation_id) if self.correlation_id else None,
+            "trace_id": str(self.trace_id) if self.trace_id else None,
+            "origin_service": self.origin_service
+        }
+
     model_config = ConfigDict(populate_by_name=True, extra='allow', validate_assignment=True)
 
 # Modelo de Respuesta, alineado con standart_payload.md
@@ -96,5 +114,19 @@ class DomainActionResponse(BaseModel):
             # if data is not None:
             #     raise ValueError("El campo 'data' debe ser nulo si 'success' es False.")
         return self
+
+    def get_log_extra(self) -> Dict[str, Any]:
+        """
+        Retorna un diccionario con campos relevantes para logging estructurado.
+        """
+        return {
+            "action_id": str(self.action_id) if self.action_id else None,
+            "correlation_id": str(self.correlation_id) if self.correlation_id else None,
+            "trace_id": str(self.trace_id) if self.trace_id else None,
+            "task_id": str(self.task_id) if self.task_id else None,
+            "tenant_id": str(self.tenant_id) if self.tenant_id else None,
+            "session_id": str(self.session_id) if self.session_id else None,
+            "success": self.success
+        }
 
     model_config = ConfigDict(populate_by_name=True, extra='allow', validate_assignment=True)

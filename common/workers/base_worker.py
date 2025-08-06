@@ -334,27 +334,74 @@ class BaseWorker(ABC):
             logger.error(f"[{self.service_name}] Error de Redis al enviar respuesta a {target_queue_name}: {e}", extra=log_extra)
 
     async def _send_callback(self, original_action: DomainAction, callback_data: Dict[str, Any]):
-        """Crea y envía un nuevo DomainAction como callback."""
-        callback_action = DomainAction(
-            action_id=uuid.uuid4(),
-            action_type=original_action.callback_action_type,
-            tenant_id=original_action.tenant_id, # Campo requerido
-            task_id=original_action.task_id,
-            agent_id=original_action.agent_id,  
-            correlation_id=original_action.correlation_id,
-            trace_id=original_action.trace_id,
-            session_id=original_action.session_id,
-            origin_service=self.service_name,
-            data=callback_data,
-            # Los callbacks no suelen tener callbacks a su vez.
-            callback_queue_name=None,
-            callback_action_type=None
+    """Crea y envía un nuevo DomainAction como callback usando STREAMS."""
+    callback_action = DomainAction(
+        action_id=uuid.uuid4(),
+        action_type=original_action.callback_action_type,
+        tenant_id=original_action.tenant_id,
+        agent_id=original_action.agent_id,
+        user_id=original_action.user_id,
+        task_id=original_action.task_id,
+        correlation_id=original_action.correlation_id,
+        trace_id=original_action.trace_id,
+        session_id=original_action.session_id,
+        origin_service=self.service_name,
+        data=callback_data,
+        callback_queue_name=None,
+        callback_action_type=None
+    )
+    
+    try:
+        # SOLUCIÓN: Enviar callback al STREAM del servicio destino
+        # Extraer servicio destino del callback_action_type
+        # Ejemplos:
+        # "ingestion.embedding_callback" -> servicio "ingestion-callbacks"
+        # "orchestrator.execution_callback" -> servicio "orchestrator-callbacks"
+        
+        if not original_action.callback_action_type:
+            logger.error(
+                f"[{self.service_name}] No se puede enviar callback sin callback_action_type"
+            )
+            return
+        
+        # Determinar el servicio destino del callback
+        # Pattern: "servicio.accion" -> "servicio-callbacks"
+        target_service = original_action.callback_action_type.split('.')[0]
+        
+        # Para callbacks, agregamos "-callbacks" al nombre del servicio
+        # Esto coincide con cómo ingestion configura su worker
+        callback_service_name = f"{target_service}-callbacks"
+        
+        # Obtener el stream del servicio de callbacks
+        target_stream = self.queue_manager.get_service_action_stream(callback_service_name)
+        
+        # Preparar payload para XADD (debe ser dict con 'data' key)
+        message_payload = {'data': callback_action.model_dump_json()}
+        
+        # Enviar al STREAM usando XADD
+        message_id = await self.async_redis_conn.xadd(target_stream, message_payload)
+        
+        logger.info(
+            f"[{self.service_name}] Callback {callback_action.action_id} "
+            f"({callback_action.action_type}) enviado al stream {target_stream} "
+            f"con ID {message_id}",
+            extra={
+                "action_id": str(callback_action.action_id),
+                "action_type": callback_action.action_type,
+                "correlation_id": str(callback_action.correlation_id),
+                "target_stream": target_stream,
+                "redis_message_id": message_id
+            }
         )
-        try:
-            await self.async_redis_conn.lpush(original_action.callback_queue_name, callback_action.model_dump_json())
-            logger.info(f"[{self.service_name}] Callback {callback_action.action_id} ({callback_action.action_type}) enviado a {original_action.callback_queue_name}.", extra=callback_action.get_log_extra())
-        except redis_async.RedisError as e:
-            logger.error(f"[{self.service_name}] Error de Redis al enviar callback a {original_action.callback_queue_name}: {e}", extra=callback_action.get_log_extra())
+        
+    except redis_async.RedisError as e:
+        logger.error(
+            f"[{self.service_name}] Error de Redis al enviar callback al stream: {e}",
+            extra={
+                "action_id": str(callback_action.action_id),
+                "error": str(e)
+            }
+        )
 
     async def run(self):
         """Inicia el worker y su bucle de procesamiento."""
