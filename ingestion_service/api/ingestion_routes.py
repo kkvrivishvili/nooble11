@@ -67,7 +67,8 @@ async def ingest_document(
         result = await ingestion_service.ingest_document(
             tenant_id=uuid.UUID(str(tenant_id)),
             user_id=uuid.UUID(str(user_auth["user_id"])),
-            request=request
+            request=request,
+            auth_token=user_auth.get("raw_token")
         )
         
         # Construir URL de WebSocket
@@ -215,7 +216,8 @@ async def delete_document(
         result = await ingestion_service.delete_document(
             tenant_id=uuid.UUID(str(tenant_id)),
             document_id=document_id,
-            collection_id=collection_id
+            collection_id=collection_id,
+            auth_token=user_auth.get("raw_token")
         )
         
         return result
@@ -256,7 +258,8 @@ async def update_document_agents(
             tenant_id=uuid.UUID(str(tenant_id)),
             document_id=document_id,
             agent_ids=agent_ids,
-            operation=operation
+            operation=operation,
+            auth_token=user_auth.get("raw_token")
         )
         
         return result

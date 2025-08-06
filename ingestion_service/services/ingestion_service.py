@@ -214,7 +214,8 @@ class IngestionService(BaseService):
         self,
         tenant_id: uuid.UUID,
         user_id: uuid.UUID,
-        request: DocumentIngestionRequest
+        request: DocumentIngestionRequest,
+        auth_token: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Procesa la ingestion de un documento.
@@ -244,7 +245,8 @@ class IngestionService(BaseService):
         await self._validate_collection_consistency(
             tenant_id=str(tenant_id),
             collection_id=request.collection_id,
-            rag_config=rag_config
+            rag_config=rag_config,
+            auth_token=auth_token
         )
         
         # Crear estado inicial en Redis
@@ -262,7 +264,8 @@ class IngestionService(BaseService):
             "request": request.model_dump(mode='json'),
             "rag_config": rag_config.model_dump(mode='json'),
             "total_chunks": 0,
-            "processed_chunks": 0
+            "processed_chunks": 0,
+            "auth_token": auth_token
         }
         
         await self.update_task_state(task_id, initial_state)
@@ -374,13 +377,13 @@ class IngestionService(BaseService):
             chunk_embeddings = data["embeddings"]
             for i, chunk in enumerate(chunks):
                 if i < len(chunk_embeddings):
-                    chunk.embedding = chunk_embeddings[i]["embedding"]
+                    chunk.embedding = chunk_embeddings[i]
             
             await self.update_task_state(task_id, {
                 "status": IngestionStatus.STORING.value,
                 "percentage": 80,
                 "message": "Storing vectors",
-                "processed_chunks": len(chunk_embeddings)
+                "processed_chunks": min(len(chunk_embeddings), len(chunks))
             })
             
             # Metadata de embedding
@@ -442,10 +445,17 @@ class IngestionService(BaseService):
         self,
         tenant_id: str,
         collection_id: str,
-        rag_config: RAGIngestionConfig
+        rag_config: RAGIngestionConfig,
+        auth_token: Optional[str] = None
     ):
         """Valida que todos los docs en una collection usen el mismo modelo."""
         try:
+            # Establecer auth del usuario para respetar RLS
+            if auth_token:
+                try:
+                    self.supabase_client.client.postgrest.auth(auth_token)
+                except Exception:
+                    self._logger.debug("Could not set postgrest auth token", exc_info=True)
             # Consultar si ya hay documentos en esta collection
             def _select_existing():
                 return (
@@ -458,7 +468,7 @@ class IngestionService(BaseService):
                     .execute()
                 )
             existing = await asyncio.to_thread(_select_existing)
-             
+            
             if existing.data:
                 existing_model = existing.data[0]["embedding_model"]
                 existing_dims = existing.data[0]["embedding_dimensions"]
@@ -481,6 +491,12 @@ class IngestionService(BaseService):
             if "Cannot mix models" in str(e):
                 raise
             self._logger.warning(f"Error validating collection: {e}")
+        finally:
+            if auth_token:
+                try:
+                    self.supabase_client.client.postgrest.auth(None)
+                except Exception:
+                    pass
     
     async def _persist_document_metadata(
         self,
@@ -489,12 +505,20 @@ class IngestionService(BaseService):
     ):
         """Persiste metadata en tabla documents_rag."""
         try:
+            auth_token = task.get("auth_token")
+            if auth_token:
+                try:
+                    self.supabase_client.client.postgrest.auth(auth_token)
+                except Exception:
+                    self._logger.debug("Could not set postgrest auth token for insert", exc_info=True)
             # agent_ids como array JSON
             agent_ids_json = task["agent_ids"] if task["agent_ids"] else []
             
             # Obtener tipo de documento
             request = task.get("request", {})
             doc_type = request.get("document_type", "unknown")
+            # Configuración RAG usada (para campos requeridos)
+            rag_cfg = task.get("rag_config", {})
             
             document_data = {
                 "profile_id": task["user_id"],
@@ -508,6 +532,10 @@ class IngestionService(BaseService):
                 "embedding_model": embedding_metadata["embedding_model"],
                 "embedding_dimensions": embedding_metadata["embedding_dimensions"],
                 "encoding_format": embedding_metadata.get("encoding_format", "float"),
+
+                # Configuración de chunking (NOT NULL en schema)
+                "chunk_size": rag_cfg.get("chunk_size"),
+                "chunk_overlap": rag_cfg.get("chunk_overlap"),
                 
                 # Estado
                 "status": "completed",
@@ -521,7 +549,7 @@ class IngestionService(BaseService):
                 },
                 
                 # Campo legacy agent_id (single)
-                "agent_id": agent_ids_json[0] if agent_ids_json else str(uuid.uuid4())
+                "agent_id": agent_ids_json[0] if agent_ids_json else None
             }
             
             def _insert_document():
@@ -540,12 +568,19 @@ class IngestionService(BaseService):
             
         except Exception as e:
             self._logger.error(f"Error persisting metadata: {e}")
+        finally:
+            if task.get("auth_token"):
+                try:
+                    self.supabase_client.client.postgrest.auth(None)
+                except Exception:
+                    pass
     
     async def delete_document(
         self,
         tenant_id: uuid.UUID,
         document_id: uuid.UUID,
-        collection_id: str
+        collection_id: str,
+        auth_token: Optional[str] = None
     ) -> Dict[str, Any]:
         """Elimina documento de Qdrant y Supabase."""
         try:
@@ -557,6 +592,11 @@ class IngestionService(BaseService):
             )
             
             # 2. Eliminar de Supabase
+            if auth_token:
+                try:
+                    self.supabase_client.client.postgrest.auth(auth_token)
+                except Exception:
+                    self._logger.debug("Could not set postgrest auth token for delete", exc_info=True)
             def _delete_document():
                 return (
                     self.supabase_client.client
@@ -580,13 +620,20 @@ class IngestionService(BaseService):
         except Exception as e:
             self._logger.error(f"Error deleting document: {e}")
             raise
+        finally:
+            if auth_token:
+                try:
+                    self.supabase_client.client.postgrest.auth(None)
+                except Exception:
+                    pass
     
     async def update_document_agents(
         self,
         tenant_id: uuid.UUID,
         document_id: uuid.UUID,
         agent_ids: List[str],
-        operation: str = "set"
+        operation: str = "set",
+        auth_token: Optional[str] = None
     ) -> Dict[str, Any]:
         """Actualiza los agentes con acceso a un documento."""
         try:
@@ -602,6 +649,11 @@ class IngestionService(BaseService):
                 raise ValueError("Failed to update agents in Qdrant")
             
             # 2. Actualizar en Supabase
+            if auth_token:
+                try:
+                    self.supabase_client.client.postgrest.auth(auth_token)
+                except Exception:
+                    self._logger.debug("Could not set postgrest auth token for update", exc_info=True)
             def _select_doc():
                 return (
                     self.supabase_client.client
@@ -633,7 +685,7 @@ class IngestionService(BaseService):
                         .table("documents_rag")
                         .update({
                             "metadata": metadata,
-                            "agent_id": agent_ids[0] if agent_ids else str(uuid.uuid4())
+                            "agent_id": agent_ids[0] if agent_ids else None
                         })
                         .match({
                             "tenant_id": str(tenant_id),
@@ -653,3 +705,9 @@ class IngestionService(BaseService):
         except Exception as e:
             self._logger.error(f"Error updating agents: {e}")
             raise
+        finally:
+            if auth_token:
+                try:
+                    self.supabase_client.client.postgrest.auth(None)
+                except Exception:
+                    pass

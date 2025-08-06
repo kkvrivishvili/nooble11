@@ -1,6 +1,6 @@
 // src/features/my-nooble/agents/knowledge/index.tsx - Fixed upload handling
 import { Progress } from '@/components/ui/progress'
-import { useEffect, useCallback, useState } from 'react'
+import { useEffect, useCallback, useState, useRef } from 'react'
 import { useLocation } from '@tanstack/react-router'
 import { usePageContext } from '@/context/page-context'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -82,7 +82,7 @@ export default function AgentsKnowledgePage() {
   const [selectedAgentIds, setSelectedAgentIds] = useState<string[]>([])
   const [deleteConfirmDoc, setDeleteConfirmDoc] = useState<DocumentRecord | null>(null)
   const [uploadProgress, setUploadProgress] = useState<Record<string, UploadProgress>>({})
-  const [websockets, setWebsockets] = useState<Record<string, WebSocket>>({})
+  const websocketsRef = useRef<Record<string, WebSocket>>({} as Record<string, WebSocket>)
 
   const updateSubPages = useCallback(() => {
     const currentPath = location.pathname
@@ -115,10 +115,13 @@ export default function AgentsKnowledgePage() {
     updateSubPages()
     return () => {
       setSubPages([])
-      // Clean up websockets
-      Object.values(websockets).forEach(ws => ws.close())
+      // Clean up websockets on unmount
+      const sockets = websocketsRef.current
+      Object.values(sockets).forEach(ws => {
+        try { ws.close() } catch (e) { void e }
+      })
     }
-  }, [updateSubPages, setSubPages, websockets])
+  }, [updateSubPages, setSubPages])
 
   // Get user's documents
   const { data: documents = [], isLoading: documentsLoading } = useQuery({
@@ -173,27 +176,29 @@ export default function AgentsKnowledgePage() {
       
       ws.onmessage = (event) => {
         const data = JSON.parse(event.data)
-        if (data.type === 'ingestion_progress') {
+        const msgType = data.message_type || data.type
+        if (msgType === 'ingestion_progress') {
           const progress = data.data
+          const normalizedStatus = String(progress.status || '').toLowerCase()
           setUploadProgress(prev => ({
             ...prev,
             [progress.task_id]: {
               taskId: progress.task_id,
               fileName: variables.file.name,
-              status: progress.status,
-              percentage: progress.percentage,
+              status: normalizedStatus,
+              percentage: progress.percentage ?? 0,
               message: progress.message
             }
           }))
           
-          if (progress.status === 'completed' || progress.status === 'failed') {
+          if (normalizedStatus === 'completed' || normalizedStatus === 'failed') {
             // Close websocket and refresh data
             ws.close()
             queryClient.invalidateQueries({ queryKey: ['user-documents'] })
             queryClient.invalidateQueries({ queryKey: ['knowledge-stats'] })
             
             // Show notification
-            if (progress.status === 'completed') {
+            if (normalizedStatus === 'completed') {
               toast.success(`Document uploaded successfully: ${variables.file.name}`)
             } else {
               toast.error(`Failed to upload document: ${progress.error || 'Unknown error'}`)
@@ -211,7 +216,7 @@ export default function AgentsKnowledgePage() {
         }
       }
       
-      setWebsockets(prev => ({ ...prev, [response.task_id]: ws }))
+      websocketsRef.current[response.task_id] = ws
     },
     onError: (error: Error) => {
       toast.error('Failed to upload document: ' + error.message)
