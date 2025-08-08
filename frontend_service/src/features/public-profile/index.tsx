@@ -15,6 +15,7 @@ interface PublicProfileProps {
   username: string;
   isPreview?: boolean;
   previewDesign?: ProfileDesign;
+  useExternalTheme?: boolean;
 }
 
 // Wallpaper component - handles video and blur overlays
@@ -112,7 +113,7 @@ function ProfileContent({ profile, isPreview }: { profile: ProfileWithAgents; is
   );
 }
 
-export default function PublicProfile({ username, isPreview = false, previewDesign }: PublicProfileProps) {
+export default function PublicProfile({ username, isPreview = false, previewDesign, useExternalTheme = false }: PublicProfileProps) {
   const { data: publicProfile, isLoading, error } = useQuery<ProfileWithAgents | null>({
     queryKey: ['public-profile', username],
     queryFn: async () => {
@@ -162,10 +163,14 @@ export default function PublicProfile({ username, isPreview = false, previewDesi
       "min-h-screen relative transition-all duration-300",
       isPreview && "rounded-lg overflow-hidden max-h-[600px]" // Added max-height for preview
     )}>
-      {/* Wrap everything in ProfileThemeProvider with the appropriate design */}
-      <ProfileThemeProvider profileDesign={designToUse}>
+      {/* If an external theme provider is supplied, don't wrap again */}
+      {useExternalTheme ? (
         <ProfileContent profile={profile} isPreview={isPreview} />
-      </ProfileThemeProvider>
+      ) : (
+        <ProfileThemeProvider profileDesign={designToUse}>
+          <ProfileContent profile={profile} isPreview={isPreview} />
+        </ProfileThemeProvider>
+      )}
     </div>
   );
 }

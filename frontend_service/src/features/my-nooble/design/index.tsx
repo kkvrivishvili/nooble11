@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { useDesign } from '@/hooks/use-design';
 import { LayoutWithMobile } from '@/components/layout/layout-with-mobile';
 import PublicProfile from '@/features/public-profile';
+import { ProfileThemeProvider } from '@/context/profile-theme-context';
 
 // Import updated components
 import { PresetGrid } from './components/preset-grid';
@@ -133,7 +134,14 @@ export default function DesignPage() {
     
     return (
       <div className="h-full overflow-y-auto">
-        <PublicProfile username={profile.username} isPreview={true} previewDesign={localDesign} />
+        <ProfileThemeProvider profileDesign={localDesign}>
+          <PublicProfile 
+            username={profile.username} 
+            isPreview={true} 
+            previewDesign={localDesign}
+            useExternalTheme={true}
+          />
+        </ProfileThemeProvider>
       </div>
     );
   }, [profile?.username, localDesign]);
