@@ -146,20 +146,34 @@ export default function PublicProfile({ username, isPreview = false, previewDesi
   const [currentAgentId, setCurrentAgentId] = useState<string | undefined>(undefined);
   const [messagesByAgent, setMessagesByAgent] = useState<Record<string, any[]>>({});
 
-  // Handle sending messages in chat
-  const handleSendMessage = (message: string) => {
-    if (!currentAgentId || !message.trim()) return;
+  // Handle sending messages in chat (allows override of agentId when starting from suggestions)
+  const handleSendMessage = (message: string, overrideAgentId?: string) => {
+    const trimmed = message.trim();
+    if (!trimmed) return;
+
+    const firstAgentId = profile?.agentDetails?.[0]?.id;
+    const targetAgentId = overrideAgentId || currentAgentId || firstAgentId;
+    if (!targetAgentId) return;
+
+    // If we got an override and current is different or unset, sync it
+    if (overrideAgentId && overrideAgentId !== currentAgentId) {
+      setCurrentAgentId(overrideAgentId);
+    }
+    // If there was no current agent selected, sync it to target
+    if (!currentAgentId && targetAgentId) {
+      setCurrentAgentId(targetAgentId);
+    }
 
     const newMessage = {
       id: `msg-${Date.now()}`,
       role: 'user' as const,
-      content: message.trim(),
+      content: trimmed,
       created_at: new Date().toISOString()
     };
 
     setMessagesByAgent(prev => ({
       ...prev,
-      [currentAgentId]: [...(prev[currentAgentId] || []), newMessage]
+      [targetAgentId]: [...(prev[targetAgentId] || []), newMessage]
     }));
 
     // Mock agent response
@@ -167,13 +181,13 @@ export default function PublicProfile({ username, isPreview = false, previewDesi
       const agentResponse = {
         id: `msg-${Date.now()}-agent`,
         role: 'assistant' as const,
-        content: `Respuesta automática del agente a: "${message}"`,
+        content: `Respuesta automática del agente a: "${trimmed}"`,
         created_at: new Date().toISOString()
       };
 
       setMessagesByAgent(prev => ({
         ...prev,
-        [currentAgentId]: [...(prev[currentAgentId] || []), agentResponse]
+        [targetAgentId]: [...(prev[targetAgentId] || []), agentResponse]
       }));
     }, 1000);
   };
@@ -215,6 +229,7 @@ export default function PublicProfile({ username, isPreview = false, previewDesi
             currentAgentId={currentAgentId}
             onAgentChange={setCurrentAgentId}
             messagesByAgent={messagesByAgent}
+            onSendMessage={handleSendMessage}
           />
         );
       case 'shop':
@@ -269,7 +284,7 @@ export default function PublicProfile({ username, isPreview = false, previewDesi
           </div>
           {/* Chat input - only visible in chats tab, above tabs menu */}
           {activeTab === 'chats' && (
-            <div className="w-full bg-white/90 backdrop-blur border-t px-4 py-2">
+            <div className="w-full px-4 py-2">
               <ChatInput onSendMessage={handleSendMessage} />
             </div>
           )}
@@ -299,7 +314,7 @@ export default function PublicProfile({ username, isPreview = false, previewDesi
           </div>
           {/* Chat input - only visible in chats tab, above tabs menu */}
           {activeTab === 'chats' && (
-            <div className="w-full bg-white/90 backdrop-blur border-t px-4 py-2">
+            <div className="w-full px-4 py-2">
               <ChatInput onSendMessage={handleSendMessage} />
             </div>
           )}

@@ -8,6 +8,8 @@ interface ChatsViewProps {
   profile: ProfileWithAgents
   currentAgentId?: string
   onAgentChange?: (agentId: string) => void
+  messagesByAgent: Record<string, ChatMessage[]>
+  onSendMessage?: (message: string, agentId?: string) => void
 }
 
 interface ChatMessage {
@@ -17,11 +19,10 @@ interface ChatMessage {
   created_at: string
 }
 
-export default function ChatsView({ profile, currentAgentId, onAgentChange }: ChatsViewProps) {
+export default function ChatsView({ profile, currentAgentId, onAgentChange, messagesByAgent, onSendMessage }: ChatsViewProps) {
   const { theme, layout } = useProfileTheme()
   const [selectedAgentId, setSelectedAgentId] = useState<string | undefined>(currentAgentId)
-  const [messagesByAgent, setMessagesByAgent] = useState<Record<string, ChatMessage[]>>({})
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!selectedAgentId && profile?.agentDetails?.length) {
@@ -40,26 +41,11 @@ export default function ChatsView({ profile, currentAgentId, onAgentChange }: Ch
     [profile?.agentDetails, selectedAgentId]
   )
 
-  useEffect(() => {
-    // Seed mock messages for newly selected agent
-    if (selectedAgentId && !messagesByAgent[selectedAgentId]) {
-      setMessagesByAgent(prev => ({
-        ...prev,
-        [selectedAgentId]: [
-          {
-            id: 'm1',
-            role: 'assistant',
-            content: `Hola! Soy ${selectedAgent?.name}. ¿En qué puedo ayudarte?`,
-            created_at: new Date().toISOString(),
-          },
-        ],
-      }))
-    }
-  }, [selectedAgentId])
+  // No seed de mensajes: se mostrarán sugerencias hasta que el usuario envíe el primero
 
   useEffect(() => {
-    // Auto scroll on new messages
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
+    // Auto scroll al fondo cuando cambian mensajes
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messagesByAgent, selectedAgentId])
 
   const getBubbleStyles = (role: ChatMessage['role']) => ({
@@ -73,6 +59,20 @@ export default function ChatsView({ profile, currentAgentId, onAgentChange }: Ch
     border: role === 'assistant' ? `1px solid ${theme.primary_color || '#e5e7eb'}` : 'none',
   })
 
+  const getAgentSuggestions = (agent: Agent): string[] => {
+    return [
+      `¿Qué puedes hacer por mí, ${agent.name}?`,
+      'Dame un ejemplo de cómo trabajas',
+      'Ayúdame con una tarea concreta',
+    ]
+  }
+
+  const startConversation = (agent: Agent, prompt: string) => {
+    setSelectedAgentId(agent.id)
+    onAgentChange?.(agent.id)
+    onSendMessage?.(prompt, agent.id)
+  }
+
   return (
     <div
       className={cn(
@@ -82,34 +82,45 @@ export default function ChatsView({ profile, currentAgentId, onAgentChange }: Ch
         layout.content_width === 'wide' && 'max-w-3xl'
       )}
     >
-      {/* Agent selector */}
-      <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
-        {profile.agentDetails?.map(agent => {
-          const isActive = agent.id === selectedAgentId
-          return (
-            <button
+      {/* Sugerencias iniciales por agente (se ocultan al primer mensaje) */}
+      {(!selectedAgentId || (messagesByAgent[selectedAgentId]?.length ?? 0) === 0) && (
+        <div className="mt-3 grid grid-cols-1 gap-3">
+          {profile.agentDetails?.map(agent => (
+            <div
               key={agent.id}
-              onClick={() => {
-                setSelectedAgentId(agent.id)
-                onAgentChange?.(agent.id)
-              }}
-              className={cn(
-                'flex items-center gap-2 px-3 py-2 border rounded-full whitespace-nowrap transition-colors',
-                isActive ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-900 border-gray-200'
-              )}
+              className="rounded-xl border bg-white/90 backdrop-blur p-3 shadow-sm"
               style={{
-                fontFamily: theme.font_family === 'serif' ? 'serif' : theme.font_family === 'mono' ? 'monospace' : 'sans-serif',
+                borderColor: `${theme.primary_color}33`,
+                borderRadius: theme.border_radius === 'sharp' ? '0.5rem' : theme.border_radius === 'curved' ? '0.75rem' : '1.25rem',
               }}
             >
-              <span className="text-lg">{agent.icon}</span>
-              <span className="text-sm font-medium">{agent.name}</span>
-            </button>
-          )
-        })}
-      </div>
+              <div className="flex items-center gap-2 mb-2">
+                <Avatar className="h-8 w-8"><AvatarFallback>{agent.name?.[0] || 'A'}</AvatarFallback></Avatar>
+                <div className="text-sm font-medium" style={{ color: theme.text_color }}>{agent.name}</div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {getAgentSuggestions(agent).map((s, i) => (
+                  <button
+                    key={i}
+                    onClick={() => startConversation(agent, s)}
+                    className="px-3 py-2 text-sm border bg-white hover:bg-gray-50 transition-colors"
+                    style={{
+                      borderColor: `${theme.primary_color}33`,
+                      borderRadius: theme.border_radius === 'sharp' ? '0.5rem' : theme.border_radius === 'curved' ? '0.75rem' : '1.25rem',
+                      color: theme.text_color,
+                    }}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
-      {/* Messages */}
-      <div ref={scrollRef} className="mt-3 space-y-3 max-h-[50vh] overflow-auto pr-1">
+      {/* Mensajes */}
+      <div className="mt-3 space-y-3 pr-1">
         {(selectedAgentId && messagesByAgent[selectedAgentId])?.map(msg => (
           <div key={msg.id} className={cn('flex items-start gap-2', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
             {msg.role === 'assistant' && (
@@ -122,6 +133,7 @@ export default function ChatsView({ profile, currentAgentId, onAgentChange }: Ch
             </div>
           </div>
         ))}
+        <div ref={bottomRef} />
       </div>
 
     </div>
