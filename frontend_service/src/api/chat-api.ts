@@ -13,7 +13,6 @@ export type UUID = string;
 
 // REST models
 export interface ChatInitRequest {
-  tenant_id: UUID;
   agent_id: UUID;
   metadata?: Record<string, unknown>;
 }
