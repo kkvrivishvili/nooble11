@@ -1,7 +1,7 @@
 // src/features/my-nooble/design/index.tsx - UPDATED to use only design-api.ts
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useProfile } from '@/context/profile-context';
-import { designPresets } from '@/api/design-api';
+import { designPresets, DesignPresetName } from '@/api/design-api';
 import { ProfileDesign, ProfileWallpaper, ProfileLayout } from '@/types/profile';
 
 import { cn } from '@/lib/utils';
@@ -49,7 +49,7 @@ export default function DesignPage() {
     }
   }, [currentDesign]);
 
-  const handlePresetSelect = async (presetName: keyof typeof designPresets) => {
+  const handlePresetSelect = async (presetName: DesignPresetName) => {
     try {
       const preset = designPresets[presetName];
       setLocalDesign(preset);
