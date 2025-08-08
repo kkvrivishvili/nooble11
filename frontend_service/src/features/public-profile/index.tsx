@@ -1,14 +1,16 @@
-// src/features/public-profile/index.tsx - Updated with proper blur handling
-import { useState, useEffect } from 'react'
+// src/features/public-profile/index.tsx - Updated with tabs (Profile/Chats/Shop) and proper blur handling
+import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query';
 import { publicProfileApi } from '@/api/public-profile-api';
 import { ProfileDesign, ProfileWithAgents } from '@/types/profile';
 import ProfileComponent from './components/ProfileComponent'
 import PublicContentComponent from './components/PublicContentComponent'
-import ChatInput from './components/ChatInput'
 import SocialLinks from './components/SocialLinks'
 import { ProfileThemeProvider, useProfileTheme } from '@/context/profile-theme-context';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import ChatsView from './components/ChatsView'
+import ShopView from './components/ShopView'
 import './styles/profile-theme.css';
 
 interface PublicProfileProps {
@@ -52,26 +54,12 @@ function ProfileWallpaper() {
 }
 
 // Profile content wrapper
-function ProfileContent({ profile, isPreview }: { profile: ProfileWithAgents; isPreview: boolean }) {
+function ProfileContent({ profile, isPreview, onAgentClick }: { profile: ProfileWithAgents; isPreview: boolean; onAgentClick?: (agentId: string) => void }) {
   const { layout, getCSSVariables } = useProfileTheme();
-  const [currentAgentId, setCurrentAgentId] = useState<string>();
-
-  useEffect(() => {
-    if (profile?.agentDetails?.length && !currentAgentId) {
-      setCurrentAgentId(profile.agentDetails[0].id);
-    }
-  }, [profile?.agentDetails, currentAgentId]);
-
-  const handleAgentClick = (agentId: string) => {
-    setCurrentAgentId(agentId);
-  };
 
   return (
     <div className="profile-container" style={getCSSVariables()}>
-      <ProfileWallpaper />
-      
       <div className="profile-content pb-24">
-        
         {/* Profile Header */}
         <div className="profile-animate-in">
           <ProfileComponent 
@@ -85,7 +73,7 @@ function ProfileContent({ profile, isPreview }: { profile: ProfileWithAgents; is
         <div className="profile-animate-in" style={{ animationDelay: '0.1s' }}>
           <PublicContentComponent
             profile={profile}
-            onAgentClick={handleAgentClick}
+            onAgentClick={onAgentClick}
           />
         </div>
         
@@ -102,13 +90,6 @@ function ProfileContent({ profile, isPreview }: { profile: ProfileWithAgents; is
           </div>
         )}
       </div>
-      
-      {/* Chat Input */}
-      {!isPreview && (
-        <div className="w-full z-50 fixed bottom-0 left-0 right-0">
-          <ChatInput onSendMessage={() => {}} />
-        </div>
-      )}
     </div>
   );
 }
@@ -129,6 +110,8 @@ export default function PublicProfile({ username, isPreview = false, previewDesi
   });
 
   const profile = publicProfile;
+  const [activeTab, setActiveTab] = useState<'profile' | 'chats' | 'shop'>('profile');
+  const [currentAgentId, setCurrentAgentId] = useState<string | undefined>(undefined);
 
   if (isLoading) {
     return (
@@ -165,10 +148,74 @@ export default function PublicProfile({ username, isPreview = false, previewDesi
     )}>
       {/* If an external theme provider is supplied, don't wrap again */}
       {useExternalTheme ? (
-        <ProfileContent profile={profile} isPreview={isPreview} />
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'profile' | 'chats' | 'shop')}>
+          {/* Wallpaper for all tabs */}
+          <ProfileWallpaper />
+
+          <TabsContent value="profile">
+            <ProfileContent 
+              profile={profile} 
+              isPreview={isPreview}
+              onAgentClick={(agentId) => { setCurrentAgentId(agentId); setActiveTab('chats'); }}
+            />
+          </TabsContent>
+          <TabsContent value="chats">
+            <ChatsView 
+              profile={profile}
+              currentAgentId={currentAgentId}
+              onAgentChange={setCurrentAgentId}
+            />
+          </TabsContent>
+          <TabsContent value="shop">
+            <ShopView profile={profile} />
+          </TabsContent>
+
+          {/* Fixed bottom menu */}
+          <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur border-t">
+            <div className="max-w-3xl mx-auto px-4 py-2">
+              <TabsList className="w-full justify-between">
+                <TabsTrigger value="profile">Perfil</TabsTrigger>
+                <TabsTrigger value="chats">Chats</TabsTrigger>
+                <TabsTrigger value="shop">Shop</TabsTrigger>
+              </TabsList>
+            </div>
+          </div>
+        </Tabs>
       ) : (
         <ProfileThemeProvider profileDesign={designToUse}>
-          <ProfileContent profile={profile} isPreview={isPreview} />
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'profile' | 'chats' | 'shop')}>
+            {/* Wallpaper for all tabs */}
+            <ProfileWallpaper />
+
+            <TabsContent value="profile">
+              <ProfileContent 
+                profile={profile} 
+                isPreview={isPreview}
+                onAgentClick={(agentId) => { setCurrentAgentId(agentId); setActiveTab('chats'); }}
+              />
+            </TabsContent>
+            <TabsContent value="chats">
+              <ChatsView 
+                profile={profile}
+                currentAgentId={currentAgentId}
+                onAgentChange={setCurrentAgentId}
+              />
+            </TabsContent>
+            <TabsContent value="shop">
+              <ShopView profile={profile} />
+            </TabsContent>
+
+            {/* Fixed bottom menu */}
+            <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur border-t">
+              <div className="max-w-3xl mx-auto px-4 py-2">
+                <TabsList className="w-full justify-between">
+                  <TabsTrigger value="profile">Perfil</TabsTrigger>
+                  <TabsTrigger value="chats">Chats</TabsTrigger>
+                  <TabsTrigger value="shop">Shop</TabsTrigger>
+                </TabsList>
+              </div>
+            </div>
+          </Tabs>
         </ProfileThemeProvider>
       )}
     </div>
