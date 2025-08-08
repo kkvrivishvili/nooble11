@@ -2,13 +2,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Label } from '@/components/ui/label';
 import { useProfile } from '@/context/profile-context';
-import { designApi, designPresets } from '@/api/design-api'; // ONLY use design-api
+import { designApi, designPresets } from '@/api/design-api';
 import { ProfileDesign, ProfileWallpaper, ProfileLayout } from '@/types/profile';
 
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
-import { useDesign } from '@/hooks/use-design'; // This hook already uses design-api correctly
+import { useDesign } from '@/hooks/use-design';
 import { LayoutWithMobile } from '@/components/layout/layout-with-mobile';
 import PublicProfile from '@/features/public-profile';
 
@@ -31,12 +31,11 @@ export default function DesignPage() {
     currentDesign,
     isLoading,
     updateDesign: _updateDesign,
-    isSaving,
-  } = useDesign(); // This hook uses design-api correctly
+  } = useDesign();
 
   const [localDesign, setLocalDesign] = useState<ProfileDesign | null>(null);
   const [activeTab, setActiveTab] = useState('buttons');
-  const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [autoSaveInterval, setAutoSaveInterval] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (currentDesign) {
@@ -47,7 +46,7 @@ export default function DesignPage() {
   const handlePresetSelect = async (presetName: keyof typeof designPresets) => {
     try {
       const preset = designPresets[presetName];
-      setLocalDesign(camelToSnakeDesign(preset));
+      setLocalDesign(preset);
       
       // Apply preset immediately using design-api
       await designApi.applyPreset(presetName);
@@ -55,56 +54,6 @@ export default function DesignPage() {
     } catch (_error) {
       toast.error('Failed to apply preset');
     }
-  };
-
-  // Ensure presets (which may be camelCase) are normalized to snake_case
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const camelToSnakeDesign = (design: any): ProfileDesign => {
-    const theme = design?.theme ?? {};
-    const wp = theme?.wallpaper ?? {};
-    const layout = design?.layout ?? {};
-    const normalized: ProfileDesign = {
-      theme: {
-        primary_color: theme.primary_color ?? theme.primaryColor,
-        background_color: theme.background_color ?? theme.backgroundColor,
-        text_color: theme.text_color ?? theme.textColor,
-        button_text_color: theme.button_text_color ?? theme.buttonTextColor,
-        font_family: theme.font_family ?? theme.fontFamily,
-        font_size: theme.font_size ?? theme.fontSize,
-        border_radius: theme.border_radius ?? theme.borderRadius,
-        button_fill: theme.button_fill ?? theme.buttonFill,
-        button_shadow: theme.button_shadow ?? theme.buttonShadow,
-        wallpaper: wp && Object.keys(wp).length ? {
-          type: wp.type,
-          fill_color: wp.fill_color ?? wp.fillColor,
-          gradient_colors: wp.gradient_colors ?? wp.gradientColors,
-          gradient_direction: wp.gradient_direction ?? wp.gradientDirection,
-          gradient_type: wp.gradient_type ?? wp.gradientType,
-          pattern_type: wp.pattern_type ?? wp.patternType,
-          pattern_color: wp.pattern_color ?? wp.patternColor,
-          pattern_opacity: wp.pattern_opacity ?? wp.patternOpacity,
-          pattern_blur: wp.pattern_blur ?? wp.patternBlur,
-          pattern_blur_intensity: wp.pattern_blur_intensity ?? wp.patternBlurIntensity,
-          image_url: wp.image_url ?? wp.imageUrl,
-          image_position: wp.image_position ?? wp.imagePosition,
-          image_size: wp.image_size ?? wp.imageSize,
-          image_overlay: wp.image_overlay ?? wp.imageOverlay,
-          image_blur: wp.image_blur ?? wp.imageBlur,
-          image_blur_intensity: wp.image_blur_intensity ?? wp.imageBlurIntensity,
-          video_url: wp.video_url ?? wp.videoUrl,
-          video_muted: wp.video_muted ?? wp.videoMuted,
-          video_loop: wp.video_loop ?? wp.videoLoop,
-          video_overlay: wp.video_overlay ?? wp.videoOverlay,
-          video_blur: wp.video_blur ?? wp.videoBlur,
-          video_blur_intensity: wp.video_blur_intensity ?? wp.videoBlurIntensity,
-        } : undefined,
-      },
-      layout: {
-        social_position: layout.social_position ?? layout.socialPosition,
-        content_width: layout.content_width ?? layout.contentWidth,
-      }
-    };
-    return normalized;
   };
 
   const updateTheme = (updates: Partial<ProfileDesign['theme']>) => {
@@ -116,7 +65,6 @@ export default function DesignPage() {
     };
     
     setLocalDesign(newDesign);
-    scheduleAutoSave(newDesign);
   };
 
   const updateWallpaper = (wallpaper: ProfileWallpaper) => {
@@ -128,7 +76,6 @@ export default function DesignPage() {
     };
     
     setLocalDesign(newDesign);
-    scheduleAutoSave(newDesign);
   };
 
   const updateLayout = (updates: Partial<ProfileDesign['layout']>) => {
@@ -140,44 +87,47 @@ export default function DesignPage() {
     };
     
     setLocalDesign(newDesign);
-    scheduleAutoSave(newDesign);
   };
 
-  // Auto-save logic with debouncing
-  const scheduleAutoSave = (design: ProfileDesign) => {
-    // Clear existing timeout
-    if (saveTimeout) {
-      clearTimeout(saveTimeout);
+  // Auto-save every 3 seconds
+  useEffect(() => {
+    if (!localDesign) return;
+
+    // Clear existing interval
+    if (autoSaveInterval) {
+      clearInterval(autoSaveInterval);
     }
 
-    // Schedule new save
-    const timeout = setTimeout(async () => {
+    // Set up new interval for auto-save every 3 seconds
+    const interval = setInterval(async () => {
       try {
-        await designApi.updateDesign(design);
-        // Don't show success toast for auto-saves to avoid spam
-        // auto-saved
+        await designApi.updateDesign(localDesign);
+        // Silent save - no toast notifications
       } catch (_error) {
-        toast.error('Failed to save design changes');
+        // Silent failure - no error notifications
       }
-    }, 1500); // 1.5 second debounce
+    }, 3000); // 3 seconds
 
-    setSaveTimeout(timeout);
-  };
+    setAutoSaveInterval(interval);
 
-  // Cleanup timeout on unmount
-  useEffect(() => {
+    // Cleanup function
     return () => {
-      if (saveTimeout) {
-        clearTimeout(saveTimeout);
+      if (interval) {
+        clearInterval(interval);
       }
     };
-  }, [saveTimeout]);
+  }, [localDesign, autoSaveInterval]);
 
-  const hasLocalChanges = useMemo(() => 
-    localDesign && currentDesign && 
-    JSON.stringify(localDesign) !== JSON.stringify(currentDesign),
-    [localDesign, currentDesign]
-  );
+  // Cleanup interval on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveInterval) {
+        clearInterval(autoSaveInterval);
+      }
+    };
+  }, [autoSaveInterval]);
+
+
 
   // Mobile preview content
   const mobilePreviewContent = useMemo(() => {
@@ -190,28 +140,7 @@ export default function DesignPage() {
     );
   }, [profile?.username, localDesign]);
 
-  // Manual save function for explicit user actions
-  const handleManualSave = async () => {
-    if (!localDesign) return;
-    
-    try {
-      await designApi.updateDesign(localDesign);
-      toast.success('Design saved successfully!');
-    } catch (_error) {
-      toast.error('Failed to save design');
-    }
-  };
 
-  // Reset to default design
-  const handleResetDesign = async () => {
-    try {
-      const defaultDesign = await designApi.resetToDefault();
-      setLocalDesign(defaultDesign);
-      toast.success('Design reset to default');
-    } catch (_error) {
-      toast.error('Failed to reset design');
-    }
-  };
 
   if (isLoading || !localDesign) {
     return (
@@ -226,48 +155,7 @@ export default function DesignPage() {
 
   const designContent = (
     <div className="space-y-8">
-      {/* Save Status Indicator */}
-      {(hasLocalChanges || isSaving) && (
-        <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border rounded-lg p-3 mb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {isSaving ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                  <span className="text-sm text-blue-600">Saving changes...</span>
-                </>
-              ) : hasLocalChanges ? (
-                <>
-                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                  <span className="text-sm text-orange-600">Unsaved changes</span>
-                </>
-              ) : (
-                <>
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-green-600">All changes saved</span>
-                </>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={handleResetDesign}
-                className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100"
-              >
-                Reset to Default
-              </button>
-              {hasLocalChanges && (
-                <button
-                  onClick={handleManualSave}
-                  className="text-xs text-blue-600 hover:text-blue-700 px-2 py-1 rounded hover:bg-blue-50"
-                  disabled={isSaving}
-                >
-                  Save Now
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* 1. Presets Grid - Primera posición */}
       <PresetGrid 
@@ -422,8 +310,7 @@ export default function DesignPage() {
 
       {/* Help text */}
       <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
-        💡 <strong>Tip:</strong> Los cambios se guardan automáticamente después de 1.5 segundos de inactividad. 
-        También puedes usar "Save Now" para guardar inmediatamente.
+        💡 <strong>Tip:</strong> Los cambios se guardan automáticamente cada 3 segundos.
       </div>
     </div>
   );

@@ -18,7 +18,6 @@ const getUserId = async (): Promise<string> => {
   return session.user.id;
 };
 
-// Enhanced design presets with better UX and modern aesthetics
 export const designPresets = {
   minimal: {
     theme: {
@@ -36,7 +35,7 @@ export const designPresets = {
       }
     },
     layout: {
-      social_position: 'bottom' as const,
+      social_position: 'top' as const,
       content_width: 'narrow' as const,
     }
   },
@@ -69,9 +68,9 @@ export const designPresets = {
       text_color: '#4c1d95',
       button_text_color: '#ffffff',
       font_family: 'sans' as const,
-      border_radius: 'round' as const,
+      border_radius: 'curved' as const,
       button_fill: 'solid' as const,
-      button_shadow: 'subtle' as const,
+      button_shadow: 'hard' as const,
       wallpaper: {
         type: 'gradient' as const,
         gradient_colors: ['#ddd6fe', '#c7d2fe', '#a5b4fc', '#818cf8'],
@@ -87,139 +86,139 @@ export const designPresets = {
   
   neon: {
     theme: {
-      primaryColor: '#f97316',
-      backgroundColor: '#18181b',
-      textColor: '#fafafa',
-      buttonTextColor: '#18181b',
-      fontFamily: 'sans' as const,
-      borderRadius: 'sharp' as const,
-      buttonFill: 'solid' as const,
-      buttonShadow: 'hard' as const,
+      primary_color: '#f97316',
+      background_color: '#18181b',
+      text_color: '#fafafa',
+      button_text_color: '#18181b',
+      font_family: 'sans' as const,
+      border_radius: 'sharp' as const,
+      button_fill: 'solid' as const,
+      button_shadow: 'hard' as const,
       wallpaper: {
         type: 'gradient' as const,
-        gradientColors: ['#1e1b4b', '#312e81', '#4c1d95', '#6d28d9', '#7c3aed'],
-        gradientDirection: 'up' as const,
-        gradientType: 'linear' as const
+        gradient_colors: ['#1e1b4b', '#312e81', '#4c1d95', '#6d28d9', '#7c3aed'],
+        gradient_direction: 'up' as const,
+        gradient_type: 'linear' as const
       }
     },
     layout: {
-      socialPosition: 'bottom' as const,
-      contentWidth: 'normal' as const,
+      social_position: 'top' as const,
+      content_width: 'normal' as const,
     }
   },
   
   nature: {
     theme: {
-      primaryColor: '#059669',
-      backgroundColor: '#ecfdf5',
-      textColor: '#064e3b',
-      buttonTextColor: '#ffffff',
-      fontFamily: 'sans' as const,
-      borderRadius: 'round' as const,
-      buttonFill: 'glass' as const,
-      buttonShadow: 'subtle' as const,
+      primary_color: '#059669',
+      background_color: '#ecfdf5',
+      text_color: '#064e3b',
+      button_text_color: '#ffffff',
+      font_family: 'sans' as const,
+      border_radius: 'curved' as const,
+      button_fill: 'glass' as const,
+      button_shadow: 'hard' as const,
       wallpaper: {
         type: 'gradient' as const,
-        gradientColors: ['#d1fae5', '#a7f3d0', '#6ee7b7', '#34d399'],
-        gradientDirection: 'diagonal' as const,
-        gradientType: 'linear' as const
+        gradient_colors: ['#d1fae5', '#a7f3d0', '#6ee7b7', '#34d399'],
+        gradient_direction: 'diagonal' as const,
+        gradient_type: 'linear' as const
       }
     },
     layout: {
-      socialPosition: 'top' as const,
-      contentWidth: 'narrow' as const,
+      social_position: 'top' as const,
+      content_width: 'narrow' as const,
     }
   },
   
   modern: {
     theme: {
-      primaryColor: '#000000',
-      backgroundColor: '#ffffff',
-      textColor: '#000000',
-      buttonTextColor: '#ffffff',
-      fontFamily: 'sans' as const,
-      borderRadius: 'sharp' as const,
-      buttonFill: 'solid' as const,
-      buttonShadow: 'hard' as const,
+      primary_color: '#000000',
+      background_color: '#ffffff',
+      text_color: '#000000',
+      button_text_color: '#ffffff',
+      font_family: 'sans' as const,
+      border_radius: 'sharp' as const,
+      button_fill: 'solid' as const,
+      button_shadow: 'hard' as const,
       wallpaper: {
         type: 'pattern' as const,
-        patternType: 'grid' as const,
-        patternColor: '#e5e7eb',
-        patternOpacity: 0.5
+        pattern_type: 'grid' as const,
+        pattern_color: '#e5e7eb',
+        pattern_opacity: 0.5
       }
     },
     layout: {
-      socialPosition: 'bottom' as const,
-      contentWidth: 'normal' as const,
+      social_position: 'top' as const,
+      content_width: 'normal' as const,
     }
   },
   
   industrial: {
     theme: {
-      primaryColor: '#475569',
-      backgroundColor: '#f1f5f9',
-      textColor: '#0f172a',
-      buttonTextColor: '#f8fafc',
-      fontFamily: 'mono' as const,
-      borderRadius: 'sharp' as const,
-      buttonFill: 'solid' as const,
-      buttonShadow: 'none' as const,
+      primary_color: '#475569',
+      background_color: '#f1f5f9',
+      text_color: '#0f172a',
+      button_text_color: '#f8fafc',
+      font_family: 'mono' as const,
+      border_radius: 'sharp' as const,
+      button_fill: 'solid' as const,
+      button_shadow: 'none' as const,
       wallpaper: {
         type: 'pattern' as const,
-        patternType: 'dots' as const,
-        patternColor: '#94a3b8',
-        patternOpacity: 0.3
+        pattern_type: 'dots' as const,
+        pattern_color: '#94a3b8',
+        pattern_opacity: 0.3
       }
     },
     layout: {
-      socialPosition: 'top' as const,
-      contentWidth: 'wide' as const,
+      social_position: 'top' as const,
+      content_width: 'wide' as const,
     }
   },
   
   luxury: {
     theme: {
-      primaryColor: '#d97706',
-      backgroundColor: '#1f2937',
-      textColor: '#f9fafb',
-      buttonTextColor: '#111827',
-      fontFamily: 'serif' as const,
-      borderRadius: 'curved' as const,
-      buttonFill: 'solid' as const,
-      buttonShadow: 'subtle' as const,
+      primary_color: '#d97706',
+      background_color: '#1f2937',
+      text_color: '#f9fafb',
+      button_text_color: '#111827',
+      font_family: 'serif' as const,
+      border_radius: 'curved' as const,
+      button_fill: 'solid' as const,
+      button_shadow: 'subtle' as const,
       wallpaper: {
         type: 'gradient' as const,
-        gradientColors: ['#1f2937', '#374151', '#4b5563', '#374151', '#1f2937'],
-        gradientDirection: 'diagonal' as const,
-        gradientType: 'linear' as const
+        gradient_colors: ['#1f2937', '#374151', '#4b5563', '#374151', '#1f2937'],
+        gradient_direction: 'diagonal' as const,
+        gradient_type: 'linear' as const
       }
     },
     layout: {
-      socialPosition: 'bottom' as const,
-      contentWidth: 'normal' as const,
+      social_position: 'top' as const,
+      content_width: 'normal' as const,
     }
   },
   
   pastel: {
     theme: {
-      primaryColor: '#ec4899',
-      backgroundColor: '#fef3c7',
-      textColor: '#831843',
-      buttonTextColor: '#ffffff',
-      fontFamily: 'sans' as const,
-      borderRadius: 'round' as const,
-      buttonFill: 'glass' as const,
-      buttonShadow: 'subtle' as const,
+      primary_color: '#ec4899',
+      background_color: '#fef3c7',
+      text_color: '#831843',
+      button_text_color: '#ffffff',
+      font_family: 'sans' as const,
+      border_radius: 'round' as const,
+      button_fill: 'glass' as const,
+      button_shadow: 'hard' as const,
       wallpaper: {
         type: 'gradient' as const,
-        gradientColors: ['#fef3c7', '#fde68a', '#fbbf24', '#f59e0b'],
-        gradientDirection: 'down' as const,
-        gradientType: 'linear' as const
+        gradient_colors: ['#fef3c7', '#fde68a', '#fbbf24', '#f59e0b'],
+        gradient_direction: 'down' as const,
+        gradient_type: 'linear' as const
       }
     },
     layout: {
-      socialPosition: 'top' as const,
-      contentWidth: 'normal' as const,
+      social_position: 'top' as const,
+      content_width: 'normal' as const,
     }
   }
 };

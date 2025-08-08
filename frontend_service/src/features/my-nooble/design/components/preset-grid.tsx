@@ -13,16 +13,14 @@ export function PresetGrid({ currentDesign, onSelectPreset }: PresetGridProps) {
   };
 
   const getWallpaperStyle = (theme: ProfileDesign['theme']) => {
-    // Compatibilidad con ambos estilos durante la migración
-    const backgroundColor = (theme as any).background_color || (theme as any).backgroundColor;
+    const backgroundColor = theme.background_color;
     if (!theme.wallpaper) return { backgroundColor };
     
     switch (theme.wallpaper.type) {
       case 'gradient': {
-        // Compatibilidad con ambos estilos de gradiente
-        const gradientColors = (theme.wallpaper as any).gradient_colors || (theme.wallpaper as any).gradientColors;
+        const gradientColors = theme.wallpaper.gradient_colors;
         if (gradientColors && Array.isArray(gradientColors) && gradientColors.length > 0) {
-          const gradientDirection = (theme.wallpaper as any).gradient_direction || (theme.wallpaper as any).gradientDirection;
+          const gradientDirection = theme.wallpaper.gradient_direction;
           const direction = gradientDirection === 'diagonal' ? '135deg' :
                           gradientDirection === 'up' ? '0deg' :
                           gradientDirection === 'down' ? '180deg' :
@@ -31,15 +29,15 @@ export function PresetGrid({ currentDesign, onSelectPreset }: PresetGridProps) {
             background: `linear-gradient(${direction}, ${gradientColors.join(', ')})`,
           };
         }
-        // Fallback si no hay gradientColors válidos
+        // Fallback si no hay gradient_colors válidos
         return { backgroundColor };
       }
       case 'pattern': {
-        const opacity = (theme.wallpaper as any).pattern_opacity || (theme.wallpaper as any).patternOpacity || 0.3;
+        const opacity = theme.wallpaper.pattern_opacity || 0.3;
         const hexOpacity = Math.round(opacity * 255).toString(16).padStart(2, '0');
         
-        const patternType = (theme.wallpaper as any).pattern_type || (theme.wallpaper as any).patternType;
-        const patternColor = (theme.wallpaper as any).pattern_color || (theme.wallpaper as any).patternColor;
+        const patternType = theme.wallpaper.pattern_type;
+        const patternColor = theme.wallpaper.pattern_color;
         
         if (patternType === 'dots') {
           return {
@@ -86,7 +84,7 @@ export function PresetGrid({ currentDesign, onSelectPreset }: PresetGridProps) {
       }
       case 'fill':
         return {
-          backgroundColor: (theme.wallpaper as any).fill_color || (theme.wallpaper as any).fillColor || backgroundColor,
+          backgroundColor: theme.wallpaper.fill_color || backgroundColor,
         };
     }
     
@@ -112,8 +110,7 @@ export function PresetGrid({ currentDesign, onSelectPreset }: PresetGridProps) {
   };
 
   const renderButtonShape = (theme: ProfileDesign['theme']) => {
-    // Compatibilidad con ambos estilos
-    const borderRadiusValue = (theme as any).border_radius || (theme as any).borderRadius;
+    const borderRadiusValue = theme.border_radius;
     const borderRadius = getBorderRadius(borderRadiusValue);
     const isRound = borderRadiusValue === 'round';
     
@@ -128,9 +125,9 @@ export function PresetGrid({ currentDesign, onSelectPreset }: PresetGridProps) {
     };
 
     // Estilos según el tipo de relleno
-    const buttonFill = (theme as any).button_fill || (theme as any).buttonFill;
-    const buttonShadow = (theme as any).button_shadow || (theme as any).buttonShadow;
-    const primaryColor = (theme as any).primary_color || (theme as any).primaryColor;
+    const buttonFill = theme.button_fill;
+    const buttonShadow = theme.button_shadow;
+    const primaryColor = theme.primary_color;
     
     if (buttonFill === 'glass') {
       return (
@@ -141,8 +138,8 @@ export function PresetGrid({ currentDesign, onSelectPreset }: PresetGridProps) {
             backdropFilter: 'blur(10px)',
             WebkitBackdropFilter: 'blur(10px)',
             border: '1px solid rgba(255, 255, 255, 0.3)',
-            boxShadow: theme.buttonShadow === 'subtle' ? '0 2px 8px rgba(0,0,0,0.1)' : 
-                      theme.buttonShadow === 'hard' ? '4px 4px 0 rgba(0,0,0,0.2)' : 'none',
+            boxShadow: buttonShadow === 'subtle' ? '0 2px 8px rgba(0,0,0,0.1)' : 
+                      buttonShadow === 'hard' ? '4px 4px 0 rgba(0,0,0,0.2)' : 'none',
           }}
         />
       );
@@ -189,10 +186,10 @@ export function PresetGrid({ currentDesign, onSelectPreset }: PresetGridProps) {
         <div className="absolute top-1/2 left-1/3 transform -translate-x-1/2 -translate-y-1/2">
           <span 
             style={{
-              fontFamily: getFontFamily((theme as any).font_family || (theme as any).fontFamily),
+              fontFamily: getFontFamily(theme.font_family),
               fontSize: '2.5rem',
               fontWeight: '500',
-              color: (theme as any).text_color || (theme as any).textColor || '#000000',
+              color: theme.text_color || '#000000',
               letterSpacing: '-0.02em',
             }}
           >
