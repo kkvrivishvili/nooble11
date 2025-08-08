@@ -1,5 +1,5 @@
 // src/features/public-profile/index.tsx - Simple structure with bottom animated tabs
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query';
 import { publicProfileApi } from '@/api/public-profile-api';
@@ -12,13 +12,20 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/animated-tabs'
 import ChatsView from './components/ChatsView'
 import ShopView from './components/ShopView'
 import ChatInput from './components/ChatInput'
+import { chatApi, ChatSocketConnection } from '@/api/chat-api'
 import './styles/profile-theme.css';
 
 interface PublicProfileProps {
   username: string;
   isPreview?: boolean;
   previewDesign?: ProfileDesign;
-  useExternalTheme?: boolean;
+}
+
+interface UIChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  created_at: string;
 }
 
 // Wallpaper component - handles video and blur overlays
@@ -144,10 +151,28 @@ export default function PublicProfile({ username, isPreview = false, previewDesi
   const profile = publicProfile;
   const [activeTab, setActiveTab] = useState<'profile' | 'chats' | 'shop'>('profile');
   const [currentAgentId, setCurrentAgentId] = useState<string | undefined>(undefined);
-  const [messagesByAgent, setMessagesByAgent] = useState<Record<string, any[]>>({});
+  const [messagesByAgent, setMessagesByAgent] = useState<Record<string, UIChatMessage[]>>({});
+  // Orchestrator sessions and sockets by agent
+  const [sessionsByAgent, setSessionsByAgent] = useState<Record<string, { sessionId: string; wsUrl: string }>>({});
+  const [socketsByAgent, setSocketsByAgent] = useState<Record<string, ChatSocketConnection | null>>({});
+  const [_draftByAgent, setDraftByAgent] = useState<Record<string, { taskId?: string; messageId: string }>>({});
+  const socketsRef = useRef<Record<string, ChatSocketConnection | null>>({});
+
+  // Keep socketsRef in sync and close all on unmount
+  useEffect(() => {
+    socketsRef.current = socketsByAgent;
+  }, [socketsByAgent]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(socketsRef.current).forEach((s) => {
+        try { s?.close(); } catch { /* noop */ }
+      });
+    };
+  }, []);
 
   // Handle sending messages in chat (allows override of agentId when starting from suggestions)
-  const handleSendMessage = (message: string, overrideAgentId?: string) => {
+  const handleSendMessage = async (message: string, overrideAgentId?: string) => {
     const trimmed = message.trim();
     if (!trimmed) return;
 
@@ -164,7 +189,7 @@ export default function PublicProfile({ username, isPreview = false, previewDesi
       setCurrentAgentId(targetAgentId);
     }
 
-    const newMessage = {
+    const newMessage: UIChatMessage = {
       id: `msg-${Date.now()}`,
       role: 'user' as const,
       content: trimmed,
@@ -175,21 +200,124 @@ export default function PublicProfile({ username, isPreview = false, previewDesi
       ...prev,
       [targetAgentId]: [...(prev[targetAgentId] || []), newMessage]
     }));
+    // Orchestrator: ensure session + websocket, then send message
+    try {
+      const tenantId = profile?.id as string | undefined;
+      if (!tenantId) return;
 
-    // Mock agent response
-    setTimeout(() => {
-      const agentResponse = {
-        id: `msg-${Date.now()}-agent`,
+      // 1) Ensure session exists
+      let session = sessionsByAgent[targetAgentId];
+      if (!session) {
+        const init = await chatApi.initChatSession({
+          tenant_id: tenantId,
+          agent_id: targetAgentId,
+          metadata: { source: 'public_profile' }
+        });
+        session = { sessionId: init.session_id, wsUrl: init.websocket_url };
+        setSessionsByAgent(prev => ({ ...prev, [targetAgentId]: session! }));
+      }
+
+      // 2) Ensure websocket
+      let socket = socketsByAgent[targetAgentId];
+      if (!socket || !socket.isOpen()) {
+        socket = chatApi.connectWebSocket(session.wsUrl, {
+          onError: (err) => {
+            const errorMsg = {
+              id: `msg-${Date.now()}-error`,
+              role: 'assistant' as const,
+              content: `⚠️ Error de chat: ${err.message}`,
+              created_at: new Date().toISOString()
+            };
+            setMessagesByAgent(prev => ({
+              ...prev,
+              [targetAgentId]: [...(prev[targetAgentId] || []), errorMsg]
+            }));
+          },
+          onStreaming: (taskId, data) => {
+            if (!data) return;
+            setDraftByAgent(prevDraft => {
+              const existing = prevDraft[targetAgentId];
+              let draftId = existing?.messageId;
+              if (!draftId) {
+                draftId = `msg-${Date.now()}-assistant-draft`;
+                setMessagesByAgent(prev => ({
+                  ...prev,
+                  [targetAgentId]: [
+                    ...(prev[targetAgentId] || []),
+                    { id: draftId, role: 'assistant' as const, content: '', created_at: new Date().toISOString() }
+                  ]
+                }));
+              }
+              // Append chunk
+              setMessagesByAgent(prev => {
+                const arr = prev[targetAgentId] || [];
+                const updated = arr.map(m => m.id === draftId
+                  ? { ...m, content: `${m.content || ''}${data.content || ''}` }
+                  : m
+                );
+                return { ...prev, [targetAgentId]: updated };
+              });
+              return { ...prevDraft, [targetAgentId]: { taskId: taskId || existing?.taskId, messageId: draftId } };
+            });
+          },
+          onResponse: (taskId, payload) => {
+            const content = payload?.message?.content || '';
+            setDraftByAgent(prevDraft => {
+              const existing = prevDraft[targetAgentId];
+              if (!existing?.messageId) {
+                const msgId = `msg-${Date.now()}-assistant`;
+                setMessagesByAgent(prev => ({
+                  ...prev,
+                  [targetAgentId]: [
+                    ...(prev[targetAgentId] || []),
+                    { id: msgId, role: 'assistant' as const, content, created_at: new Date().toISOString() }
+                  ]
+                }));
+                return { ...prevDraft, [targetAgentId]: { taskId: taskId || undefined, messageId: msgId } };
+              }
+              const draftId = existing.messageId;
+              setMessagesByAgent(prev => {
+                const arr = prev[targetAgentId] || [];
+                const updated = arr.map(m => m.id === draftId
+                  ? { ...m, content: content || m.content }
+                  : m
+                );
+                return { ...prev, [targetAgentId]: updated };
+              });
+              return prevDraft;
+            });
+          },
+          onClose: () => {
+            setSocketsByAgent(prev => ({ ...prev, [targetAgentId]: null }));
+          },
+        });
+        setSocketsByAgent(prev => ({ ...prev, [targetAgentId]: socket! }));
+      }
+
+      // 3) Send user message
+      const sendNow = () => socket!.sendUserMessage(trimmed, { sessionId: session!.sessionId });
+      if (socket.isOpen()) sendNow();
+      else {
+        const origOpen = socket.ws.onopen;
+        socket.ws.onopen = (ev) => {
+          // @ts-expect-error allow chaining any existing handler
+          if (typeof origOpen === 'function') origOpen(ev);
+          sendNow();
+        };
+      }
+    } catch (err: unknown) {
+      const messageText = err instanceof Error ? err.message : 'Error desconocido';
+      const errorMsg = {
+        id: `msg-${Date.now()}-error`,
         role: 'assistant' as const,
-        content: `Respuesta automática del agente a: "${trimmed}"`,
+        content: `⚠️ No se pudo enviar el mensaje: ${messageText}`,
         created_at: new Date().toISOString()
       };
-
       setMessagesByAgent(prev => ({
         ...prev,
-        [targetAgentId]: [...(prev[targetAgentId] || []), agentResponse]
+        [targetAgentId]: [...(prev[targetAgentId] || []), errorMsg]
       }));
-    }, 1000);
+    }
   };
 
   if (isLoading) {
