@@ -115,13 +115,16 @@ function ProfileContent({ profile, isPreview }: { profile: ProfileWithAgents; is
 export default function PublicProfile({ username, isPreview = false, previewDesign }: PublicProfileProps) {
   const { data: publicProfile, isLoading, error } = useQuery<ProfileWithAgents | null>({
     queryKey: ['public-profile', username],
-    queryFn: () => {
+    queryFn: async () => {
       if (!username) return null;
-      return publicProfileApi.getPublicProfile(username);
+      return await publicProfileApi.getPublicProfile(username);
     },
     enabled: !!username,
     retry: 2,
-    staleTime: 1000 * 60 * 5,
+    // En modo preview (usado dentro de Profile), siempre refetch al montar para evitar cache stale
+    staleTime: isPreview ? 0 : 1000 * 60 * 5,
+    refetchOnMount: isPreview ? 'always' : true,
+    refetchOnWindowFocus: isPreview ? false : true,
   });
 
   const profile = publicProfile;

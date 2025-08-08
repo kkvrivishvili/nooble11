@@ -47,7 +47,7 @@ export function useDesign() {
       // Return a context object with the snapshotted value
       return { previousDesign };
     },
-    onError: (err, newDesign, context) => {
+    onError: (_err, _newDesign, context) => {
       // If the mutation fails, use the context returned from onMutate to roll back
       if (context?.previousDesign) {
         queryClient.setQueryData(['profile-design'], context.previousDesign);
@@ -61,8 +61,10 @@ export function useDesign() {
     onSettled: () => {
       // Always refetch after error or success
       queryClient.invalidateQueries({ queryKey: ['profile-design'] });
-      // Also invalidate the profile to update the preview
+      // Invalidate my profile context
       queryClient.invalidateQueries({ queryKey: ['myProfile'] });
+      // Invalidate all public-profile queries (e.g., Profile preview)
+      queryClient.invalidateQueries({ queryKey: ['public-profile'] });
     },
   });
 
@@ -81,12 +83,13 @@ export function useDesign() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['profile-design'] });
       queryClient.invalidateQueries({ queryKey: ['myProfile'] });
+      queryClient.invalidateQueries({ queryKey: ['public-profile'] });
     },
   });
 
   // Apply preset mutation
   const applyPresetMutation = useMutation({
-    mutationFn: (presetName: 'minimal' | 'subtle' | 'classic' | 'unique' | 'zen' | 'modern' | 'industrial' | 'retro' | 'vibrant') => designApi.applyPreset(presetName),
+    mutationFn: (presetName: keyof typeof import('@/api/design-api').designPresets) => designApi.applyPreset(presetName),
     onSuccess: () => {
       toast.success("El preset se ha aplicado correctamente.");
     },
@@ -96,6 +99,7 @@ export function useDesign() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['profile-design'] });
       queryClient.invalidateQueries({ queryKey: ['myProfile'] });
+      queryClient.invalidateQueries({ queryKey: ['public-profile'] });
     },
   });
 
@@ -109,9 +113,19 @@ export function useDesign() {
     resetToDefault: resetDesignMutation.mutate,
     applyPreset: applyPresetMutation.mutate,
     updateTheme: (theme: Partial<ProfileDesign['theme']>) => 
-      updateDesignMutation.mutate({ theme }),
+      currentDesign?.theme && updateDesignMutation.mutate({ 
+        theme: {
+          ...currentDesign.theme,
+          ...theme,
+        }
+      }),
     updateLayout: (layout: Partial<ProfileDesign['layout']>) => 
-      updateDesignMutation.mutate({ layout }),
+      updateDesignMutation.mutate({ 
+        layout: {
+          ...(currentDesign?.layout || {}),
+          ...layout,
+        }
+      }),
     updateWallpaper: (wallpaper: ProfileDesign['theme']['wallpaper']) => {
       if (!currentDesign?.theme) return;
       updateDesignMutation.mutate({ 
