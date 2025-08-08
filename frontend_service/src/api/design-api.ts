@@ -413,8 +413,8 @@ export const designApi = {
       displayName: key.charAt(0).toUpperCase() + key.slice(1),
       design: designPresets[key as keyof typeof designPresets],
       preview: {
-        primaryColor: designPresets[key as keyof typeof designPresets].theme.primaryColor,
-        backgroundColor: designPresets[key as keyof typeof designPresets].theme.backgroundColor,
+        primary_color: designPresets[key as keyof typeof designPresets].theme.primary_color,
+        background_color: designPresets[key as keyof typeof designPresets].theme.background_color,
         wallpaper: designPresets[key as keyof typeof designPresets].theme.wallpaper,
       }
     }));
@@ -428,8 +428,8 @@ export const designApi = {
     
     // Check theme
     if (!design.theme || typeof design.theme !== 'object') return false;
-    if (typeof design.theme.primaryColor !== 'string') return false;
-    if (typeof design.theme.backgroundColor !== 'string') return false;
+    if (typeof design.theme.primary_color !== 'string') return false;
+    if (typeof design.theme.background_color !== 'string') return false;
     
     // Check layout (optional)
     if (design.layout && typeof design.layout !== 'object') return false;

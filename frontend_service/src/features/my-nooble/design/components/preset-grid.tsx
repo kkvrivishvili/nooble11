@@ -13,73 +13,84 @@ export function PresetGrid({ currentDesign, onSelectPreset }: PresetGridProps) {
   };
 
   const getWallpaperStyle = (theme: ProfileDesign['theme']) => {
-    if (!theme.wallpaper) return { backgroundColor: theme.backgroundColor };
+    // Compatibilidad con ambos estilos durante la migración
+    const backgroundColor = (theme as any).background_color || (theme as any).backgroundColor;
+    if (!theme.wallpaper) return { backgroundColor };
     
     switch (theme.wallpaper.type) {
-      case 'gradient':
-        if (theme.wallpaper.gradientColors) {
-          const direction = theme.wallpaper.gradientDirection === 'diagonal' ? '135deg' :
-                          theme.wallpaper.gradientDirection === 'up' ? '0deg' :
-                          theme.wallpaper.gradientDirection === 'down' ? '180deg' :
-                          theme.wallpaper.gradientDirection === 'left' ? '270deg' : '90deg';
+      case 'gradient': {
+        // Compatibilidad con ambos estilos de gradiente
+        const gradientColors = (theme.wallpaper as any).gradient_colors || (theme.wallpaper as any).gradientColors;
+        if (gradientColors && Array.isArray(gradientColors) && gradientColors.length > 0) {
+          const gradientDirection = (theme.wallpaper as any).gradient_direction || (theme.wallpaper as any).gradientDirection;
+          const direction = gradientDirection === 'diagonal' ? '135deg' :
+                          gradientDirection === 'up' ? '0deg' :
+                          gradientDirection === 'down' ? '180deg' :
+                          gradientDirection === 'left' ? '270deg' : '90deg';
           return {
-            background: `linear-gradient(${direction}, ${theme.wallpaper.gradientColors.join(', ')})`,
+            background: `linear-gradient(${direction}, ${gradientColors.join(', ')})`,
           };
         }
-        break;
-      case 'pattern':
-        const opacity = theme.wallpaper.patternOpacity || 0.3;
+        // Fallback si no hay gradientColors válidos
+        return { backgroundColor };
+      }
+      case 'pattern': {
+        const opacity = (theme.wallpaper as any).pattern_opacity || (theme.wallpaper as any).patternOpacity || 0.3;
         const hexOpacity = Math.round(opacity * 255).toString(16).padStart(2, '0');
         
-        if (theme.wallpaper.patternType === 'dots') {
+        const patternType = (theme.wallpaper as any).pattern_type || (theme.wallpaper as any).patternType;
+        const patternColor = (theme.wallpaper as any).pattern_color || (theme.wallpaper as any).patternColor;
+        
+        if (patternType === 'dots') {
           return {
-            backgroundColor: theme.backgroundColor,
-            backgroundImage: `radial-gradient(circle, ${theme.wallpaper.patternColor}${hexOpacity} 1px, transparent 1px)`,
+            backgroundColor,
+            backgroundImage: `radial-gradient(circle, ${patternColor}${hexOpacity} 1px, transparent 1px)`,
             backgroundSize: '20px 20px',
           };
-        } else if (theme.wallpaper.patternType === 'grid') {
+        } else if (patternType === 'grid') {
           return {
-            backgroundColor: theme.backgroundColor,
+            backgroundColor,
             backgroundImage: `
-              repeating-linear-gradient(0deg, ${theme.wallpaper.patternColor}${hexOpacity}, ${theme.wallpaper.patternColor}${hexOpacity} 1px, transparent 1px, transparent 20px),
-              repeating-linear-gradient(90deg, ${theme.wallpaper.patternColor}${hexOpacity}, ${theme.wallpaper.patternColor}${hexOpacity} 1px, transparent 1px, transparent 20px)
+              repeating-linear-gradient(0deg, ${patternColor}${hexOpacity}, ${patternColor}${hexOpacity} 1px, transparent 1px, transparent 20px),
+              repeating-linear-gradient(90deg, ${patternColor}${hexOpacity}, ${patternColor}${hexOpacity} 1px, transparent 1px, transparent 20px)
             `,
           };
-        } else if (theme.wallpaper.patternType === 'lines') {
+        } else if (patternType === 'lines') {
           return {
-            backgroundColor: theme.backgroundColor,
+            backgroundColor,
             backgroundImage: `repeating-linear-gradient(
               45deg,
               transparent,
               transparent 10px,
-              ${theme.wallpaper.patternColor}${hexOpacity} 10px,
-              ${theme.wallpaper.patternColor}${hexOpacity} 11px
+              ${patternColor}${hexOpacity} 10px,
+              ${patternColor}${hexOpacity} 11px
             )`,
           };
-        } else if (theme.wallpaper.patternType === 'waves') {
+        } else if (patternType === 'waves') {
           return {
-            backgroundColor: theme.backgroundColor,
+            backgroundColor,
             backgroundImage: `repeating-radial-gradient(
               circle at 0 0,
               transparent 0,
-              ${theme.wallpaper.patternColor}${hexOpacity} 10px,
+              ${patternColor}${hexOpacity} 10px,
               transparent 10px,
               transparent 20px,
-              ${theme.wallpaper.patternColor}${hexOpacity} 20px,
-              ${theme.wallpaper.patternColor}${hexOpacity} 30px,
+              ${patternColor}${hexOpacity} 20px,
+              ${patternColor}${hexOpacity} 30px,
               transparent 30px,
               transparent 40px
             )`,
           };
         }
         break;
+      }
       case 'fill':
         return {
-          backgroundColor: theme.wallpaper.fillColor || theme.backgroundColor,
+          backgroundColor: (theme.wallpaper as any).fill_color || (theme.wallpaper as any).fillColor || backgroundColor,
         };
     }
     
-    return { backgroundColor: theme.backgroundColor };
+    return { backgroundColor };
   };
 
   const getBorderRadius = (borderRadius?: string) => {
@@ -101,8 +112,10 @@ export function PresetGrid({ currentDesign, onSelectPreset }: PresetGridProps) {
   };
 
   const renderButtonShape = (theme: ProfileDesign['theme']) => {
-    const borderRadius = getBorderRadius(theme.borderRadius);
-    const isRound = theme.borderRadius === 'round';
+    // Compatibilidad con ambos estilos
+    const borderRadiusValue = (theme as any).border_radius || (theme as any).borderRadius;
+    const borderRadius = getBorderRadius(borderRadiusValue);
+    const isRound = borderRadiusValue === 'round';
     
     // Posición y tamaño dinámicos basados en el estilo
     const shapeStyles = {
@@ -115,7 +128,11 @@ export function PresetGrid({ currentDesign, onSelectPreset }: PresetGridProps) {
     };
 
     // Estilos según el tipo de relleno
-    if (theme.buttonFill === 'glass') {
+    const buttonFill = (theme as any).button_fill || (theme as any).buttonFill;
+    const buttonShadow = (theme as any).button_shadow || (theme as any).buttonShadow;
+    const primaryColor = (theme as any).primary_color || (theme as any).primaryColor;
+    
+    if (buttonFill === 'glass') {
       return (
         <div
           style={{
@@ -129,15 +146,15 @@ export function PresetGrid({ currentDesign, onSelectPreset }: PresetGridProps) {
           }}
         />
       );
-    } else if (theme.buttonFill === 'outline') {
+    } else if (buttonFill === 'outline') {
       return (
         <div
           style={{
             ...shapeStyles,
             backgroundColor: 'transparent',
-            border: `2px solid ${theme.primaryColor}`,
-            boxShadow: theme.buttonShadow === 'subtle' ? '0 2px 8px rgba(0,0,0,0.1)' : 
-                      theme.buttonShadow === 'hard' ? '4px 4px 0 rgba(0,0,0,0.2)' : 'none',
+            border: `1px solid ${primaryColor}`,
+            boxShadow: buttonShadow === 'subtle' ? '0 2px 8px rgba(0,0,0,0.1)' : 
+                      buttonShadow === 'hard' ? '4px 4px 0 rgba(0,0,0,0.2)' : 'none',
           }}
         />
       );
@@ -147,9 +164,9 @@ export function PresetGrid({ currentDesign, onSelectPreset }: PresetGridProps) {
         <div
           style={{
             ...shapeStyles,
-            backgroundColor: theme.primaryColor,
-            boxShadow: theme.buttonShadow === 'subtle' ? '0 2px 8px rgba(0,0,0,0.1)' : 
-                      theme.buttonShadow === 'hard' ? '4px 4px 0 rgba(0,0,0,0.2)' : 'none',
+            backgroundColor: primaryColor,
+            boxShadow: buttonShadow === 'subtle' ? '0 2px 8px rgba(0,0,0,0.1)' : 
+                      buttonShadow === 'hard' ? '4px 4px 0 rgba(0,0,0,0.2)' : 'none',
           }}
         />
       );
@@ -172,10 +189,10 @@ export function PresetGrid({ currentDesign, onSelectPreset }: PresetGridProps) {
         <div className="absolute top-1/2 left-1/3 transform -translate-x-1/2 -translate-y-1/2">
           <span 
             style={{
-              fontFamily: getFontFamily(theme.fontFamily),
+              fontFamily: getFontFamily((theme as any).font_family || (theme as any).fontFamily),
               fontSize: '2.5rem',
               fontWeight: '500',
-              color: theme.textColor || '#000000',
+              color: (theme as any).text_color || (theme as any).textColor || '#000000',
               letterSpacing: '-0.02em',
             }}
           >

@@ -18,9 +18,6 @@ export default function ProfileComponent({
 }: ProfileComponentProps) {
   const { theme, layout } = useProfileTheme();
 
-  // Avatar is always round, ignoring theme border radius
-  const avatarRadiusClass = 'rounded-full';
-
   return (
     <div 
       className={cn(
