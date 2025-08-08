@@ -4,7 +4,7 @@ import { ProfileTheme } from '@/types/profile';
 export const getBorderRadius = (theme: ProfileTheme) => {
   const radiusMap = {
     'sharp': '0.25rem',
-    'curved': '0.5rem',
+    'curved': '0.75rem',
     'round': '9999px'
   };
   return radiusMap[theme.border_radius || 'curved'];
@@ -42,7 +42,7 @@ export const getButtonStyles = (theme: ProfileTheme, variant?: 'primary' | 'seco
     return {
       ...baseStyles,
       backgroundColor: 'transparent',
-      border: `2px solid ${theme.primary_color}`,
+      border: `1px solid ${theme.primary_color}`,
       color: theme.primary_color,
     };
   } else {

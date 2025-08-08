@@ -45,7 +45,7 @@ export function PublicCalendarWidget({ data, theme, className }: PublicCalendarW
       ? theme?.primary_color || '#3b82f6'
       : theme?.button_text_color || '#ffffff',
     border: theme?.button_fill === 'outline'
-      ? `2px solid ${theme?.primary_color || '#3b82f6'}`
+      ? `1px solid ${theme?.primary_color || '#3b82f6'}`
       : 'none',
     borderRadius: theme ? getBorderRadius(theme) : '9999px',
     boxShadow: theme ? getShadowStyle(theme) : 'none',
@@ -56,7 +56,7 @@ export function PublicCalendarWidget({ data, theme, className }: PublicCalendarW
   return (
     <div className={className}>
       <div 
-        className="p-6 border-2 border-dashed transition-all hover:border-solid hover:shadow-md"
+        className="p-6 border border-dashed transition-all hover:border-solid hover:shadow-md"
         style={containerStyles}
       >
         {/* Header */}

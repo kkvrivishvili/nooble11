@@ -40,7 +40,7 @@ export function StyleSelector({
             key={option.value}
             onClick={() => onChange(option.value)}
             className={cn(
-              "p-4 border-2 rounded-lg transition-all hover:shadow-md",
+              "p-4 border rounded-lg transition-all hover:shadow-md",
               value === option.value 
                 ? "border-blue-500 bg-blue-50" 
                 : "border-gray-200"

@@ -18,9 +18,8 @@ export default function ProfileComponent({
 }: ProfileComponentProps) {
   const { theme, layout } = useProfileTheme();
 
-  // Use theme utility for avatar radius (avatar uses specific Tailwind classes)
-  const avatarRadiusClass = theme.border_radius === 'sharp' ? 'rounded-md' :
-                           theme.border_radius === 'round' ? 'rounded-full' : 'rounded-xl';
+  // Avatar is always round, ignoring theme border radius
+  const avatarRadiusClass = 'rounded-full';
 
   return (
     <div 
@@ -41,14 +40,13 @@ export default function ProfileComponent({
         isPreview && "scale-95"
       )}>
         <Avatar className={cn(
-          "transition-all duration-300",
-          isPreview ? "h-16 w-16" : "h-20 w-20",
-          avatarRadiusClass
+          "transition-all duration-300 rounded-full",
+          isPreview ? "h-16 w-16" : "h-20 w-20"
         )}
         >
-          <AvatarImage src={profile.avatar} />
+          <AvatarImage src={profile.avatar} className="rounded-full" />
           <AvatarFallback 
-            className="font-bold"
+            className="font-bold rounded-full"
             style={{ 
               backgroundColor: theme.primary_color,
               color: theme.button_text_color || '#ffffff'

@@ -47,7 +47,7 @@ export function PublicMapsWidget({ data, theme, className }: PublicMapsWidgetPro
       : `${theme?.primary_color || '#3b82f6'}20`,
     color: theme?.primary_color || '#3b82f6',
     border: theme?.button_fill === 'outline' 
-      ? `2px solid ${theme?.primary_color || '#3b82f6'}`
+      ? `1px solid ${theme?.primary_color || '#3b82f6'}`
       : `1px solid ${theme?.primary_color || '#3b82f6'}`,
     borderRadius: theme ? getBorderRadius(theme) : '9999px',
     backdropFilter: theme?.button_fill === 'glass' ? 'blur(10px)' : 'none',

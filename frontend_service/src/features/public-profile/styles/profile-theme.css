@@ -70,7 +70,7 @@
   font-family: var(--profile-font-family);
   transition: all 0.2s ease;
   box-shadow: var(--profile-button-shadow);
-  border: 2px solid var(--profile-primary-color);
+  border: 1px solid var(--profile-primary-color);
   cursor: pointer;
   font-weight: 500;
 }

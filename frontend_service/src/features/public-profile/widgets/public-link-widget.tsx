@@ -21,11 +21,11 @@ export function PublicLinkWidget({ data, theme, className }: PublicLinkWidgetPro
       variant="primary"
     >
       <div className="flex-1 text-left">
-        <BaseWidget.Text theme={theme} as="h3" className="font-medium mb-1">
+        <BaseWidget.Text theme={theme} as="h3" className="font-medium mb-1" inheritColor={true}>
           {data.title}
         </BaseWidget.Text>
         {data.description && (
-          <BaseWidget.Text theme={theme} variant="muted" as="p" className="text-sm">
+          <BaseWidget.Text theme={theme} variant="muted" as="p" className="text-sm" inheritColor={true}>
             {data.description}
           </BaseWidget.Text>
         )}

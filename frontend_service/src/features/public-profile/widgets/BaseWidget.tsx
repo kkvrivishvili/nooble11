@@ -110,13 +110,17 @@ export class BaseWidget {
   /**
    * Text component with consistent theming
    */
-  static Text = ({ theme, className, children, variant = 'primary', as: Component = 'span', style, ...props }: BaseWidgetProps & { 
+  static Text = ({ theme, className, children, variant = 'primary', as: Component = 'span', style, inheritColor = false, ...props }: BaseWidgetProps & { 
     children: ReactNode
     variant?: 'primary' | 'secondary' | 'muted'
     as?: 'span' | 'p' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'
+    inheritColor?: boolean
   }) => {
       const getTextColor = () => {
         if (!theme) return undefined
+        
+        // If inheritColor is true, use currentColor (like icons do)
+        if (inheritColor) return 'currentColor'
         
         switch (variant) {
           case 'primary':

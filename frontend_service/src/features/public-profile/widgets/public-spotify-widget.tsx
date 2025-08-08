@@ -70,7 +70,7 @@ export function PublicSpotifyWidget({ data, theme, className }: PublicSpotifyWid
       ? '#1DB954'
       : 'white',
     border: theme?.button_fill === 'outline' 
-      ? '2px solid #1DB954'
+      ? '1px solid #1DB954'
       : 'none',
     fontFamily: theme ? getFontFamily(theme.font_family) : 'sans-serif',
   };

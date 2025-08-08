@@ -2,7 +2,7 @@
 import { cn } from '@/lib/utils'
 import { SocialLink } from '@/types/profile'
 import { useProfileTheme } from '@/context/profile-theme-context'
-import { getButtonStyles } from '@/features/public-profile/utils/theme-styles'
+import { getButtonStyles, getBorderRadius } from '@/features/public-profile/utils/theme-styles'
 import { 
   IconBrandInstagram, 
   IconBrandTiktok, 
@@ -32,6 +32,8 @@ interface SocialLinksProps {
   position?: 'top' | 'bottom'
   className?: string
   iconSize?: number
+  noBackground?: boolean
+  noShadow?: boolean
 }
 
 export default function SocialLinks({ 
@@ -40,12 +42,21 @@ export default function SocialLinks({
   isPreview = false, 
   position = 'top',
   className = '',
-  iconSize = 20
+  iconSize = 20,
+  noBackground = false,
+  noShadow = false
 }: SocialLinksProps) {
   const { theme, layout } = useProfileTheme()
   
-  // Get social button styles using theme utility
-  const socialButtonStyles = getButtonStyles(theme, 'secondary')
+  // Get social button styles - use widget link style or minimal style
+  const socialButtonStyles = noBackground ? {
+    backgroundColor: 'transparent',
+    border: 'none',
+    boxShadow: noShadow ? 'none' : undefined,
+    color: theme.text_color || theme.primary_color,
+    borderRadius: getBorderRadius(theme),
+    transition: 'all 0.2s ease',
+  } : getButtonStyles(theme, 'secondary')
   
   const links = socialLinks ?? social_links ?? []
   if (!links.length) return null
@@ -71,7 +82,10 @@ export default function SocialLinks({
             style={socialButtonStyles}
             onClick={isPreview ? (e) => e.preventDefault() : undefined}
             onMouseEnter={(e) => {
-              if (theme.button_fill === 'outline') {
+              if (noBackground) {
+                e.currentTarget.style.transform = 'scale(1.1)'
+                e.currentTarget.style.color = theme.primary_color
+              } else if (theme.button_fill === 'outline') {
                 e.currentTarget.style.backgroundColor = theme.primary_color
                 e.currentTarget.style.color = theme.button_text_color || '#ffffff'
               } else if (theme.button_fill === 'glass') {

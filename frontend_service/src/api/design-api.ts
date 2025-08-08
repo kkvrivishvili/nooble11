@@ -22,66 +22,66 @@ const getUserId = async (): Promise<string> => {
 export const designPresets = {
   minimal: {
     theme: {
-      primaryColor: '#18181b',
-      backgroundColor: '#ffffff',
-      textColor: '#18181b',
-      buttonTextColor: '#ffffff',
-      fontFamily: 'sans' as const,
-      borderRadius: 'sharp' as const,
-      buttonFill: 'solid' as const,
-      buttonShadow: 'none' as const,
+      primary_color: '#18181b',
+      background_color: '#ffffff',
+      text_color: '#18181b',
+      button_text_color: '#ffffff',
+      font_family: 'sans' as const,
+      border_radius: 'sharp' as const,
+      button_fill: 'solid' as const,
+      button_shadow: 'none' as const,
       wallpaper: {
         type: 'fill' as const,
-        fillColor: '#fafafa'
+        fill_color: '#fafafa'
       }
     },
     layout: {
-      socialPosition: 'bottom' as const,
-      contentWidth: 'narrow' as const,
+      social_position: 'bottom' as const,
+      content_width: 'narrow' as const,
     }
   },
   
   classic: {
     theme: {
-      primaryColor: '#2563eb',
-      backgroundColor: '#ffffff',
-      textColor: '#1e293b',
-      buttonTextColor: '#ffffff',
-      fontFamily: 'serif' as const,
-      borderRadius: 'curved' as const,
-      buttonFill: 'solid' as const,
-      buttonShadow: 'subtle' as const,
+      primary_color: '#2563eb',
+      background_color: '#ffffff',
+      text_color: '#1e293b',
+      button_text_color: '#ffffff',
+      font_family: 'serif' as const,
+      border_radius: 'curved' as const,
+      button_fill: 'solid' as const,
+      button_shadow: 'subtle' as const,
       wallpaper: {
         type: 'fill' as const,
-        fillColor: '#f8fafc'
+        fill_color: '#f8fafc'
       }
     },
     layout: {
-      socialPosition: 'top' as const,
-      contentWidth: 'normal' as const,
+      social_position: 'top' as const,
+      content_width: 'normal' as const,
     }
   },
   
   aurora: {
     theme: {
-      primaryColor: '#6366f1',
-      backgroundColor: '#faf5ff',
-      textColor: '#4c1d95',
-      buttonTextColor: '#ffffff',
-      fontFamily: 'sans' as const,
-      borderRadius: 'round' as const,
-      buttonFill: 'solid' as const,
-      buttonShadow: 'subtle' as const,
+      primary_color: '#6366f1',
+      background_color: '#faf5ff',
+      text_color: '#4c1d95',
+      button_text_color: '#ffffff',
+      font_family: 'sans' as const,
+      border_radius: 'round' as const,
+      button_fill: 'solid' as const,
+      button_shadow: 'subtle' as const,
       wallpaper: {
         type: 'gradient' as const,
-        gradientColors: ['#ddd6fe', '#c7d2fe', '#a5b4fc', '#818cf8'],
-        gradientDirection: 'diagonal' as const,
-        gradientType: 'linear' as const
+        gradient_colors: ['#ddd6fe', '#c7d2fe', '#a5b4fc', '#818cf8'],
+        gradient_direction: 'diagonal' as const,
+        gradient_type: 'linear' as const
       }
     },
     layout: {
-      socialPosition: 'top' as const,
-      contentWidth: 'normal' as const,
+      social_position: 'top' as const,
+      content_width: 'normal' as const,
     }
   },
   
@@ -126,7 +126,7 @@ export const designPresets = {
       }
     },
     layout: {
-      socialPosition: 'hidden' as const,
+      socialPosition: 'top' as const,
       contentWidth: 'narrow' as const,
     }
   },
