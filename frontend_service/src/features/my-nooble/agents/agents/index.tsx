@@ -11,12 +11,7 @@ export default function AgentsAgentsPage() {
     const currentPath = location.pathname;
     const subPages = [
       {
-        title: 'Team',
-        href: '/my-nooble/agents/team',
-        isActive: currentPath === '/my-nooble/agents/team'
-      },
-      {
-        title: 'Agents',
+        title: 'My Agents',
         href: '/my-nooble/agents/agents',
         isActive: currentPath === '/my-nooble/agents/agents'
       },

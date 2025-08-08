@@ -44,7 +44,6 @@ import { Route as authenticatedMyNoobleShopOrdersIndexRouteImport } from './rout
 import { Route as authenticatedMyNoobleShopMyProductsIndexRouteImport } from './routes/(authenticated)/my-nooble/shop/my-products/index'
 import { Route as authenticatedMyNoobleShopEditIndexRouteImport } from './routes/(authenticated)/my-nooble/shop/edit/index'
 import { Route as authenticatedMyNoobleAgentsToolsIndexRouteImport } from './routes/(authenticated)/my-nooble/agents/tools/index'
-import { Route as authenticatedMyNoobleAgentsTeamIndexRouteImport } from './routes/(authenticated)/my-nooble/agents/team/index'
 import { Route as authenticatedMyNoobleAgentsKnowledgeIndexRouteImport } from './routes/(authenticated)/my-nooble/agents/knowledge/index'
 import { Route as authenticatedMyNoobleAgentsAgentsIndexRouteImport } from './routes/(authenticated)/my-nooble/agents/agents/index'
 
@@ -244,12 +243,6 @@ const authenticatedMyNoobleAgentsToolsIndexRoute =
     path: '/tools/',
     getParentRoute: () => authenticatedMyNoobleAgentsRouteRoute,
   } as any)
-const authenticatedMyNoobleAgentsTeamIndexRoute =
-  authenticatedMyNoobleAgentsTeamIndexRouteImport.update({
-    id: '/team/',
-    path: '/team/',
-    getParentRoute: () => authenticatedMyNoobleAgentsRouteRoute,
-  } as any)
 const authenticatedMyNoobleAgentsKnowledgeIndexRoute =
   authenticatedMyNoobleAgentsKnowledgeIndexRouteImport.update({
     id: '/knowledge/',
@@ -296,7 +289,6 @@ export interface FileRoutesByFullPath {
   '/my-nooble/shop/': typeof authenticatedMyNoobleShopIndexRoute
   '/my-nooble/agents/agents': typeof authenticatedMyNoobleAgentsAgentsIndexRoute
   '/my-nooble/agents/knowledge': typeof authenticatedMyNoobleAgentsKnowledgeIndexRoute
-  '/my-nooble/agents/team': typeof authenticatedMyNoobleAgentsTeamIndexRoute
   '/my-nooble/agents/tools': typeof authenticatedMyNoobleAgentsToolsIndexRoute
   '/my-nooble/shop/edit': typeof authenticatedMyNoobleShopEditIndexRoute
   '/my-nooble/shop/my-products': typeof authenticatedMyNoobleShopMyProductsIndexRoute
@@ -332,7 +324,6 @@ export interface FileRoutesByTo {
   '/my-nooble/shop': typeof authenticatedMyNoobleShopIndexRoute
   '/my-nooble/agents/agents': typeof authenticatedMyNoobleAgentsAgentsIndexRoute
   '/my-nooble/agents/knowledge': typeof authenticatedMyNoobleAgentsKnowledgeIndexRoute
-  '/my-nooble/agents/team': typeof authenticatedMyNoobleAgentsTeamIndexRoute
   '/my-nooble/agents/tools': typeof authenticatedMyNoobleAgentsToolsIndexRoute
   '/my-nooble/shop/edit': typeof authenticatedMyNoobleShopEditIndexRoute
   '/my-nooble/shop/my-products': typeof authenticatedMyNoobleShopMyProductsIndexRoute
@@ -373,7 +364,6 @@ export interface FileRoutesById {
   '/(authenticated)/my-nooble/shop/': typeof authenticatedMyNoobleShopIndexRoute
   '/(authenticated)/my-nooble/agents/agents/': typeof authenticatedMyNoobleAgentsAgentsIndexRoute
   '/(authenticated)/my-nooble/agents/knowledge/': typeof authenticatedMyNoobleAgentsKnowledgeIndexRoute
-  '/(authenticated)/my-nooble/agents/team/': typeof authenticatedMyNoobleAgentsTeamIndexRoute
   '/(authenticated)/my-nooble/agents/tools/': typeof authenticatedMyNoobleAgentsToolsIndexRoute
   '/(authenticated)/my-nooble/shop/edit/': typeof authenticatedMyNoobleShopEditIndexRoute
   '/(authenticated)/my-nooble/shop/my-products/': typeof authenticatedMyNoobleShopMyProductsIndexRoute
@@ -414,7 +404,6 @@ export interface FileRouteTypes {
     | '/my-nooble/shop/'
     | '/my-nooble/agents/agents'
     | '/my-nooble/agents/knowledge'
-    | '/my-nooble/agents/team'
     | '/my-nooble/agents/tools'
     | '/my-nooble/shop/edit'
     | '/my-nooble/shop/my-products'
@@ -450,7 +439,6 @@ export interface FileRouteTypes {
     | '/my-nooble/shop'
     | '/my-nooble/agents/agents'
     | '/my-nooble/agents/knowledge'
-    | '/my-nooble/agents/team'
     | '/my-nooble/agents/tools'
     | '/my-nooble/shop/edit'
     | '/my-nooble/shop/my-products'
@@ -490,7 +478,6 @@ export interface FileRouteTypes {
     | '/(authenticated)/my-nooble/shop/'
     | '/(authenticated)/my-nooble/agents/agents/'
     | '/(authenticated)/my-nooble/agents/knowledge/'
-    | '/(authenticated)/my-nooble/agents/team/'
     | '/(authenticated)/my-nooble/agents/tools/'
     | '/(authenticated)/my-nooble/shop/edit/'
     | '/(authenticated)/my-nooble/shop/my-products/'
@@ -759,13 +746,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authenticatedMyNoobleAgentsToolsIndexRouteImport
       parentRoute: typeof authenticatedMyNoobleAgentsRouteRoute
     }
-    '/(authenticated)/my-nooble/agents/team/': {
-      id: '/(authenticated)/my-nooble/agents/team/'
-      path: '/team'
-      fullPath: '/my-nooble/agents/team'
-      preLoaderRoute: typeof authenticatedMyNoobleAgentsTeamIndexRouteImport
-      parentRoute: typeof authenticatedMyNoobleAgentsRouteRoute
-    }
     '/(authenticated)/my-nooble/agents/knowledge/': {
       id: '/(authenticated)/my-nooble/agents/knowledge/'
       path: '/knowledge'
@@ -831,7 +811,6 @@ interface authenticatedMyNoobleAgentsRouteRouteChildren {
   authenticatedMyNoobleAgentsIndexRoute: typeof authenticatedMyNoobleAgentsIndexRoute
   authenticatedMyNoobleAgentsAgentsIndexRoute: typeof authenticatedMyNoobleAgentsAgentsIndexRoute
   authenticatedMyNoobleAgentsKnowledgeIndexRoute: typeof authenticatedMyNoobleAgentsKnowledgeIndexRoute
-  authenticatedMyNoobleAgentsTeamIndexRoute: typeof authenticatedMyNoobleAgentsTeamIndexRoute
   authenticatedMyNoobleAgentsToolsIndexRoute: typeof authenticatedMyNoobleAgentsToolsIndexRoute
 }
 
@@ -843,8 +822,6 @@ const authenticatedMyNoobleAgentsRouteRouteChildren: authenticatedMyNoobleAgents
       authenticatedMyNoobleAgentsAgentsIndexRoute,
     authenticatedMyNoobleAgentsKnowledgeIndexRoute:
       authenticatedMyNoobleAgentsKnowledgeIndexRoute,
-    authenticatedMyNoobleAgentsTeamIndexRoute:
-      authenticatedMyNoobleAgentsTeamIndexRoute,
     authenticatedMyNoobleAgentsToolsIndexRoute:
       authenticatedMyNoobleAgentsToolsIndexRoute,
   }

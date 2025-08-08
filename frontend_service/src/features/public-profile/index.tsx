@@ -1,4 +1,4 @@
-// src/features/public-profile/index.tsx - Updated with tabs (Profile/Chats/Shop) and proper blur handling
+// src/features/public-profile/index.tsx - Simple structure with bottom animated tabs
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query';
@@ -8,9 +8,10 @@ import ProfileComponent from './components/ProfileComponent'
 import PublicContentComponent from './components/PublicContentComponent'
 import SocialLinks from './components/SocialLinks'
 import { ProfileThemeProvider, useProfileTheme } from '@/context/profile-theme-context';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/animated-tabs'
 import ChatsView from './components/ChatsView'
 import ShopView from './components/ShopView'
+import ChatInput from './components/ChatInput'
 import './styles/profile-theme.css';
 
 interface PublicProfileProps {
@@ -53,7 +54,7 @@ function ProfileWallpaper() {
   return null;
 }
 
-// Profile content wrapper
+// Profile content - original structure
 function ProfileContent({ profile, isPreview, onAgentClick }: { profile: ProfileWithAgents; isPreview: boolean; onAgentClick?: (agentId: string) => void }) {
   const { layout, getCSSVariables } = useProfileTheme();
 
@@ -94,6 +95,38 @@ function ProfileContent({ profile, isPreview, onAgentClick }: { profile: Profile
   );
 }
 
+// Bottom animated tabs menu - mobile viewport style
+function BottomTabsMenu({ activeTab, onTabChange, isPreview }: { activeTab: string; onTabChange: (tab: string) => void; isPreview?: boolean }) {
+  const { theme } = useProfileTheme();
+  const fill = theme.button_fill || 'solid';
+  const primary = theme.primary_color;
+  const text = theme.text_color || '#111827';
+  const btnText = theme.button_text_color || '#ffffff';
+
+  const tabVars = {
+    '--tab-active-bg': fill === 'solid' ? primary : fill === 'glass' ? 'rgba(255,255,255,0.28)' : 'rgba(0,0,0,0.06)',
+    '--tab-active-text': fill === 'solid' ? btnText : primary,
+    '--color-base-content': text,
+  } as React.CSSProperties;
+
+  return (
+    <div className="w-full bg-white/70 backdrop-blur border-t z-50">
+      <div className={cn(
+        "mx-auto px-4 py-2",
+        isPreview ? "max-w-full" : "max-w-3xl"
+      )}>
+        <Tabs value={activeTab} onValueChange={onTabChange}>
+          <TabsList style={tabVars} className="w-full justify-between">
+            <TabsTrigger value="profile">Perfil</TabsTrigger>
+            <TabsTrigger value="chats">Chats</TabsTrigger>
+            <TabsTrigger value="shop">Shop</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+    </div>
+  );
+}
+
 export default function PublicProfile({ username, isPreview = false, previewDesign, useExternalTheme = false }: PublicProfileProps) {
   const { data: publicProfile, isLoading, error } = useQuery<ProfileWithAgents | null>({
     queryKey: ['public-profile', username],
@@ -103,7 +136,6 @@ export default function PublicProfile({ username, isPreview = false, previewDesi
     },
     enabled: !!username,
     retry: 2,
-    // En modo preview (usado dentro de Profile), siempre refetch al montar para evitar cache stale
     staleTime: isPreview ? 0 : 1000 * 60 * 5,
     refetchOnMount: isPreview ? 'always' : true,
     refetchOnWindowFocus: isPreview ? false : true,
@@ -112,6 +144,39 @@ export default function PublicProfile({ username, isPreview = false, previewDesi
   const profile = publicProfile;
   const [activeTab, setActiveTab] = useState<'profile' | 'chats' | 'shop'>('profile');
   const [currentAgentId, setCurrentAgentId] = useState<string | undefined>(undefined);
+  const [messagesByAgent, setMessagesByAgent] = useState<Record<string, any[]>>({});
+
+  // Handle sending messages in chat
+  const handleSendMessage = (message: string) => {
+    if (!currentAgentId || !message.trim()) return;
+
+    const newMessage = {
+      id: `msg-${Date.now()}`,
+      role: 'user' as const,
+      content: message.trim(),
+      created_at: new Date().toISOString()
+    };
+
+    setMessagesByAgent(prev => ({
+      ...prev,
+      [currentAgentId]: [...(prev[currentAgentId] || []), newMessage]
+    }));
+
+    // Mock agent response
+    setTimeout(() => {
+      const agentResponse = {
+        id: `msg-${Date.now()}-agent`,
+        role: 'assistant' as const,
+        content: `Respuesta automática del agente a: "${message}"`,
+        created_at: new Date().toISOString()
+      };
+
+      setMessagesByAgent(prev => ({
+        ...prev,
+        [currentAgentId]: [...(prev[currentAgentId] || []), agentResponse]
+      }));
+    }, 1000);
+  };
 
   if (isLoading) {
     return (
@@ -138,84 +203,112 @@ export default function PublicProfile({ username, isPreview = false, previewDesi
     );
   }
 
-  // Use previewDesign if provided and we're in preview mode, otherwise use profile.design
   const designToUse = isPreview && previewDesign ? previewDesign : profile.design;
+
+  // Render content based on active tab with proper wallpaper container
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'chats':
+        return (
+          <ChatsView 
+            profile={profile}
+            currentAgentId={currentAgentId}
+            onAgentChange={setCurrentAgentId}
+            messagesByAgent={messagesByAgent}
+          />
+        );
+      case 'shop':
+        return <ShopView profile={profile} />;
+      default:
+        return (
+          <ProfileContent 
+            profile={profile} 
+            isPreview={isPreview}
+            onAgentClick={(agentId: string) => { 
+              setCurrentAgentId(agentId); 
+              setActiveTab('chats'); 
+            }}
+          />
+        );
+    }
+  };
+
+  // Wrapper component for non-profile content to inherit wallpaper
+  const ContentWithWallpaper = ({ children }: { children: React.ReactNode }) => {
+    const { getCSSVariables } = useProfileTheme();
+    return (
+      <div className="profile-container" style={getCSSVariables()}>
+        <div className="profile-content pb-24">
+          {children}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className={cn(
-      "min-h-screen relative transition-all duration-300",
-      isPreview && "rounded-lg overflow-hidden max-h-[600px]" // Added max-height for preview
+      "relative transition-all duration-300",
+      isPreview ? "h-[600px] w-full rounded-lg overflow-hidden flex flex-col" : "min-h-screen"
     )}>
-      {/* If an external theme provider is supplied, don't wrap again */}
       {useExternalTheme ? (
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'profile' | 'chats' | 'shop')}>
-          {/* Wallpaper for all tabs */}
+        <>
+          {/* Wallpaper always visible */}
           <ProfileWallpaper />
-
-          <TabsContent value="profile">
-            <ProfileContent 
-              profile={profile} 
-              isPreview={isPreview}
-              onAgentClick={(agentId) => { setCurrentAgentId(agentId); setActiveTab('chats'); }}
-            />
-          </TabsContent>
-          <TabsContent value="chats">
-            <ChatsView 
-              profile={profile}
-              currentAgentId={currentAgentId}
-              onAgentChange={setCurrentAgentId}
-            />
-          </TabsContent>
-          <TabsContent value="shop">
-            <ShopView profile={profile} />
-          </TabsContent>
-
-          {/* Fixed bottom menu */}
-          <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur border-t">
-            <div className="max-w-3xl mx-auto px-4 py-2">
-              <TabsList className="w-full justify-between">
-                <TabsTrigger value="profile">Perfil</TabsTrigger>
-                <TabsTrigger value="chats">Chats</TabsTrigger>
-                <TabsTrigger value="shop">Shop</TabsTrigger>
-              </TabsList>
-            </div>
+          {/* Scrollable content area */}
+          <div className={cn(
+            "relative",
+            isPreview ? "flex-1 overflow-y-auto" : "min-h-screen"
+          )}>
+            {activeTab === 'profile' ? (
+              renderContent()
+            ) : (
+              <ContentWithWallpaper>
+                {renderContent()}
+              </ContentWithWallpaper>
+            )}
           </div>
-        </Tabs>
+          {/* Chat input - only visible in chats tab, above tabs menu */}
+          {activeTab === 'chats' && (
+            <div className="w-full bg-white/90 backdrop-blur border-t px-4 py-2">
+              <ChatInput onSendMessage={handleSendMessage} />
+            </div>
+          )}
+          {/* Bottom tabs menu - always at bottom */}
+          <BottomTabsMenu 
+            activeTab={activeTab} 
+            onTabChange={(tab) => setActiveTab(tab as 'profile' | 'chats' | 'shop')}
+            isPreview={isPreview}
+          />
+        </>
       ) : (
         <ProfileThemeProvider profileDesign={designToUse}>
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'profile' | 'chats' | 'shop')}>
-            {/* Wallpaper for all tabs */}
-            <ProfileWallpaper />
-
-            <TabsContent value="profile">
-              <ProfileContent 
-                profile={profile} 
-                isPreview={isPreview}
-                onAgentClick={(agentId) => { setCurrentAgentId(agentId); setActiveTab('chats'); }}
-              />
-            </TabsContent>
-            <TabsContent value="chats">
-              <ChatsView 
-                profile={profile}
-                currentAgentId={currentAgentId}
-                onAgentChange={setCurrentAgentId}
-              />
-            </TabsContent>
-            <TabsContent value="shop">
-              <ShopView profile={profile} />
-            </TabsContent>
-
-            {/* Fixed bottom menu */}
-            <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur border-t">
-              <div className="max-w-3xl mx-auto px-4 py-2">
-                <TabsList className="w-full justify-between">
-                  <TabsTrigger value="profile">Perfil</TabsTrigger>
-                  <TabsTrigger value="chats">Chats</TabsTrigger>
-                  <TabsTrigger value="shop">Shop</TabsTrigger>
-                </TabsList>
-              </div>
+          {/* Wallpaper always visible */}
+          <ProfileWallpaper />
+          {/* Scrollable content area */}
+          <div className={cn(
+            "relative",
+            isPreview ? "flex-1 overflow-y-auto" : "min-h-screen"
+          )}>
+            {activeTab === 'profile' ? (
+              renderContent()
+            ) : (
+              <ContentWithWallpaper>
+                {renderContent()}
+              </ContentWithWallpaper>
+            )}
+          </div>
+          {/* Chat input - only visible in chats tab, above tabs menu */}
+          {activeTab === 'chats' && (
+            <div className="w-full bg-white/90 backdrop-blur border-t px-4 py-2">
+              <ChatInput onSendMessage={handleSendMessage} />
             </div>
-          </Tabs>
+          )}
+          {/* Bottom tabs menu - always at bottom */}
+          <BottomTabsMenu 
+            activeTab={activeTab} 
+            onTabChange={(tab) => setActiveTab(tab as 'profile' | 'chats' | 'shop')}
+            isPreview={isPreview}
+          />
         </ProfileThemeProvider>
       )}
     </div>

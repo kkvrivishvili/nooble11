@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useProfileTheme } from '@/context/profile-theme-context'
 import { Agent, ProfileWithAgents } from '@/types/profile'
-import ChatInput from './ChatInput'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
 interface ChatsViewProps {
@@ -62,34 +61,6 @@ export default function ChatsView({ profile, currentAgentId, onAgentChange }: Ch
     // Auto scroll on new messages
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
   }, [messagesByAgent, selectedAgentId])
-
-  const handleSendMessage = (message: string) => {
-    if (!selectedAgentId) return
-    const newMsg: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: 'user',
-      content: message,
-      created_at: new Date().toISOString(),
-    }
-    setMessagesByAgent(prev => {
-      const list = prev[selectedAgentId] || []
-      return { ...prev, [selectedAgentId]: [...list, newMsg] }
-    })
-
-    // Mock assistant reply
-    const reply: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: 'assistant',
-      content: 'Gracias por tu mensaje. Pronto conectaremos con el agente real (mock).',
-      created_at: new Date().toISOString(),
-    }
-    setTimeout(() => {
-      setMessagesByAgent(prev => {
-        const list = prev[selectedAgentId] || []
-        return { ...prev, [selectedAgentId]: [...list, reply] }
-      })
-    }, 500)
-  }
 
   const getBubbleStyles = (role: ChatMessage['role']) => ({
     backgroundColor:
@@ -153,10 +124,6 @@ export default function ChatsView({ profile, currentAgentId, onAgentChange }: Ch
         ))}
       </div>
 
-      {/* Chat input */}
-      <div className="fixed bottom-14 left-0 right-0 z-40">
-        <ChatInput onSendMessage={handleSendMessage} />
-      </div>
     </div>
   )
 }
