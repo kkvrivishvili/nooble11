@@ -38,9 +38,9 @@ export function ProfileThemeProvider({
   children, 
   profileDesign 
 }: ProfileThemeProviderProps) {
-  const [theme, setTheme] = useState<ProfileTheme>(defaultTheme);
-  const [layout, setLayout] = useState<ProfileLayout>(defaultLayout);
-  const [isLoading, setIsLoading] = useState(true);
+  const [theme, setTheme] = useState<ProfileTheme>(() => profileDesign?.theme ?? defaultTheme);
+  const [layout, setLayout] = useState<ProfileLayout>(() => profileDesign?.layout ?? defaultLayout);
+  const [isLoading] = useState(false);
 
   // Generate wallpaper CSS
   const generateWallpaperStyles = (wallpaper?: ProfileWallpaper): string => {
@@ -90,14 +90,6 @@ export function ProfileThemeProvider({
       default:
         return '';
     }
-  };
-
-  // Helper function to convert hex to rgb
-  const hexToRgb = (hex: string): string => {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? 
-      `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : 
-      '0, 0, 0';
   };
 
   // Generate CSS variables object for scoped application
@@ -195,15 +187,12 @@ export function ProfileThemeProvider({
     if (profileDesign) {
       const newTheme = { ...defaultTheme, ...profileDesign.theme };
       const newLayout = { ...defaultLayout, ...profileDesign.layout };
-      
       setTheme(newTheme);
       setLayout(newLayout);
     } else {
-      // Apply default theme
       setTheme(defaultTheme);
       setLayout(defaultLayout);
     }
-    setIsLoading(false);
   }, [profileDesign]);
 
   const applyTheme = (design: ProfileDesign) => {

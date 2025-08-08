@@ -1,6 +1,6 @@
 // src/hooks/use-design.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { designApi } from '@/api/design-api';
+import { designApi, DesignPresetName, DesignUpdate } from '@/api/design-api';
 import { ProfileDesign } from '@/types/profile';
 import { toast } from 'sonner';
 
@@ -20,7 +20,7 @@ export function useDesign() {
 
   // Mutation for updating design
   const updateDesignMutation = useMutation({
-    mutationFn: (design: Partial<ProfileDesign>) => designApi.updateDesign(design),
+    mutationFn: (design: DesignUpdate) => designApi.updateDesign(design),
     onMutate: async (newDesign) => {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['profile-design'] });
@@ -89,7 +89,7 @@ export function useDesign() {
 
   // Apply preset mutation
   const applyPresetMutation = useMutation({
-    mutationFn: (presetName: keyof typeof import('@/api/design-api').designPresets) => designApi.applyPreset(presetName),
+    mutationFn: (presetName: DesignPresetName) => designApi.applyPreset(presetName),
     onSuccess: () => {
       toast.success("El preset se ha aplicado correctamente.");
     },
@@ -110,8 +110,11 @@ export function useDesign() {
     isSaving: updateDesignMutation.isPending,
     isResetting: resetDesignMutation.isPending,
     updateDesign: updateDesignMutation.mutate,
+    updateDesignAsync: updateDesignMutation.mutateAsync,
     resetToDefault: resetDesignMutation.mutate,
+    resetToDefaultAsync: resetDesignMutation.mutateAsync,
     applyPreset: applyPresetMutation.mutate,
+    applyPresetAsync: applyPresetMutation.mutateAsync,
     updateTheme: (theme: Partial<ProfileDesign['theme']>) => 
       currentDesign?.theme && updateDesignMutation.mutate({ 
         theme: {

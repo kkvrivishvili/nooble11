@@ -1,12 +1,10 @@
 // src/features/my-nooble/design/index.tsx - UPDATED to use only design-api.ts
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Label } from '@/components/ui/label';
 import { useProfile } from '@/context/profile-context';
-import { designApi, designPresets } from '@/api/design-api';
+import { designPresets } from '@/api/design-api';
 import { ProfileDesign, ProfileWallpaper, ProfileLayout } from '@/types/profile';
 
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
 
 import { useDesign } from '@/hooks/use-design';
 import { LayoutWithMobile } from '@/components/layout/layout-with-mobile';
@@ -25,13 +23,15 @@ import {
   IconSquareRoundedFilled,
   IconShadow,
 } from '@tabler/icons-react';
+import { Label } from '@/components/ui/label';
 
 export default function DesignPage() {
   const { profile } = useProfile();
   const {
     currentDesign,
     isLoading,
-    updateDesign: _updateDesign,
+    updateDesignAsync,
+    applyPresetAsync,
   } = useDesign();
 
   const [localDesign, setLocalDesign] = useState<ProfileDesign | null>(null);
@@ -54,17 +54,14 @@ export default function DesignPage() {
       const preset = designPresets[presetName];
       setLocalDesign(preset);
       setHasChanges(true);
-      
-      // Apply preset immediately using design-api
-      await designApi.applyPreset(presetName);
-      // Preset already applied on server; avoid redundant auto-save
-      // Only clear changes if the current design still equals the preset we set
-      if (latestDesignRef.current === preset) {
+      // Apply preset via hook (handles invalidations and toasts)
+      await applyPresetAsync(presetName);
+      // Clear changes only if the latest local design still matches the preset
+      if (JSON.stringify(latestDesignRef.current) === JSON.stringify(preset)) {
         setHasChanges(false);
       }
-      toast.success(`"${presetName}" design applied successfully!`);
     } catch (_error) {
-      toast.error('Failed to apply preset');
+      // hook already shows toast; keep silent here
     }
   };
 
@@ -109,13 +106,11 @@ export default function DesignPage() {
     const timeout = setTimeout(async () => {
       if (canceled) return;
       try {
-        await designApi.updateDesign(localDesign);
+        await updateDesignAsync(localDesign);
         if (canceled) return;
         setHasChanges(false); // Mark as saved
-        toast.success('Diseño guardado automáticamente');
       } catch (_error) {
-        if (canceled) return;
-        toast.error('Error al guardar el diseño');
+        // hook already shows toast; keep silent here
       }
     }, 3000);
 
@@ -124,7 +119,7 @@ export default function DesignPage() {
       canceled = true;
       clearTimeout(timeout);
     };
-  }, [localDesign, hasChanges]);
+  }, [localDesign, hasChanges, updateDesignAsync]);
 
 
 

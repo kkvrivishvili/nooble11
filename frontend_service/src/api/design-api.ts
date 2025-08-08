@@ -6,7 +6,7 @@ import { PostgrestError, AuthError } from '@supabase/supabase-js';
 // Helper Functions
 const handleApiError = (error: PostgrestError | AuthError | null, context: string) => {
   if (error) {
-    console.error(`Error in ${context}:`, error.message);
+    // Avoid console noise in production; surface via thrown error
     throw new Error(`A problem occurred in ${context}: ${error.message}`);
   }
 };
@@ -223,6 +223,12 @@ export const designPresets = {
   }
 };
 
+export type DesignPresetName = keyof typeof designPresets;
+export type DesignUpdate = {
+  theme?: Partial<ProfileDesign['theme']>;
+  layout?: Partial<ProfileDesign['layout']>;
+};
+
 // Enhanced gradient presets with more sophisticated designs
 export const gradientPresets = [
   { 
@@ -326,7 +332,7 @@ export const designApi = {
   /**
    * Update design settings in profile.design
    */
-  async updateDesign(design: Partial<ProfileDesign>): Promise<ProfileDesign> {
+  async updateDesign(design: DesignUpdate): Promise<ProfileDesign> {
     const userId = await getUserId();
     const currentDesign = await this.getDesign();
     
@@ -361,7 +367,9 @@ export const designApi = {
    * Apply a preset design
    */
   async applyPreset(presetName: keyof typeof designPresets): Promise<ProfileDesign> {
-    const preset = designPresets[presetName];
+    // Use exported type for stability
+    const _name: DesignPresetName = presetName as DesignPresetName;
+    const preset = designPresets[_name];
     if (!preset) {
       throw new Error(`Preset "${presetName}" not found`);
     }
@@ -422,17 +430,15 @@ export const designApi = {
   /**
    * Validate design structure
    */
-  validateDesign(design: any): design is ProfileDesign {
+  validateDesign(design: unknown): design is ProfileDesign {
     if (!design || typeof design !== 'object') return false;
-    
+    const d = design as { theme?: Record<string, unknown>; layout?: Record<string, unknown> };
     // Check theme
-    if (!design.theme || typeof design.theme !== 'object') return false;
-    if (typeof design.theme.primary_color !== 'string') return false;
-    if (typeof design.theme.background_color !== 'string') return false;
-    
+    if (!d.theme || typeof d.theme !== 'object') return false;
+    if (typeof d.theme.primary_color !== 'string') return false;
+    if (typeof d.theme.background_color !== 'string') return false;
     // Check layout (optional)
-    if (design.layout && typeof design.layout !== 'object') return false;
-    
+    if (d.layout && typeof d.layout !== 'object') return false;
     return true;
   }
 };
