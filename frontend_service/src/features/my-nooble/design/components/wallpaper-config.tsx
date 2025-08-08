@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ProfileWallpaper } from '@/types/profile';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,6 +27,13 @@ export function WallpaperConfig({ wallpaper, onChange, theme }: WallpaperConfigP
   const [customGradientColors, setCustomGradientColors] = useState<string[]>(
     wallpaper?.gradient_colors || ['#fbbf24', '#f97316', '#dc2626']
   );
+
+  // Sync customGradientColors with wallpaper prop changes
+  useEffect(() => {
+    if (wallpaper?.gradient_colors) {
+      setCustomGradientColors(wallpaper.gradient_colors);
+    }
+  }, [wallpaper?.gradient_colors]);
 
   const wallpaperTypes = [
     { 

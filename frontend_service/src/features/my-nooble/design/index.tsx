@@ -1,5 +1,5 @@
 // src/features/my-nooble/design/index.tsx - UPDATED to use only design-api.ts
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Label } from '@/components/ui/label';
 import { useProfile } from '@/context/profile-context';
 import { designApi, designPresets } from '@/api/design-api';
@@ -35,7 +35,12 @@ export default function DesignPage() {
 
   const [localDesign, setLocalDesign] = useState<ProfileDesign | null>(null);
   const [activeTab, setActiveTab] = useState('buttons');
-  const [autoSaveInterval, setAutoSaveInterval] = useState<NodeJS.Timeout | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
+  const latestDesignRef = useRef<ProfileDesign | null>(null);
+
+  useEffect(() => {
+    latestDesignRef.current = localDesign;
+  }, [localDesign]);
 
   useEffect(() => {
     if (currentDesign) {
@@ -47,9 +52,15 @@ export default function DesignPage() {
     try {
       const preset = designPresets[presetName];
       setLocalDesign(preset);
+      setHasChanges(true);
       
       // Apply preset immediately using design-api
       await designApi.applyPreset(presetName);
+      // Preset already applied on server; avoid redundant auto-save
+      // Only clear changes if the current design still equals the preset we set
+      if (latestDesignRef.current === preset) {
+        setHasChanges(false);
+      }
       toast.success(`"${presetName}" design applied successfully!`);
     } catch (_error) {
       toast.error('Failed to apply preset');
@@ -57,75 +68,62 @@ export default function DesignPage() {
   };
 
   const updateTheme = (updates: Partial<ProfileDesign['theme']>) => {
-    if (!localDesign) return;
-    
-    const newDesign = {
-      ...localDesign,
-      theme: { ...localDesign.theme, ...updates }
-    };
-    
-    setLocalDesign(newDesign);
+    setLocalDesign((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        theme: { ...prev.theme, ...updates },
+      };
+    });
+    setHasChanges(true);
   };
 
   const updateWallpaper = (wallpaper: ProfileWallpaper) => {
-    if (!localDesign) return;
-    
-    const newDesign = {
-      ...localDesign,
-      theme: { ...localDesign.theme, wallpaper }
-    };
-    
-    setLocalDesign(newDesign);
+    setLocalDesign((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        theme: { ...prev.theme, wallpaper },
+      };
+    });
+    setHasChanges(true);
   };
 
   const updateLayout = (updates: Partial<ProfileDesign['layout']>) => {
-    if (!localDesign) return;
-    
-    const newDesign = {
-      ...localDesign,
-      layout: { ...localDesign.layout, ...updates }
-    };
-    
-    setLocalDesign(newDesign);
+    setLocalDesign((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        layout: { ...prev.layout, ...updates },
+      };
+    });
+    setHasChanges(true);
   };
 
-  // Auto-save every 3 seconds
+  // Auto-save 3 seconds after the last change (debounced)
   useEffect(() => {
-    if (!localDesign) return;
+    if (!localDesign || !hasChanges) return;
 
-    // Clear existing interval
-    if (autoSaveInterval) {
-      clearInterval(autoSaveInterval);
-    }
-
-    // Set up new interval for auto-save every 3 seconds
-    const interval = setInterval(async () => {
+    let canceled = false;
+    const timeout = setTimeout(async () => {
+      if (canceled) return;
       try {
         await designApi.updateDesign(localDesign);
-        // Silent save - no toast notifications
+        if (canceled) return;
+        setHasChanges(false); // Mark as saved
+        toast.success('Diseño guardado automáticamente');
       } catch (_error) {
-        // Silent failure - no error notifications
+        if (canceled) return;
+        toast.error('Error al guardar el diseño');
       }
-    }, 3000); // 3 seconds
-
-    setAutoSaveInterval(interval);
+    }, 3000);
 
     // Cleanup function
     return () => {
-      if (interval) {
-        clearInterval(interval);
-      }
+      canceled = true;
+      clearTimeout(timeout);
     };
-  }, [localDesign, autoSaveInterval]);
-
-  // Cleanup interval on unmount
-  useEffect(() => {
-    return () => {
-      if (autoSaveInterval) {
-        clearInterval(autoSaveInterval);
-      }
-    };
-  }, [autoSaveInterval]);
+  }, [localDesign, hasChanges]);
 
 
 

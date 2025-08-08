@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { debounce } from 'lodash';
 
 interface ColorPickerProps {
   value: string;
@@ -16,16 +15,9 @@ export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
     setLocalValue(value);
   }, [value]);
 
-  const debouncedOnChange = React.useMemo(
-    () => debounce((color: string) => {
-      onChange(color);
-    }, 300),
-    [onChange]
-  );
-
   const handleColorChange = (newValue: string) => {
     setLocalValue(newValue);
-    debouncedOnChange(newValue);
+    onChange(newValue); // Immediate notification to parent
   };
 
   const isValidHex = (hex: string) => {
@@ -86,7 +78,7 @@ export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
           const value = e.target.value;
           setLocalValue(value);
           if (isValidColor(value)) {
-            debouncedOnChange(value);
+            onChange(value); // Immediate notification to parent
           }
         }}
         className="w-32 font-mono text-sm"
