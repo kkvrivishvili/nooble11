@@ -1,6 +1,5 @@
 """
 Handler para procesamiento de mensajes de chat.
-Orquesta la comunicación entre WebSocket y Execution Service.
 """
 import logging
 import uuid
@@ -13,17 +12,13 @@ from ..clients.execution_client import ExecutionClient
 from ..websocket.orchestrator_websocket_manager import OrchestratorWebSocketManager
 from .config_handler import ConfigHandler
 from .session_handler import SessionHandler
-from common.models.chat_models import ChatRequest
 from ..config.settings import OrchestratorSettings
 
 logger = logging.getLogger(__name__)
 
 
 class ChatHandler(BaseHandler):
-    """
-    Handler para procesar mensajes de chat desde WebSocket.
-    Coordina entre sesiones, configuraciones y execution service.
-    """
+    """Handler para procesar mensajes de chat desde WebSocket."""
     
     def __init__(
         self,
@@ -46,14 +41,7 @@ class ChatHandler(BaseHandler):
         message_request: ChatRequest,
         connection_id: str
     ) -> None:
-        """
-        Procesa un mensaje de chat recibido por WebSocket.
-        
-        Args:
-            session_state: Estado de la sesión
-            message_request: Request de chat
-            connection_id: ID de la conexión WebSocket
-        """
+        """Procesa un mensaje de chat recibido por WebSocket."""
         task_id = None
         
         try:
@@ -63,34 +51,32 @@ class ChatHandler(BaseHandler):
             )
             
             self._logger.info(
-                "Procesando mensaje de chat",
+                "Procesando mensaje de chat público",
                 extra={
                     "session_id": str(session_state.session_id),
                     "task_id": str(task_id),
                     "agent_id": str(session_state.agent_id),
+                    "agent_owner": str(session_state.tenant_id),  # Owner del agente
                     "connection_id": connection_id
                 }
             )
             
-            # 2. Obtener configuraciones del agente
+            # 2. Obtener configuraciones (usa tenant_id del owner internamente)
             configs = await self.config_handler.get_agent_configs(
-                tenant_id=session_state.tenant_id,
+                tenant_id=session_state.tenant_id,  # Owner del agente
                 agent_id=session_state.agent_id,
                 session_id=session_state.session_id,
                 task_id=task_id
             )
             execution_config, query_config, rag_config = configs
             
-            # 3. Completar el ChatRequest con IDs del contexto
-            message_request.tenant_id = session_state.tenant_id
-            message_request.session_id = session_state.session_id
-            message_request.agent_id = session_state.agent_id
-            message_request.task_id = task_id
+            # 3. Extraer datos del ChatRequest
+            messages = [msg.dict() for msg in message_request.messages]
             
-            # 4. Determinar modo según presencia de tools
+            # 4. Determinar modo
             mode = "advance" if message_request.tools else "simple"
             
-            # 5. Notificar inicio de procesamiento
+            # 5. Notificar inicio
             await self.websocket_manager.send_to_session(
                 session_id=session_state.session_id,
                 message_type="chat_processing",
@@ -102,9 +88,21 @@ class ChatHandler(BaseHandler):
                 task_id=task_id
             )
             
-            # 6. Enviar a execution service
+            # 6. Enviar a execution service con estructura correcta
             await self.execution_client.execute_chat(
-                chat_request=message_request,
+                # IDs del contexto
+                tenant_id=session_state.tenant_id,  # Owner del agente
+                session_id=session_state.session_id,
+                task_id=task_id,
+                agent_id=session_state.agent_id,
+                user_id=None,  # Chat público
+                # Datos del chat
+                messages=messages,
+                tools=message_request.tools,
+                tool_choice=message_request.tool_choice,
+                conversation_id=message_request.conversation_id,
+                metadata=message_request.metadata,
+                # Configuraciones
                 execution_config=execution_config,
                 query_config=query_config,
                 rag_config=rag_config,
@@ -115,7 +113,8 @@ class ChatHandler(BaseHandler):
                 "Mensaje enviado a execution service",
                 extra={
                     "task_id": str(task_id),
-                    "mode": mode
+                    "mode": mode,
+                    "agent_owner": str(session_state.tenant_id)
                 }
             )
             
@@ -129,7 +128,6 @@ class ChatHandler(BaseHandler):
                 }
             )
             
-            # Enviar error al cliente
             await self.websocket_manager.send_error_to_session(
                 session_id=session_state.session_id,
                 error_type="chat_processing_error",

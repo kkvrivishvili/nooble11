@@ -50,13 +50,6 @@ class OrchestratorWebSocketManager(BaseWebSocketManager):
     ) -> str:
         """
         Conecta un WebSocket para chat público.
-        
-        Args:
-            websocket: WebSocket de FastAPI
-            session_id: ID de la sesión
-            
-        Returns:
-            ID de la conexión creada
         """
         try:
             # Obtener sesión
@@ -65,7 +58,7 @@ class OrchestratorWebSocketManager(BaseWebSocketManager):
                 await websocket.close(code=4004, reason="Session not found")
                 raise ValueError(f"Sesión no encontrada: {session_id}")
             
-            # Crear conexión
+            # Crear conexión usando el método base correcto
             connection_id = await self.connect(
                 websocket=websocket,
                 connection_type="chat",
@@ -74,7 +67,7 @@ class OrchestratorWebSocketManager(BaseWebSocketManager):
                 agent_id=session.agent_id
             )
             
-            # Registrar en mapeo
+            # Registrar mapeo
             self._session_connections[session_id] = connection_id
             
             # Registrar en sesión
@@ -83,18 +76,19 @@ class OrchestratorWebSocketManager(BaseWebSocketManager):
                 connection_id=connection_id
             )
             
-            self._logger.info(
+            self.logger.info(
                 f"Chat WebSocket conectado",
                 extra={
                     "connection_id": connection_id,
-                    "session_id": str(session_id)
+                    "session_id": str(session_id),
+                    "agent_id": str(session.agent_id)
                 }
             )
             
             return connection_id
             
         except Exception as e:
-            self._logger.error(f"Error conectando chat WebSocket: {e}")
+            self.logger.error(f"Error conectando chat WebSocket: {e}")
             raise
     
     async def disconnect(self, connection_id: str) -> None:

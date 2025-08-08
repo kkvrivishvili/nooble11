@@ -123,6 +123,31 @@ export interface WebSocketMessage {
   task_id?: UUID;
 }
 
+// Normalize WS URL coming from backend (may be ws://0.0.0.0:PORT/...)
+function resolveWebSocketUrl(input: string): string {
+  try {
+    const u = new URL(input);
+    if (u.hostname === '0.0.0.0') {
+      const base = new URL(ORCHESTRATOR_SERVICE_URL);
+      u.protocol = base.protocol === 'https:' ? 'wss:' : 'ws:';
+      u.hostname = base.hostname;
+      u.port = base.port;
+      return u.toString();
+    }
+    return u.toString();
+  } catch {
+    // input might be a path, build from base
+    try {
+      const base = new URL(ORCHESTRATOR_SERVICE_URL);
+      const proto = base.protocol === 'https:' ? 'wss' : 'ws';
+      const path = input.startsWith('/') ? input : `/${input}`;
+      return `${proto}://${base.host}${path}`;
+    } catch {
+      return input; // best effort
+    }
+  }
+}
+
 // ===== REST client =====
 class ChatAPI {
   /**
@@ -133,7 +158,6 @@ class ChatAPI {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        tenant_id: payload.tenant_id,
         agent_id: payload.agent_id,
         metadata: payload.metadata || {},
       }),
@@ -198,7 +222,8 @@ class ChatAPI {
    * @param handlers callbacks for socket events
    */
   connectWebSocket(websocketUrl: string, handlers: ChatSocketHandlers = {}): ChatSocketConnection {
-    const ws = new WebSocket(websocketUrl);
+    const wsUrl = resolveWebSocketUrl(websocketUrl);
+    const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
       handlers.onOpen?.();

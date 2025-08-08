@@ -334,3 +334,43 @@ class SupabaseClient:
                 "error": str(e),
                 "timestamp": datetime.utcnow().isoformat()
             }
+
+# Agregar este método a la clase SupabaseClient
+
+async def get_public_agent_config(self, agent_id: str) -> Optional[AgentConfig]:
+    """
+    Obtiene configuración de agente SOLO si es público y activo.
+    """
+    try:
+        response = await asyncio.to_thread(
+            lambda: self.client.table('agents_with_prompt')
+            .select('*')
+            .eq('id', agent_id)
+            .eq('is_public', True)  # ✅ Verificar público
+            .eq('is_active', True)   # ✅ Verificar activo
+            .single()
+            .execute()
+        )
+        
+        if not response.data:
+            self.logger.warning(f"Agent {agent_id} not found or not public")
+            return None
+        
+        # Transformar datos
+        agent_data = self._transform_agent_data(response.data)
+        
+        # El user_id del dueño será el tenant_id real
+        return AgentConfig(
+            agent_id=uuid.UUID(agent_data['id']),
+            agent_name=agent_data['name'],
+            tenant_id=uuid.UUID(agent_data['user_id']),  # user_id del owner
+            execution_config=agent_data['execution_config'],
+            query_config=agent_data['query_config'],
+            rag_config=agent_data['rag_config'],
+            created_at=datetime.fromisoformat(agent_data['created_at'].replace('Z', '+00:00')),
+            updated_at=datetime.fromisoformat(agent_data['updated_at'].replace('Z', '+00:00'))
+        )
+        
+    except Exception as e:
+        self.logger.error(f"Error getting public agent config: {str(e)}")
+        raise SupabaseError(f"Failed to get public agent config: {str(e)}")
