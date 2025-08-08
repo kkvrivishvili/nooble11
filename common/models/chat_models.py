@@ -286,7 +286,6 @@ class OrchestratorMessageType(str, Enum):
 
 class ChatInitRequest(BaseModel):
     """Request para inicializar una sesión de chat."""
-    tenant_id: uuid.UUID = Field(..., description="ID del tenant")
     agent_id: uuid.UUID = Field(..., description="ID del agente")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Metadata adicional")
     
