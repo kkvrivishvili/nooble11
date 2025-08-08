@@ -59,8 +59,8 @@ function ProfileContent({ profile, isPreview, onAgentClick }: { profile: Profile
   const { layout, getCSSVariables } = useProfileTheme();
 
   return (
-    <div className="profile-container" style={getCSSVariables()}>
-      <div className="profile-content pb-24">
+    <div className="profile-container" style={{ ...getCSSVariables(), minHeight: isPreview ? '100%' : undefined }}>
+      <div className={cn("profile-content", isPreview ? undefined : "pb-24")}>
         {/* Profile Header */}
         <div className="profile-animate-in">
           <ProfileComponent 
@@ -237,8 +237,8 @@ export default function PublicProfile({ username, isPreview = false, previewDesi
   const ContentWithWallpaper = ({ children }: { children: React.ReactNode }) => {
     const { getCSSVariables } = useProfileTheme();
     return (
-      <div className="profile-container" style={getCSSVariables()}>
-        <div className="profile-content pb-24">
+      <div className="profile-container" style={{ ...getCSSVariables(), minHeight: isPreview ? '100%' : undefined }}>
+        <div className={cn("profile-content", isPreview ? undefined : "pb-24")}>
           {children}
         </div>
       </div>
@@ -248,7 +248,7 @@ export default function PublicProfile({ username, isPreview = false, previewDesi
   return (
     <div className={cn(
       "relative transition-all duration-300",
-      isPreview ? "h-[600px] w-full rounded-lg overflow-hidden flex flex-col" : "min-h-screen"
+      isPreview ? "h-full w-full rounded-lg overflow-hidden flex flex-col" : "min-h-screen"
     )}>
       {useExternalTheme ? (
         <>

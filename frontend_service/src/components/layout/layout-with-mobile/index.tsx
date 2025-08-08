@@ -37,7 +37,7 @@ export function LayoutWithMobile({
   const { mobilePreview } = usePageContext()
   
   return (
-    <div className={cn("flex min-h-screen", className)}>
+    <div className={cn("flex", className)}>
       {/* Main content - removed overflow-y-auto to use parent scroll */}
       <div className={cn(
         "flex-1 p-6",
