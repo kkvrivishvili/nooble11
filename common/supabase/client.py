@@ -107,21 +107,21 @@ class SupabaseClient:
             # Transformar datos de camelCase a snake_case
             agent_data = self._transform_agent_data(response.data)
             
-            # Crear AgentConfig
+            # Normalizar configuraciones anidadas y timestamps
+            exec_cfg = self._normalize_execution_config(agent_data.get('execution_config') or {})
+            query_cfg = self._normalize_query_config(agent_data.get('query_config') or {}, agent_data.get('system_prompt'))
+            rag_cfg = self._normalize_rag_config(agent_data.get('rag_config') or {}, default_collections=["default"])            
+            
             agent_config = AgentConfig(
                 agent_id=uuid.UUID(agent_data['id']),
                 agent_name=agent_data['name'],
-                tenant_id=uuid.UUID(agent_data['user_id']),  # Usar userId como tenant_id
-                execution_config=agent_data['execution_config'],
-                query_config=agent_data['query_config'],
-                rag_config=agent_data['rag_config'],
-                created_at=datetime.fromisoformat(agent_data['created_at'].replace('Z', '+00:00')),
-                updated_at=datetime.fromisoformat(agent_data['updated_at'].replace('Z', '+00:00'))
+                tenant_id=uuid.UUID(agent_data['user_id']),
+                execution_config=exec_cfg,
+                query_config=query_cfg,
+                rag_config=rag_cfg,
+                created_at=self._parse_datetime(agent_data.get('created_at')),
+                updated_at=self._parse_datetime(agent_data.get('updated_at'))
             )
-            
-            # Agregar system_prompt a query_config si existe
-            if 'system_prompt' in agent_data:
-                agent_config.query_config.system_prompt_template = agent_data['system_prompt']
             
             self.logger.debug(f"Agent config loaded for {agent_id}")
             return agent_config
@@ -140,23 +140,83 @@ class SupabaseClient:
         Returns:
             Dict con datos en snake_case
         """
+        # La vista agents_with_prompt devuelve snake_case.
+        # Soportamos ambos formatos por compatibilidad (snake_case preferido).
         return {
             'id': data.get('id'),
-            'user_id': data.get('userId'),
-            'template_id': data.get('templateId'),
+            'user_id': data.get('user_id') or data.get('userId'),
+            'template_id': data.get('template_id') or data.get('templateId'),
             'name': data.get('name'),
             'description': data.get('description'),
             'icon': data.get('icon'),
-            'system_prompt': data.get('systemPrompt'),  # De la vista
-            'system_prompt_override': data.get('systemPromptOverride'),
-            'query_config': data.get('queryConfig', {}),
-            'rag_config': data.get('ragConfig', {}),
-            'execution_config': data.get('executionConfig', {}),
-            'is_active': data.get('isActive', True),
-            'is_public': data.get('isPublic', True),
-            'created_at': data.get('createdAt'),
-            'updated_at': data.get('updatedAt')
+            'system_prompt': data.get('system_prompt') or data.get('systemPrompt'),
+            'system_prompt_override': data.get('system_prompt_override') or data.get('systemPromptOverride'),
+            'query_config': data.get('query_config') or data.get('queryConfig', {}),
+            'rag_config': data.get('rag_config') or data.get('ragConfig', {}),
+            'execution_config': data.get('execution_config') or data.get('executionConfig', {}),
+            'is_active': (data.get('is_active') if 'is_active' in data else data.get('isActive', True)),
+            'is_public': (data.get('is_public') if 'is_public' in data else data.get('isPublic', True)),
+            'created_at': data.get('created_at') or data.get('createdAt'),
+            'updated_at': data.get('updated_at') or data.get('updatedAt')
         }
+
+    def _parse_datetime(self, value: Any) -> datetime:
+        """Parsea timestamps que pueden venir como str ISO o datetime."""
+        try:
+            if isinstance(value, datetime):
+                return value
+            if isinstance(value, str):
+                return datetime.fromisoformat(value.replace('Z', '+00:00'))
+        except Exception as e:
+            self.logger.warning(f"Failed to parse datetime '{value}': {e}")
+        return datetime.utcnow()
+
+    def _normalize_execution_config(self, cfg: Dict[str, Any]) -> Dict[str, Any]:
+        """Mapea y filtra execution_config a los campos soportados por ExecutionConfig."""
+        normalized: Dict[str, Any] = {}
+        # Mapeos desde esquema DB a modelo
+        if 'history_ttl' in cfg:
+            normalized['history_ttl'] = cfg['history_ttl']
+        if 'history_window' in cfg:
+            normalized['max_history_length'] = cfg['history_window']
+        if 'max_history_length' in cfg:
+            normalized['max_history_length'] = cfg['max_history_length']
+        if 'history_enabled' in cfg:
+            normalized['enable_history_cache'] = cfg['history_enabled']
+        if 'timeout_seconds' in cfg:
+            normalized['tool_timeout'] = cfg['timeout_seconds']
+        if 'tool_timeout' in cfg:
+            normalized['tool_timeout'] = cfg['tool_timeout']
+        if 'max_iterations' in cfg:
+            normalized['max_iterations'] = cfg['max_iterations']
+        return normalized
+
+    def _normalize_query_config(self, cfg: Dict[str, Any], system_prompt: Optional[str]) -> Dict[str, Any]:
+        """Quita extras (p.ej. stream) y asegura system_prompt_template."""
+        allowed = {
+            'model', 'temperature', 'max_tokens', 'top_p',
+            'frequency_penalty', 'presence_penalty', 'stop',
+            'max_context_tokens', 'enable_parallel_search',
+            'timeout', 'max_retries', 'system_prompt_template'
+        }
+        normalized = {k: v for k, v in cfg.items() if k in allowed}
+        if 'system_prompt_template' not in normalized or not normalized['system_prompt_template']:
+            normalized['system_prompt_template'] = system_prompt or ""
+        return normalized
+
+    def _normalize_rag_config(self, cfg: Dict[str, Any], default_collections: Optional[List[str]] = None) -> Dict[str, Any]:
+        """Quita extras y asegura collection_ids."""
+        allowed = {
+            'collection_ids', 'document_ids', 'embedding_model',
+            'embedding_dimensions', 'encoding_format', 'top_k',
+            'similarity_threshold', 'timeout', 'max_retries', 'max_text_length'
+        }
+        normalized = {k: v for k, v in cfg.items() if k in allowed}
+        if not normalized.get('collection_ids'):
+            normalized['collection_ids'] = (default_collections or ["default"]) 
+        if 'encoding_format' not in normalized:
+            normalized['encoding_format'] = 'float'
+        return normalized
     
     @retry(
         stop=stop_after_attempt(3),
@@ -335,42 +395,47 @@ class SupabaseClient:
                 "timestamp": datetime.utcnow().isoformat()
             }
 
-# Agregar este método a la clase SupabaseClient
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10)
+    )
+    async def get_public_agent_config(self, agent_id: str) -> Optional[AgentConfig]:
+        """
+        Obtiene configuración de agente SOLO si es público y activo.
+        """
+        try:
+            response = await asyncio.to_thread(
+                lambda: self.client.table('agents_with_prompt')
+                .select('*')
+                .eq('id', agent_id)
+                .eq('is_public', True)
+                .eq('is_active', True)
+                .single()
+                .execute()
+            )
+            
+            if not response.data:
+                self.logger.warning(f"Agent not found/public/inactive: {agent_id}")
+                return None
+            
+            agent_data = self._transform_agent_data(response.data)
+            
+            exec_cfg = self._normalize_execution_config(agent_data.get('execution_config') or {})
+            query_cfg = self._normalize_query_config(agent_data.get('query_config') or {}, agent_data.get('system_prompt'))
+            rag_cfg = self._normalize_rag_config(agent_data.get('rag_config') or {}, default_collections=["default"])            
+            
+            return AgentConfig(
+                agent_id=uuid.UUID(agent_data['id']),
+                agent_name=agent_data['name'],
+                tenant_id=uuid.UUID(agent_data['user_id']),
+                execution_config=exec_cfg,
+                query_config=query_cfg,
+                rag_config=rag_cfg,
+                created_at=self._parse_datetime(agent_data.get('created_at')),
+                updated_at=self._parse_datetime(agent_data.get('updated_at'))
+            )
+        except Exception as e:
+            self.logger.error(f"Error getting public agent config: {str(e)}")
+            raise SupabaseError(f"Failed to get public agent config: {str(e)}")
 
-async def get_public_agent_config(self, agent_id: str) -> Optional[AgentConfig]:
-    """
-    Obtiene configuración de agente SOLO si es público y activo.
-    """
-    try:
-        response = await asyncio.to_thread(
-            lambda: self.client.table('agents_with_prompt')
-            .select('*')
-            .eq('id', agent_id)
-            .eq('is_public', True)  # ✅ Verificar público
-            .eq('is_active', True)   # ✅ Verificar activo
-            .single()
-            .execute()
-        )
-        
-        if not response.data:
-            self.logger.warning(f"Agent {agent_id} not found or not public")
-            return None
-        
-        # Transformar datos
-        agent_data = self._transform_agent_data(response.data)
-        
-        # El user_id del dueño será el tenant_id real
-        return AgentConfig(
-            agent_id=uuid.UUID(agent_data['id']),
-            agent_name=agent_data['name'],
-            tenant_id=uuid.UUID(agent_data['user_id']),  # user_id del owner
-            execution_config=agent_data['execution_config'],
-            query_config=agent_data['query_config'],
-            rag_config=agent_data['rag_config'],
-            created_at=datetime.fromisoformat(agent_data['created_at'].replace('Z', '+00:00')),
-            updated_at=datetime.fromisoformat(agent_data['updated_at'].replace('Z', '+00:00'))
-        )
-        
-    except Exception as e:
-        self.logger.error(f"Error getting public agent config: {str(e)}")
-        raise SupabaseError(f"Failed to get public agent config: {str(e)}")
+# (método get_public_agent_config movido dentro de la clase SupabaseClient)

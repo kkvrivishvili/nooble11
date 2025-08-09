@@ -50,5 +50,5 @@ class OrchestratorSettings(CommonAppSettings):
     callback_worker_count: int = Field(default=1, description="Número de workers de callback")
     
     class Config:
-        env_prefix = "ORCHESTRATOR_"
+        env_prefix = ""
         case_sensitive = False

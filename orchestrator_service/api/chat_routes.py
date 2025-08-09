@@ -24,7 +24,7 @@ router = APIRouter()
     description="""Crea una nueva sesión de chat público y retorna la información necesaria para conectarse.
     
     ### 📋 Proceso:
-    1. **Validación**: Verifica tenant_id y agent_id
+    1. **Validación**: Verifica agent_id público y obtiene el tenant del owner del agente
     2. **Creación**: Genera nueva sesión con metadata
     3. **Task ID**: Crea primer identificador de tarea
     4. **WebSocket URL**: Construye URL para conexión en tiempo real
@@ -58,24 +58,37 @@ async def init_chat_session(
     """Inicia una nueva sesión de chat público."""
     try:
         logger.info(
-            f"Iniciando sesión de chat",
-            extra={
-                "tenant_id": str(request.tenant_id),
-                "agent_id": str(request.agent_id)
-            }
+            f"Iniciando sesión de chat público para agente {request.agent_id}",
+            extra={"agent_id": str(request.agent_id)}
         )
-        
+
+        # Obtener configuración del agente (valida que sea público)
+        agent_config = await orchestration_service.config_handler.get_agent_info(request.agent_id)
+
+        if not agent_config:
+            raise HTTPException(
+                status_code=404,
+                detail="Agent not found or not public"
+            )
+
+        # Usar el owner del agente como tenant_id interno
+        owner_tenant_id = agent_config.tenant_id
+
+        # Generar un ID temporal para el visitante
+        visitor_id = uuid.uuid4()
+
         # Crear sesión
         session = await orchestration_service.create_session(
             session_type=SessionType.CHAT,
-            tenant_id=request.tenant_id,
+            tenant_id=owner_tenant_id,  # Owner del agente
             agent_id=request.agent_id,
-            user_id=None,  # Chat público
+            user_id=None,  # Chat público sin usuario autenticado
             metadata={
                 **request.metadata,
+                "visitor_id": str(visitor_id),  # ID temporal del visitante
                 "user_agent": http_request.headers.get("user-agent"),
                 "origin": http_request.headers.get("origin"),
-                "created_via": "api"
+                "created_via": "public_api"
             }
         )
         
@@ -99,9 +112,11 @@ async def init_chat_session(
             session_id=session.session_id,
             task_id=task_id,
             websocket_url=websocket_url,
-            agent_name="Assistant"  # TODO: Obtener de configuración del agente
+            agent_name=agent_config.agent_name
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error iniciando sesión de chat: {e}")
         raise HTTPException(

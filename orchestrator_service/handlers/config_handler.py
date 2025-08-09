@@ -52,6 +52,7 @@ class ConfigHandler(BaseHandler):
     ) -> Tuple[ExecutionConfig, QueryConfig, RAGConfig]:
         """
         Obtiene las configuraciones del agente con cache de dos niveles.
+        IMPORTANTE: Para chat público, solo obtiene agentes públicos.
         
         Args:
             tenant_id: ID del tenant (user_id del dueño del agente)
@@ -85,10 +86,19 @@ class ConfigHandler(BaseHandler):
             # 3. Obtener de Supabase
             self._logger.info(f"Obteniendo config de Supabase: {cache_key}")
             
-            agent_config = await self.supabase_client.get_agent_config(str(agent_id))
+            # ✅ FIX: Usar get_public_agent_config para chat público
+            # Este método ya verifica is_public=true y is_active=true
+            agent_config = await self.supabase_client.get_public_agent_config(str(agent_id))
             
             if not agent_config:
-                raise ValueError(f"Agente no encontrado: {agent_id}")
+                # Si no se encuentra como público, intentar con service key si está disponible
+                if self.supabase_client.admin_client:
+                    self._logger.info(f"Intentando con service key para agente privado: {agent_id}")
+                    agent_config = await self.supabase_client.get_agent_config(str(agent_id))
+                
+                if not agent_config:
+                    self._logger.warning(f"Agente no encontrado o no es público: {agent_id}")
+                    raise ValueError(f"Agente no encontrado o no es público: {agent_id}")
             
             # 4. Guardar en caches
             await self._save_to_cache(agent_id, agent_config)
@@ -99,6 +109,49 @@ class ConfigHandler(BaseHandler):
             self._logger.error(f"Error obteniendo configuraciones: {e}")
             # Retornar configuraciones por defecto en caso de error
             return self._get_default_configs()
+    
+    async def get_agent_info(
+        self,
+        agent_id: uuid.UUID
+    ) -> Optional[AgentConfig]:
+        """Obtiene la configuración completa del agente (incluye tenant_id y agent_name).
+        Usa el mismo mecanismo de cache que get_agent_configs. Prioriza agentes públicos.
+        """
+        cache_key = f"{agent_id}"
+        try:
+            # 1) Cache local
+            if cache_key in self._local_cache:
+                agent_config, _ = self._local_cache[cache_key]
+                self._logger.debug(f"AgentConfig obtenido de cache local: {cache_key}")
+                return agent_config
+
+            # 2) Cache Redis
+            cached_config = await self.cache_manager.get(
+                cache_type="agent_config",
+                context=[str(agent_id)]
+            )
+            if cached_config:
+                self._local_cache[cache_key] = (cached_config, self._get_timestamp())
+                self._logger.debug(f"AgentConfig obtenido de cache Redis: {cache_key}")
+                return cached_config
+
+            # 3) Supabase: primero como público, luego fallback con service key
+            self._logger.info(f"Obteniendo AgentConfig de Supabase: {cache_key}")
+            agent_config = await self.supabase_client.get_public_agent_config(str(agent_id))
+            if not agent_config and self.supabase_client.admin_client:
+                self._logger.info(f"Intentando obtener agente privado con service key: {agent_id}")
+                agent_config = await self.supabase_client.get_agent_config(str(agent_id))
+
+            if not agent_config:
+                self._logger.warning(f"Agente no encontrado o no es público: {agent_id}")
+                return None
+
+            # 4) Guardar en caches
+            await self._save_to_cache(agent_id, agent_config)
+            return agent_config
+        except Exception as e:
+            self._logger.error(f"Error obteniendo AgentConfig: {e}")
+            return None
     
     async def invalidate_agent_config(
         self,
