@@ -2,8 +2,10 @@
 Servicio de persistencia con Supabase.
 """
 import logging
+import asyncio
 from typing import Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, date
+import uuid
 
 from common.supabase import SupabaseClient, SupabaseError
 from conversation_service.models.conversation import Conversation, Message
@@ -17,6 +19,43 @@ class PersistenceService:
     def __init__(self, supabase_client: SupabaseClient):
         self.supabase = supabase_client
         self._logger = logging.getLogger(f"{__name__}.PersistenceService")
+    
+    def _to_jsonable(self, obj: Any) -> Any:
+        """Convierte recursivamente objetos a tipos JSON-serializables.
+        - datetime/date -> isoformat str
+        - uuid.UUID -> str
+        - dict/list/tuple -> procesa recursivamente
+        - pydantic BaseModel -> model_dump(mode="json")
+        """
+        try:
+            # Evitar coste en tipos triviales
+            if obj is None or isinstance(obj, (str, int, float, bool)):
+                return obj
+
+            if isinstance(obj, (datetime, date)):
+                return obj.isoformat()
+
+            if isinstance(obj, uuid.UUID):
+                return str(obj)
+
+            # Colecciones
+            if isinstance(obj, dict):
+                return {str(k): self._to_jsonable(v) for k, v in obj.items()}
+            if isinstance(obj, (list, tuple, set)):
+                return [self._to_jsonable(v) for v in obj]
+
+            # Pydantic v2: usar model_dump si está disponible
+            if hasattr(obj, "model_dump"):
+                try:
+                    return obj.model_dump(mode="json")
+                except Exception:
+                    return obj.model_dump()
+
+            # Fallback genérico
+            return str(obj)
+        except Exception:
+            # En caso de error de sanitización, devolvemos string
+            return str(obj)
     
     async def save_conversation_exchange(
         self,
@@ -58,12 +97,15 @@ class PersistenceService:
                 agent_id=agent_id
             )
             
+            # Sanitizar metadata para asegurar JSON serializable
+            safe_metadata: Dict[str, Any] = self._to_jsonable(metadata or {})
+
             # 2. Guardar mensaje del usuario
             user_msg = Message(
                 conversation_id=conversation_id,
                 role="user",
                 content=user_message,
-                metadata=metadata or {}
+                metadata=safe_metadata
             )
             
             await self._save_message(user_msg)
@@ -73,7 +115,7 @@ class PersistenceService:
                 conversation_id=conversation_id,
                 role="assistant",
                 content=agent_message,
-                metadata=metadata or {}
+                metadata=safe_metadata
             )
             
             await self._save_message(agent_msg)
@@ -122,16 +164,22 @@ class PersistenceService:
                 return False
             
             # Buscar y actualizar conversación activa
-            response = await self.supabase.client.table('conversations')\
+            write_client = getattr(self.supabase, 'admin_client', None)
+            if not write_client:
+                self._logger.error("Supabase admin_client no está configurado. Asegúrate de definir SERVICE_ROLE_KEY.")
+                return False
+            response = await asyncio.to_thread(
+                lambda: write_client.table('conversations')
                 .update({
                     "is_active": False,
                     "ended_at": datetime.utcnow().isoformat()
-                })\
-                .eq('tenant_id', tenant_id)\
-                .eq('session_id', session_id)\
-                .eq('agent_id', agent_id)\
-                .eq('is_active', True)\
+                })
+                .eq('tenant_id', tenant_id)
+                .eq('session_id', session_id)
+                .eq('agent_id', agent_id)
+                .eq('is_active', True)
                 .execute()
+            )
             
             if response.data:
                 self._logger.info(
@@ -168,12 +216,18 @@ class PersistenceService:
     ) -> Conversation:
         """Obtiene o crea una conversación."""
         try:
+            # Usar SIEMPRE admin_client para evitar RLS
+            read_client = getattr(self.supabase, 'admin_client', None)
+            if not read_client:
+                raise SupabaseError("admin_client no disponible. Configura SERVICE_ROLE_KEY.")
             # Intentar obtener conversación existente
-            response = await self.supabase.client.table('conversations')\
-                .select('*')\
-                .eq('id', conversation_id)\
-                .single()\
+            response = await asyncio.to_thread(
+                lambda: read_client.table('conversations')
+                .select('*')
+                .eq('id', conversation_id)
+                .single()
                 .execute()
+            )
             
             if response.data:
                 return Conversation(**response.data)
@@ -190,15 +244,25 @@ class PersistenceService:
             agent_id=agent_id
         )
         
-        await self.supabase.client.table('conversations')\
-            .insert(new_conversation.model_dump())\
+        write_client = getattr(self.supabase, 'admin_client', None)
+        if not write_client:
+            raise SupabaseError("admin_client no disponible. Configura SERVICE_ROLE_KEY.")
+        await asyncio.to_thread(
+            lambda: write_client.table('conversations')
+            .insert(new_conversation.model_dump(mode="json"))
             .execute()
+        )
         
         self._logger.info(f"Nueva conversación creada: {conversation_id}")
         return new_conversation
-    
+
     async def _save_message(self, message: Message) -> None:
         """Guarda un mensaje en Supabase."""
-        await self.supabase.client.table('messages')\
-            .insert(message.model_dump())\
+        write_client = getattr(self.supabase, 'admin_client', None)
+        if not write_client:
+            raise SupabaseError("admin_client no disponible. Configura SERVICE_ROLE_KEY.")
+        await asyncio.to_thread(
+            lambda: write_client.table('messages')
+            .insert(message.model_dump(mode="json"))
             .execute()
+        )

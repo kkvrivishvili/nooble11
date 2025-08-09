@@ -2,7 +2,8 @@
 Configuración para Conversation Service.
 """
 from typing import Optional
-from pydantic import Field
+import os
+from pydantic import Field, field_validator
 from common.config import CommonAppSettings
 
 
@@ -15,8 +16,25 @@ class ConversationSettings(CommonAppSettings):
     
     # Supabase
     supabase_url: str = Field(..., description="URL de Supabase", env="SUPABASE_URL")
-    supabase_anon_key: str = Field(..., description="Clave anónima de Supabase", env="SUPABASE_ANON_KEY")
+    supabase_anon_key: Optional[str] = Field(
+        default=None,
+        description="Clave anónima de Supabase (opcional en este servicio)",
+        env="SUPABASE_ANON_KEY",
+    )
     supabase_service_key: Optional[str] = Field(None, description="Clave de servicio", env="SUPABASE_SERVICE_KEY")
+    
+    # Compatibilidad: aceptar nombres alternativos para la clave de servicio
+    @field_validator("supabase_service_key", mode="before")
+    def _fallback_service_key(cls, v):
+        if v:
+            return v
+        # Fallback a nombres comunes en distintos servicios/entornos
+        return (
+            os.getenv("SUPABASE_SERVICE_KEY")
+            or os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+            or os.getenv("SERVICE_ROLE_KEY")
+            or None
+        )
     
     # Workers
     worker_count: int = Field(default=2, description="Número de workers")

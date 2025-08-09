@@ -641,7 +641,7 @@ services:
       # Supabase configuration
       - SUPABASE_URL=http://kong:8000
       - SUPABASE_ANON_KEY=${ANON_KEY}
-      - SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
+      #- SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
       - JWT_SECRET=${JWT_SECRET}
       # Redis configuration
       - REDIS_HOST=redis_database
@@ -679,6 +679,9 @@ services:
     expose:
       - "8004"
     environment:
+      # Supabase (override URL for in-network access via Kong)
+      - SUPABASE_URL=http://kong:8000
+      - SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
       - REDIS_HOST=redis_database
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD}

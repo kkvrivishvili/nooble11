@@ -31,7 +31,7 @@ class SupabaseClient:
     def __init__(
         self,
         url: str,
-        anon_key: str,
+        anon_key: Optional[str] = None,
         service_key: Optional[str] = None,
         app_settings: Optional[CommonAppSettings] = None
     ):
@@ -60,19 +60,34 @@ class SupabaseClient:
                 persist_session=False
             )
             
-            self.client = create_client(url, anon_key, client_options)
+            self.client = None
             self.admin_client = None
+            # Crear admin_client si hay service_key
             if service_key:
                 self.admin_client = create_client(url, service_key, client_options)
+            # Preferir anon si está disponible; si no, usar service_key como client principal
+            if anon_key:
+                self.client = create_client(url, anon_key, client_options)
+            elif service_key:
+                # Fallback seguro en procesos server-to-server
+                self.client = self.admin_client
+            else:
+                raise ValueError("Supabase keys missing: provide at least anon_key or service_key")
             
             self.logger.info(f"Supabase client initialized with URL: {url}")
         except Exception as e:
             self.logger.warning(f"Supabase client initialization warning: {e}")
             # Create a minimal client that might still work for auth verification
-            self.client = create_client(url, anon_key)
+            self.client = None
             self.admin_client = None
             if service_key:
                 self.admin_client = create_client(url, service_key)
+            if anon_key:
+                self.client = create_client(url, anon_key)
+            elif self.admin_client is not None:
+                self.client = self.admin_client
+            else:
+                raise
         
         self.logger.info("Supabase client initialized")
     

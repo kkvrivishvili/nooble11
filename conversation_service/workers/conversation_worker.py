@@ -60,15 +60,35 @@ class ConversationWorker(BaseWorker):
         - {service_name}.message.create: Guardar mensajes (fire-and-forget)
         - {service_name}.session.closed: Marcar sesión como cerrada (fire-and-forget)
         """
-        action_type = action.action_type
+        action_type_raw = action.action_type or ""
+        action_type = action_type_raw.strip().lower()
         
         try:
             # Prefijo dinámico según configuración del servicio (p. ej., "conversation_service")
-            service_prefix = self.settings.service_name
-            message_create_type = f"{service_prefix}.message.create"
-            session_closed_type = f"{service_prefix}.session.closed"
+            service_prefix = (self.settings.service_name or "").strip()
+            message_create_type_dynamic = f"{service_prefix}.message.create".strip().lower() if service_prefix else ""
+            session_closed_type_dynamic = f"{service_prefix}.session.closed".strip().lower() if service_prefix else ""
 
-            if action_type == message_create_type:
+            # Tipos estáticos esperados desde Execution Service
+            message_create_type_static = "conversation_service.message.create"
+            session_closed_type_static = "conversation_service.session.closed"
+
+            supported_message_create = {t for t in [message_create_type_static, message_create_type_dynamic] if t}
+            supported_session_closed = {t for t in [session_closed_type_static, session_closed_type_dynamic] if t}
+
+            # Log de ruteo para diagnóstico
+            self.logger.debug(
+                "[ROUTING] Evaluando tipo de acción",
+                extra={
+                    "received_type": action_type_raw,
+                    "normalized_type": action_type,
+                    "expected_create": list(supported_message_create),
+                    "expected_closed": list(supported_session_closed),
+                    "service_name": service_prefix,
+                },
+            )
+
+            if action_type in supported_message_create:
                 # Validar datos requeridos
                 data = action.data
                 required_fields = ["conversation_id", "user_message", "agent_message"]
@@ -109,7 +129,7 @@ class ConversationWorker(BaseWorker):
                 
                 return None  # Fire-and-forget
             
-            elif action_type == session_closed_type:
+            elif action_type in supported_session_closed:
                 # Fire-and-forget: marcar sesión cerrada
                 success = await self.persistence_service.mark_conversation_ended(
                     tenant_id=str(action.tenant_id),
@@ -139,7 +159,11 @@ class ConversationWorker(BaseWorker):
             else:
                 self.logger.warning(
                     f"Acción no soportada: {action_type}",
-                    extra={"action_id": str(action.action_id)}
+                    extra={
+                        "action_id": str(action.action_id),
+                        "expected_create": list(supported_message_create),
+                        "expected_closed": list(supported_session_closed),
+                    }
                 )
                 return None
                 

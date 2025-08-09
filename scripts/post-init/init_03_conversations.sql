@@ -2,6 +2,13 @@
 -- Version: 5.0 - Snake Case
 -- Description: Conversations and messages for agent interactions with snake_case convention
 
+-- Cleanup: drop dependent objects and tables (recreate from scratch)
+create extension if not exists "pgcrypto";
+drop view if exists public.conversation_summary cascade;
+drop function if exists public.update_conversation_message_count() cascade;
+drop table if exists public.messages cascade;
+drop table if exists public.conversations cascade;
+
 -- Step 1: Create conversations table
 CREATE TABLE public.conversations (
   id uuid PRIMARY KEY, -- Deterministic: uuid5(namespace, tenant:session:agent)
@@ -42,10 +49,10 @@ CREATE INDEX idx_messages_conversation ON public.messages(conversation_id);
 CREATE INDEX idx_messages_created ON public.messages(created_at);
 
 -- Step 4: Function to update message count
-CREATE OR REPLACE FUNCTION update_conversation_message_count()
+CREATE OR REPLACE FUNCTION public.update_conversation_message_count()
 RETURNS TRIGGER AS $$
 BEGIN
-  UPDATE conversations 
+  UPDATE public.conversations 
   SET message_count = message_count + 1,
       last_message_at = NEW.created_at
   WHERE id = NEW.conversation_id;
@@ -55,10 +62,10 @@ $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER update_message_count_on_insert
   AFTER INSERT ON public.messages
-  FOR EACH ROW EXECUTE FUNCTION update_conversation_message_count();
+  FOR EACH ROW EXECUTE FUNCTION public.update_conversation_message_count();
 
 -- Step 5: View for conversation summary
-CREATE OR REPLACE VIEW conversation_summary AS
+CREATE OR REPLACE VIEW public.conversation_summary AS
 SELECT 
   c.id,
   c.tenant_id,
@@ -77,19 +84,27 @@ SELECT
   END as duration,
   COUNT(m.id) FILTER (WHERE m.role = 'user') as user_messages,
   COUNT(m.id) FILTER (WHERE m.role = 'assistant') as agent_messages
-FROM conversations c
-LEFT JOIN agents a ON c.agent_id = a.id
-LEFT JOIN messages m ON c.id = m.conversation_id
+FROM public.conversations c
+LEFT JOIN public.agents a ON c.agent_id = a.id
+LEFT JOIN public.messages m ON c.id = m.conversation_id
 GROUP BY c.id, a.name;
 
 -- Step 6: Auto-close old conversations (3 months)
-CREATE OR REPLACE FUNCTION auto_close_old_conversations()
+CREATE OR REPLACE FUNCTION public.auto_close_old_conversations()
 RETURNS void AS $$
 BEGIN
-  UPDATE conversations
+  UPDATE public.conversations
   SET is_active = false,
       ended_at = last_message_at
   WHERE is_active = true
     AND last_message_at < now() - interval '3 months';
 END;
 $$ LANGUAGE plpgsql;
+
+-- Step 7: Privileges for service_role (backend only)
+GRANT USAGE ON SCHEMA public TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.conversations TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.messages TO service_role;
+
+-- Refresh PostgREST schema cache
+select pg_notify('pgrst', 'reload schema');
