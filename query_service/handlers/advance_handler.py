@@ -198,9 +198,11 @@ class AdvanceHandler(BaseHandler):
         if query_config.top_p is None:  
             raise AppValidationError("Umbral de probabilidad es requerido")
         if query_config.frequency_penalty is None:  
-            raise AppValidationError("Penalización de frecuencia es requerida")
+            # Aceptar None asignando el default del modelo (0.0)
+            query_config.frequency_penalty = 0.0
         if query_config.presence_penalty is None:  
-            raise AppValidationError("Penalización de presencia es requerida")
+            # Aceptar None asignando el default del modelo (0.0)
+            query_config.presence_penalty = 0.0
     
         # Validar valores válidos
         if query_config.temperature < 0 or query_config.temperature > 1:
