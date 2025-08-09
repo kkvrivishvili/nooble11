@@ -89,6 +89,37 @@ class ExecutionClient:
             }
         )
         
+        # Logs estructurados para diferenciar headers (DomainAction) vs payload (data)
+        try:
+            self._logger.info(
+                "[ExecutionClient] Prepared DomainAction for execution",
+                extra={
+                    "action_id": str(action.action_id),
+                    "action_type": action_type,
+                    "headers": {
+                        "tenant_id": str(tenant_id),
+                        "session_id": str(session_id),
+                        "task_id": str(task_id),
+                        "agent_id": str(agent_id),
+                        "user_id": str(user_id) if user_id else None,
+                        "origin_service": self.settings.service_name,
+                        "callback_action_type": "orchestrator.chat.response"
+                    },
+                    "configs_present": {
+                        "execution_config": execution_config is not None,
+                        "query_config": query_config is not None,
+                        "rag_config": rag_config is not None,
+                    },
+                    "payload_summary": {
+                        "keys": list(action.data.keys()) if isinstance(action.data, dict) else [],
+                        "messages_count": len(messages) if isinstance(messages, list) else 0
+                    }
+                }
+            )
+        except Exception:
+            # No bloquear envío por errores de logging
+            pass
+
         # Enviar asíncronamente con callback
         await self.redis_client.send_action_async_with_callback(
             action=action,

@@ -87,7 +87,7 @@ class QueryClient:
                     "action_id": str(action.action_id),
                     "error_detail": error_detail.model_dump() if error_detail else None
                 })
-                raise ExternalServiceError(error_message, error_detail=error_detail)
+                raise ExternalServiceError(error_message)
                 
             return response.data
             
@@ -141,7 +141,7 @@ class QueryClient:
                     "action_id": str(action.action_id),
                     "error_detail": error_detail.model_dump() if error_detail else None
                 })
-                raise ExternalServiceError(error_message, error_detail=error_detail)
+                raise ExternalServiceError(error_message)
                 
             return response.data
             
@@ -197,7 +197,7 @@ class QueryClient:
                     "action_id": str(action.action_id),
                     "error_detail": error_detail.model_dump() if error_detail else None
                 })
-                raise ExternalServiceError(error_message, error_detail=error_detail)
+                raise ExternalServiceError(error_message)
                 
             return response.data
             

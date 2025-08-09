@@ -82,6 +82,37 @@ class ExecutionService(BaseService):
 
             self._validate_action(action)
 
+            # Log estructurado para verificar headers vs payload
+            try:
+                payload_keys = list(action.data.keys()) if isinstance(action.data, dict) else []
+                messages_count = len(action.data.get("messages", [])) if isinstance(action.data, dict) and isinstance(action.data.get("messages"), list) else None
+                self._logger.debug(
+                    "[ExecutionService] Action envelope received",
+                    extra={
+                        "action_id": str(action.action_id),
+                        "action_type": action_type,
+                        "headers": {
+                            "tenant_id": str(action.tenant_id) if action.tenant_id else None,
+                            "session_id": str(action.session_id) if action.session_id else None,
+                            "task_id": str(action.task_id) if action.task_id else None,
+                            "agent_id": str(action.agent_id) if action.agent_id else None,
+                            "origin_service": action.origin_service,
+                            "callback_action_type": action.callback_action_type
+                        },
+                        "configs_present": {
+                            "execution_config": action.execution_config is not None,
+                            "query_config": action.query_config is not None,
+                            "rag_config": action.rag_config is not None,
+                        },
+                        "payload_summary": {
+                            "keys": payload_keys,
+                            "messages_count": messages_count
+                        }
+                    }
+                )
+            except Exception:
+                pass
+
             if action_type == "execution.chat.simple":
                 return await self._handle_simple_chat(action)
             

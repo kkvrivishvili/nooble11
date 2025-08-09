@@ -11,7 +11,7 @@ import logging
 import uuid
 from typing import Optional, List
 
-from common.models.chat_models import ConversationHistory, ChatMessage
+from common.models.chat_models import ConversationHistory, ChatMessage, SessionType
 from common.clients.redis.cache_manager import CacheManager
 from ..clients.conversation_client import ConversationClient
 
@@ -132,11 +132,14 @@ class ConversationHelper:
             )
             return history
         
-        # Crear nueva conversación
+        # Crear nueva conversación (sin historial previo en cache)
+        # Nota: establecemos session_type=CHAT para permitir que una sesión de chat
+        # arranque correctamente aún cuando la caché esté fría.
         history = ConversationHistory(
             conversation_id=conversation_id,
             tenant_id=tenant_id,
             session_id=session_id,
+            session_type=SessionType.CHAT,
             agent_id=agent_id
         )
         

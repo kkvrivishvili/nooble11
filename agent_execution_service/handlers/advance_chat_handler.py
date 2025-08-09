@@ -94,17 +94,32 @@ class AdvanceChatHandler:
         Returns:
             Respuesta del chat
         """
-        # Parsear ChatRequest
+        # Parsear ChatRequest (solo datos de chat)
         chat_request = ChatRequest.model_validate(payload)
-        chat_request.tenant_id = tenant_id
-        chat_request.session_id = session_id
-        chat_request.task_id = task_id
-        chat_request.agent_id = agent_id
+
+        # Procesar el chat con IDs de contexto explícitos
+        return await self._process_chat(
+            chat_request,
+            execution_config,
+            tenant_id,
+            session_id,
+            task_id,
+            agent_id,
+            query_config,
+            rag_config,
+        )
         
-        # Procesar el chat con la configuración recibida
-        return await self._process_chat(chat_request, execution_config, query_config, rag_config)
-        
-    async def _process_chat(self, chat_request: ChatRequest, execution_config, query_config=None, rag_config=None) -> ChatResponse:
+    async def _process_chat(
+        self,
+        chat_request: ChatRequest,
+        execution_config,
+        tenant_id: uuid.UUID,
+        session_id: uuid.UUID,
+        task_id: uuid.UUID,
+        agent_id: uuid.UUID,
+        query_config=None,
+        rag_config=None,
+    ) -> ChatResponse:
         """
         Procesa una solicitud de chat avanzado con herramientas.
         
@@ -120,19 +135,19 @@ class AdvanceChatHandler:
             self._logger.info(
                 "Iniciando procesamiento de chat avanzado",
                 extra={
-                    "tenant_id": str(chat_request.tenant_id),
-                    "session_id": str(chat_request.session_id),
-                    "agent_id": str(chat_request.agent_id),
-                    "task_id": str(chat_request.task_id),
+                    "tenant_id": str(tenant_id),
+                    "session_id": str(session_id),
+                    "agent_id": str(agent_id),
+                    "task_id": str(task_id),
                     "messages_count": len(chat_request.messages)
                 }
             )
             
             # 1. Obtener o crear conversación
             history = await self.conversation_helper.get_or_create_conversation(
-                tenant_id=chat_request.tenant_id,
-                session_id=chat_request.session_id,
-                agent_id=chat_request.agent_id
+                tenant_id=tenant_id,
+                session_id=session_id,
+                agent_id=agent_id
             )
             
             # 2. Separar mensajes por tipo
@@ -151,6 +166,10 @@ class AdvanceChatHandler:
                 messages=integrated_messages,
                 chat_request=chat_request,
                 execution_config=execution_config,
+                tenant_id=tenant_id,
+                session_id=session_id,
+                task_id=task_id,
+                agent_id=agent_id,
                 query_config=query_config,
                 rag_config=rag_config
             )
@@ -192,13 +211,13 @@ class AdvanceChatHandler:
             
             # 7. Guardar intercambio completo
             await self.conversation_helper.save_conversation_exchange(
-                tenant_id=chat_request.tenant_id,
-                session_id=chat_request.session_id,
-                agent_id=chat_request.agent_id,
+                tenant_id=tenant_id,
+                session_id=session_id,
+                agent_id=agent_id,
                 history=history,
                 user_message=last_user_message,
                 assistant_message=response_message,
-                task_id=chat_request.task_id,
+                task_id=task_id,
                 ttl=execution_config.history_ttl,
                 metadata={
                     "mode": "advance",
@@ -212,7 +231,7 @@ class AdvanceChatHandler:
                 "Chat avanzado procesado exitosamente",
                 extra={
                     "conversation_id": history.conversation_id,
-                    "task_id": str(chat_request.task_id),
+                    "task_id": str(task_id),
                     "execution_time_seconds": execution_time,
                     "react_iterations": len(iterations_metadata),
                     "response_length": len(response_message.content)
@@ -226,10 +245,10 @@ class AdvanceChatHandler:
             self._logger.error(
                 "Error procesando chat avanzado",
                 extra={
-                    "tenant_id": str(chat_request.tenant_id),
-                    "session_id": str(chat_request.session_id),
-                    "agent_id": str(chat_request.agent_id),
-                    "task_id": str(chat_request.task_id),
+                    "tenant_id": str(tenant_id),
+                    "session_id": str(session_id),
+                    "agent_id": str(agent_id),
+                    "task_id": str(task_id),
                     "execution_time_seconds": execution_time,
                     "error": str(e)
                 }
@@ -241,6 +260,10 @@ class AdvanceChatHandler:
         messages: List[ChatMessage],
         chat_request: ChatRequest,
         execution_config,
+        tenant_id: uuid.UUID,
+        session_id: uuid.UUID,
+        task_id: uuid.UUID,
+        agent_id: uuid.UUID,
         query_config,
         rag_config
     ) -> tuple[Dict[str, Any], List[Dict[str, Any]]]:
@@ -274,14 +297,19 @@ class AdvanceChatHandler:
             iteration_start = time.time()
             
             try:
-                # Preparar payload para query service
+                # Preparar payload para query service (solo campos válidos para ChatRequest)
                 payload = {
-                    "messages": [msg.dict() for msg in current_messages],
-                    "agent_id": str(chat_request.agent_id),
-                    "session_id": str(chat_request.session_id),
-                    "task_id": str(chat_request.task_id),
-                    "iteration": iteration + 1
+                    "messages": [msg.dict() for msg in current_messages]
                 }
+                if chat_request.tools is not None:
+                    payload["tools"] = chat_request.tools
+                if chat_request.tool_choice is not None:
+                    payload["tool_choice"] = chat_request.tool_choice
+                if chat_request.metadata:
+                    payload["metadata"] = chat_request.metadata
+                # Opcional: conversation_id para tracking
+                if chat_request.conversation_id is not None:
+                    payload["conversation_id"] = str(chat_request.conversation_id)
                 
                 # Enviar al query service con timeout
                 query_response = await asyncio.wait_for(
@@ -289,10 +317,10 @@ class AdvanceChatHandler:
                         payload=payload,
                         query_config=query_config,
                         rag_config=rag_config,
-                        tenant_id=chat_request.tenant_id,
-                        session_id=chat_request.session_id,
-                        task_id=chat_request.task_id,
-                        agent_id=chat_request.agent_id
+                        tenant_id=tenant_id,
+                        session_id=session_id,
+                        task_id=task_id,
+                        agent_id=agent_id
                     ),
                     timeout=timeout_seconds
                 )

@@ -73,6 +73,26 @@ class ChatHandler(BaseHandler):
             
             # 4. Determinar modo
             mode = "advance" if message_request.tools else "simple"
+
+            # 4.1 Log de resumen del payload que se enviará a execution
+            try:
+                self._logger.debug(
+                    "[Orchestrator.ChatHandler] Payload summary to execution",
+                    extra={
+                        "task_id": str(task_id),
+                        "session_id": str(session_state.session_id),
+                        "agent_id": str(session_state.agent_id),
+                        "tenant_id": str(session_state.tenant_id),
+                        "mode": mode,
+                        "messages_count": len(messages),
+                        "has_tools": bool(message_request.tools),
+                        "has_tool_choice": bool(message_request.tool_choice is not None),
+                        "conversation_id": str(message_request.conversation_id) if message_request.conversation_id else None,
+                        "metadata_keys": list(message_request.metadata.keys()) if message_request.metadata else []
+                    }
+                )
+            except Exception:
+                pass
             
             # 5. Notificar inicio
             await self.websocket_manager.send_to_session(

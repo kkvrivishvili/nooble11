@@ -65,8 +65,12 @@ class SimpleChatHandler:
         self,
         payload: Dict[str, Any],
         execution_config,
-        query_config=None,
-        rag_config=None,
+        query_config,
+        rag_config,
+        tenant_id: uuid.UUID,
+        session_id: uuid.UUID,
+        task_id: uuid.UUID,
+        agent_id: uuid.UUID,
         
     ) -> ChatResponse:
         """
@@ -82,22 +86,50 @@ class SimpleChatHandler:
             ChatResponse: Respuesta del chat
         """
         try:
-            # Validar y parsear el payload
+            # Validar y parsear el payload (solo datos de chat)
             chat_request = ChatRequest(**payload)
-            
+
+            # Logs estructurados del request (sin contenido de mensajes)
             self.logger.info(
-                f"Processing simple chat for tenant {chat_request.tenant_id}, "
-                f"session {chat_request.session_id}, agent {chat_request.agent_id}"
+                "Processing simple chat",
+                extra={
+                    "tenant_id": str(tenant_id),
+                    "session_id": str(session_id),
+                    "agent_id": str(agent_id),
+                    "task_id": str(task_id),
+                    "messages_count": len(chat_request.messages),
+                    "has_tools": bool(chat_request.tools),
+                    "has_tool_choice": bool(chat_request.tool_choice is not None)
+                }
             )
             
-            # Procesar el chat
-            return await self._process_chat(chat_request, execution_config, query_config, rag_config)
+            # Procesar el chat con IDs de contexto explícitos
+            return await self._process_chat(
+                chat_request,
+                execution_config,
+                tenant_id,
+                session_id,
+                task_id,
+                agent_id,
+                query_config,
+                rag_config,
+            )
             
         except Exception as e:
             self.logger.error(f"Error in handle_simple_chat: {str(e)}")
             raise
 
-    async def _process_chat(self, chat_request: ChatRequest, execution_config, query_config=None, rag_config=None) -> ChatResponse:
+    async def _process_chat(
+        self,
+        chat_request: ChatRequest,
+        execution_config,
+        tenant_id: uuid.UUID,
+        session_id: uuid.UUID,
+        task_id: uuid.UUID,
+        agent_id: uuid.UUID,
+        query_config=None,
+        rag_config=None,
+    ) -> ChatResponse:
         """
         Procesa una solicitud de chat simple.
         
@@ -111,19 +143,19 @@ class SimpleChatHandler:
             self.logger.info(
                 "Iniciando procesamiento de chat simple",
                 extra={
-                    "tenant_id": str(chat_request.tenant_id),
-                    "session_id": str(chat_request.session_id),
-                    "agent_id": str(chat_request.agent_id),
-                    "task_id": str(chat_request.task_id),
+                    "tenant_id": str(tenant_id),
+                    "session_id": str(session_id),
+                    "agent_id": str(agent_id),
+                    "task_id": str(task_id),
                     "messages_count": len(chat_request.messages)
                 }
             )
             
             # 1. Obtener o crear conversación
             history = await self.conversation_helper.get_or_create_conversation(
-                tenant_id=chat_request.tenant_id,
-                session_id=chat_request.session_id,
-                agent_id=chat_request.agent_id
+                tenant_id=tenant_id,
+                session_id=session_id,
+                agent_id=agent_id
             )
             
             # 2. Separar mensajes por tipo
@@ -137,20 +169,25 @@ class SimpleChatHandler:
                 user_messages=user_messages
             )
             
-            # 4. Preparar payload para query service
+            # 4. Preparar payload para query service (solo campos válidos para ChatRequest)
             payload = {
-                "messages": [msg.dict() for msg in integrated_messages],
-                "agent_id": str(chat_request.agent_id),
-                "session_id": str(chat_request.session_id),
-                "task_id": str(chat_request.task_id)
+                "messages": [msg.dict() for msg in integrated_messages]
             }
+            if chat_request.tools is not None:
+                payload["tools"] = chat_request.tools
+            if chat_request.tool_choice is not None:
+                payload["tool_choice"] = chat_request.tool_choice
+            if chat_request.metadata:
+                payload["metadata"] = chat_request.metadata
+            # Opcionalmente incluimos conversation_id para tracking
+            payload["conversation_id"] = str(history.conversation_id)
             
             self.logger.debug(
                 "Payload preparado para query service",
                 extra={
-                    "agent_id": str(chat_request.agent_id),
+                    "agent_id": str(agent_id),
                     "total_messages": len(integrated_messages),
-                    "task_id": str(chat_request.task_id)
+                    "task_id": str(task_id)
                 }
             )
             
@@ -159,10 +196,10 @@ class SimpleChatHandler:
                 payload=payload,
                 query_config=query_config,
                 rag_config=rag_config,
-                tenant_id=chat_request.tenant_id,
-                session_id=chat_request.session_id,
-                task_id=chat_request.task_id,
-                agent_id=chat_request.agent_id
+                tenant_id=tenant_id,
+                session_id=session_id,
+                task_id=task_id,
+                agent_id=agent_id
             )
             
             # 6. Crear respuesta completa
@@ -196,13 +233,13 @@ class SimpleChatHandler:
             
             # 8. Guardar intercambio completo
             await self.conversation_helper.save_conversation_exchange(
-                tenant_id=chat_request.tenant_id,
-                session_id=chat_request.session_id,
-                agent_id=chat_request.agent_id,
+                tenant_id=tenant_id,
+                session_id=session_id,
+                agent_id=agent_id,
                 history=history,
                 user_message=last_user_message,
                 assistant_message=response_message,
-                task_id=chat_request.task_id,
+                task_id=task_id,
                 ttl=execution_config.history_ttl,
                 metadata={
                     "mode": "simple",
@@ -214,7 +251,7 @@ class SimpleChatHandler:
                 "Chat simple procesado exitosamente",
                 extra={
                     "conversation_id": history.conversation_id,
-                    "task_id": str(chat_request.task_id),
+                    "task_id": str(task_id),
                     "response_length": len(response_message.content)
                 }
             )
@@ -225,10 +262,10 @@ class SimpleChatHandler:
             self.logger.error(
                 "Error procesando chat simple",
                 extra={
-                    "tenant_id": str(chat_request.tenant_id),
-                    "session_id": str(chat_request.session_id),
-                    "agent_id": str(chat_request.agent_id),
-                    "task_id": str(chat_request.task_id),
+                    "tenant_id": str(tenant_id),
+                    "session_id": str(session_id),
+                    "agent_id": str(agent_id),
+                    "task_id": str(task_id),
                     "error": str(e)
                 }
             )

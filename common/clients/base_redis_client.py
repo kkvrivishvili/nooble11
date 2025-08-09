@@ -54,6 +54,19 @@ class BaseRedisClient:
             
             message_payload = {'data': action.model_dump_json()} # MODIFIED: Payload for XADD
 
+            # Debug: preview del JSON exacto que se enviará al stream
+            try:
+                logger.debug(
+                    "[BaseRedisClient] send_action_async payload preview",
+                    extra={
+                        "action_type": action.action_type,
+                        "target_stream": stream_name,
+                        "json_preview": message_payload['data'][:1000]
+                    }
+                )
+            except Exception:
+                pass
+
             # Use the async client to add to stream
             message_id = await self.redis_client.xadd(stream_name, message_payload) # MODIFIED: XADD
             
@@ -97,6 +110,19 @@ class BaseRedisClient:
             action_stream_name = self.queue_manager.get_service_action_stream(service_name=target_service) # MODIFIED
             
             message_payload = {'data': action.model_dump_json()} # MODIFIED: Payload for XADD
+
+            # Debug: preview del JSON exacto que se enviará al stream
+            try:
+                logger.debug(
+                    "[BaseRedisClient] send_action_pseudo_sync payload preview",
+                    extra={
+                        "action_type": action.action_type,
+                        "target_stream": action_stream_name,
+                        "json_preview": message_payload['data'][:1000]
+                    }
+                )
+            except Exception:
+                pass
 
             message_id = await self.redis_client.xadd(action_stream_name, message_payload) # MODIFIED: XADD
             logger.info(f"Acción pseudo-síncrona {action.action_id} enviada al stream {action_stream_name} con ID de mensaje Redis: {message_id}. Esperando respuesta en {response_queue}.") # MODIFIED, Issue 9
@@ -162,6 +188,20 @@ class BaseRedisClient:
             action_stream_name = self.queue_manager.get_service_action_stream(service_name=target_service)
             
             message_payload = {'data': action.model_dump_json()}
+
+            # Debug: preview del JSON exacto que se enviará al stream
+            try:
+                logger.debug(
+                    "[BaseRedisClient] send_action_async_with_callback payload preview",
+                    extra={
+                        "action_type": action.action_type,
+                        "target_stream": action_stream_name,
+                        "callback_queue": action.callback_queue_name,
+                        "json_preview": message_payload['data'][:1000]
+                    }
+                )
+            except Exception:
+                pass
 
             logger.info(f"Enviando acción asíncrona con callback {action.action_id} al stream {action_stream_name}. Callback en {action.callback_queue_name}")
             message_id = await self.redis_client.xadd(action_stream_name, message_payload)
