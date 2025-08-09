@@ -45,6 +45,10 @@ class BaseWebSocketManager(ConnectionManagerProtocol):
         self.namespace = namespace
         self.logger = logger or logging.getLogger(f"websocket.{namespace}")
         
+        # Optional protocols (can be set by subclasses/composition)
+        self.auth_protocol = None
+        self.rate_limit_protocol = None
+        
         # Storage for active connections
         self._connections: Dict[str, tuple[WebSocket, ConnectionInfo]] = {}
         self._connection_lock = asyncio.Lock()

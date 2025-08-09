@@ -4,12 +4,12 @@ Usa DomainActions para comunicación asíncrona.
 """
 import logging
 import uuid
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List, Union, Literal
 
 from common.clients.base_redis_client import BaseRedisClient
 from common.models.actions import DomainAction
 from common.models.config_models import ExecutionConfig, QueryConfig, RAGConfig
-from common.models.chat_models import ChatRequest
+from common.models.chat_models import ChatMessage
 
 from ..config.settings import OrchestratorSettings
 
@@ -33,7 +33,19 @@ class ExecutionClient:
     
     async def execute_chat(
         self,
-        chat_request: ChatRequest,
+        # Contexto
+        tenant_id: uuid.UUID,
+        session_id: uuid.UUID,
+        task_id: uuid.UUID,
+        agent_id: uuid.UUID,
+        user_id: Optional[uuid.UUID],
+        # Datos del chat
+        messages: List[Dict[str, Any]],
+        tools: Optional[List[Dict[str, Any]]],
+        tool_choice: Optional[Union[Literal["none", "auto"], Dict[str, Any]]],
+        conversation_id: Optional[uuid.UUID],
+        metadata: Dict[str, Any],
+        # Configuraciones
         execution_config: ExecutionConfig,
         query_config: QueryConfig,
         rag_config: RAGConfig,
@@ -55,11 +67,11 @@ class ExecutionClient:
         # Crear DomainAction con configuraciones separadas
         action = DomainAction(
             action_type=action_type,
-            tenant_id=chat_request.tenant_id,
-            session_id=chat_request.session_id,
-            task_id=chat_request.task_id,
-            agent_id=chat_request.agent_id,
-            user_id=chat_request.user_id,
+            tenant_id=tenant_id,
+            session_id=session_id,
+            task_id=task_id,
+            agent_id=agent_id,
+            user_id=user_id,
             origin_service=self.settings.service_name,
             # Configuraciones en campos dedicados
             execution_config=execution_config,
@@ -68,9 +80,13 @@ class ExecutionClient:
             # Callback para respuestas
             callback_action_type="orchestrator.chat.response",
             # Solo datos del chat
-            data=chat_request.model_dump(
-                exclude={'tenant_id', 'session_id', 'task_id', 'agent_id', 'user_id'}
-            )
+            data={
+                "messages": messages,
+                "tools": tools,
+                "tool_choice": tool_choice,
+                "conversation_id": str(conversation_id) if conversation_id else None,
+                "metadata": metadata,
+            }
         )
         
         # Enviar asíncronamente con callback
@@ -84,7 +100,7 @@ class ExecutionClient:
             extra={
                 "action_id": str(action.action_id),
                 "action_type": action_type,
-                "task_id": str(chat_request.task_id),
+                "task_id": str(task_id),
                 "mode": mode
             }
         )

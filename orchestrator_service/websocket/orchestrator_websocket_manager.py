@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from fastapi import WebSocket, WebSocketDisconnect
 from common.websocket.base_websocket_manager import BaseWebSocketManager
 from common.websocket.models import WebSocketMessage, ConnectionInfo
-from common.models.chat_models import ChatResponse, OrchestratorMessageType
+from common.models.chat_models import ChatResponse, OrchestratorMessageType, ChatRequest
 
 from ..models import OrchestratorSession
 from ..config.settings import OrchestratorSettings
@@ -113,7 +113,7 @@ class OrchestratorWebSocketManager(BaseWebSocketManager):
             await super().disconnect(connection_id)
             
         except Exception as e:
-            self._logger.error(f"Error desconectando WebSocket: {e}")
+            self.logger.error(f"Error desconectando WebSocket: {e}")
     
     async def send_to_session(
         self,
@@ -136,7 +136,7 @@ class OrchestratorWebSocketManager(BaseWebSocketManager):
         """
         connection_id = self._session_connections.get(session_id)
         if not connection_id:
-            self._logger.warning(f"No hay conexión para sesión: {session_id}")
+            self.logger.warning(f"No hay conexión para sesión: {session_id}")
             return False
         
         message = WebSocketMessage(
@@ -247,7 +247,7 @@ class OrchestratorWebSocketManager(BaseWebSocketManager):
                 except WebSocketDisconnect:
                     break
                 except Exception as e:
-                    self._logger.error(f"Error procesando mensaje: {e}")
+                    self.logger.error(f"Error procesando mensaje: {e}")
                     await self.send_error(
                         connection_id,
                         "processing_error",
@@ -255,7 +255,7 @@ class OrchestratorWebSocketManager(BaseWebSocketManager):
                     )
         
         except Exception as e:
-            self._logger.error(f"Error en WebSocket handler: {e}")
+            self.logger.error(f"Error en WebSocket handler: {e}")
         
         finally:
             if connection_id:
@@ -272,7 +272,21 @@ class OrchestratorWebSocketManager(BaseWebSocketManager):
             # Delegar al chat handler
             session = await self.orchestration_service.get_session(session_id)
             if session and self.orchestration_service.chat_handler:
-                chat_request = message.data
+                # Asegurar que el payload sea un ChatRequest válido
+                try:
+                    chat_request = (
+                        ChatRequest(**message.data)
+                        if isinstance(message.data, dict)
+                        else message.data
+                    )
+                except Exception as e:
+                    await self.send_error(
+                        connection_id,
+                        "validation_error",
+                        f"Invalid chat request: {str(e)}"
+                    )
+                    return
+
                 await self.orchestration_service.chat_handler.process_chat_message(
                     session_state=session,
                     message_request=chat_request,
@@ -302,4 +316,4 @@ class OrchestratorWebSocketManager(BaseWebSocketManager):
         for connection_id in list(self._connections.keys()):
             await self.disconnect(connection_id)
         
-        self._logger.info("WebSocket Manager cerrado")
+        self.logger.info("WebSocket Manager cerrado")

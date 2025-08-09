@@ -45,10 +45,8 @@ class ChatHandler(BaseHandler):
         task_id = None
         
         try:
-            # 1. Crear task_id si no existe
-            task_id = message_request.task_id or await self.session_handler.create_task_id(
-                session_state.session_id
-            )
+            # 1. Generar siempre un task_id propio del Orchestrator por solicitud
+            task_id = await self.session_handler.create_task_id(session_state.session_id)
             
             self._logger.info(
                 "Procesando mensaje de chat público",
