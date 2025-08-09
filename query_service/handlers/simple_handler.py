@@ -313,21 +313,22 @@ class SimpleHandler(BaseHandler):
         
         return "\n\n".join(context_parts)
     
-    def _validate_query_config(self, query_config: "QueryConfig"):
+    def _validate_query_config(self, query_config):
+        """Valida la configuración de query."""        
         # Validar campos requeridos
         if not query_config.model:
             raise AppValidationError("Modelo de lenguaje es requerido")
         if not query_config.system_prompt_template:
             raise AppValidationError("Plantilla de prompt del sistema es requerida")
-        if not query_config.temperature:
+        if query_config.temperature is None:
             raise AppValidationError("Temperatura es requerida")
         if not query_config.max_tokens:
             raise AppValidationError("Cantidad máxima de tokens es requerida")
-        if not query_config.top_p:
+        if query_config.top_p is None:
             raise AppValidationError("Umbral de probabilidad es requerido")
-        if not query_config.frequency_penalty:
+        if query_config.frequency_penalty is None:
             raise AppValidationError("Penalización de frecuencia es requerida")
-        if not query_config.presence_penalty:
+        if query_config.presence_penalty is None:
             raise AppValidationError("Penalización de presencia es requerida")
         
         # Validar valores válidos
@@ -348,11 +349,11 @@ class SimpleHandler(BaseHandler):
             raise AppValidationError("IDs de colección son requeridos")
         if not rag_config.embedding_model:
             raise AppValidationError("Modelo de embedding es requerido")
-        if not rag_config.embedding_dimensions:
+        if rag_config.embedding_dimensions is None or rag_config.embedding_dimensions <= 0:
             raise AppValidationError("Dimensiones de embedding son requeridas")
-        if not rag_config.top_k:
+        if rag_config.top_k is None or rag_config.top_k < 1:
             raise AppValidationError("Cantidad de resultados es requerida")
-        if not rag_config.similarity_threshold:
+        if rag_config.similarity_threshold is None:
             raise AppValidationError("Umbral de similitud es requerido")
         
         # Validar valores válidos

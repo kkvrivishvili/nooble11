@@ -191,17 +191,17 @@ class AdvanceHandler(BaseHandler):
             raise AppValidationError("Modelo de lenguaje es requerido")
         if not query_config.system_prompt_template:
             raise AppValidationError("Plantilla de prompt del sistema es requerida")
-        if query_config.temperature is None:
+        if query_config.temperature is None:  
             raise AppValidationError("Temperatura es requerida")
         if not query_config.max_tokens:
             raise AppValidationError("Cantidad máxima de tokens es requerida")
-        if query_config.top_p is None:
+        if query_config.top_p is None:  
             raise AppValidationError("Umbral de probabilidad es requerido")
-        if query_config.frequency_penalty is None:
+        if query_config.frequency_penalty is None:  
             raise AppValidationError("Penalización de frecuencia es requerida")
-        if query_config.presence_penalty is None:
+        if query_config.presence_penalty is None:  
             raise AppValidationError("Penalización de presencia es requerida")
-        
+    
         # Validar valores válidos
         if query_config.temperature < 0 or query_config.temperature > 1:
             raise AppValidationError("Temperatura debe estar entre 0 y 1")
