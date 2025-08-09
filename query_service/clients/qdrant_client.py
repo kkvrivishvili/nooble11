@@ -72,13 +72,14 @@ class QdrantClient:
         ]
         
         # CAMBIO CRÍTICO: collection_ids como filtro virtual, no colecciones físicas
-        if collection_ids:
-            must_conditions.append(
-                FieldCondition(
-                    key="collection_id",
-                    match=MatchAny(any=[str(c) for c in collection_ids])  # Filtro virtual por collection_id
-                )
-            )
+        # TEMPORALMENTE DESACTIVADO: se omite filtro por collection_id para evitar resultados vacíos
+        # if collection_ids:
+        #     must_conditions.append(
+        #         FieldCondition(
+        #             key="collection_id",
+        #             match=MatchAny(any=[str(c) for c in collection_ids])  # Filtro virtual por collection_id
+        #         )
+        #     )
         
         qdrant_filter = Filter(must=must_conditions)
         

@@ -19,6 +19,7 @@ interface PublicProfileProps {
   username: string;
   isPreview?: boolean;
   previewDesign?: ProfileDesign;
+  useExternalTheme?: boolean;
 }
 
 interface UIChatMessage {
@@ -27,6 +28,23 @@ interface UIChatMessage {
   content: string;
   created_at: string;
 }
+
+// Generate robust unique ids for chat messages
+const uid = () => {
+  try {
+    if (typeof window !== 'undefined' && window.crypto && 'randomUUID' in window.crypto) {
+      return (window.crypto.randomUUID as () => string)();
+    }
+  } catch {
+    // ignore
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+};
+
+const makeMsgId = (role: 'user' | 'assistant', opts?: { taskId?: string }) => {
+  const base = opts?.taskId ? `${role}-${opts.taskId}` : `${role}-${uid()}`;
+  return base;
+};
 
 // Wallpaper component - handles video and blur overlays
 function ProfileWallpaper() {
@@ -155,7 +173,12 @@ export default function PublicProfile({ username, isPreview = false, previewDesi
   // Orchestrator sessions and sockets by agent
   const [sessionsByAgent, setSessionsByAgent] = useState<Record<string, { sessionId: string; wsUrl: string }>>({});
   const [socketsByAgent, setSocketsByAgent] = useState<Record<string, ChatSocketConnection | null>>({});
-  const [_draftByAgent, setDraftByAgent] = useState<Record<string, { taskId?: string; messageId: string }>>({});
+  // Borradores por agente y por tarea: evita pisar respuestas concurrentes
+  const [_draftsByAgent, setDraftsByAgent] = useState<Record<string, Record<string, { messageId: string }>>>({});
+  // Estado por tarea (para mostrar "pensando"/streaming)
+  const [taskStatusByAgent, setTaskStatusByAgent] = useState<Record<string, Record<string, 'processing' | 'streaming' | 'completed'>>>({});
+  // Estado de conexión del WS por agente
+  const [connStatusByAgent, setConnStatusByAgent] = useState<Record<string, 'connecting' | 'open' | 'closed' | 'error'>>({});
   const socketsRef = useRef<Record<string, ChatSocketConnection | null>>({});
 
   // Keep socketsRef in sync and close all on unmount
@@ -190,7 +213,7 @@ export default function PublicProfile({ username, isPreview = false, previewDesi
     }
 
     const newMessage: UIChatMessage = {
-      id: `msg-${Date.now()}`,
+      id: makeMsgId('user'),
       role: 'user' as const,
       content: trimmed,
       created_at: new Date().toISOString()
@@ -202,14 +225,19 @@ export default function PublicProfile({ username, isPreview = false, previewDesi
     }));
     // Orchestrator: ensure session + websocket, then send message
     try {
-      const tenantId = profile?.id as string | undefined;
-      if (!tenantId) return;
+      // Ya no necesitamos tenant_id para iniciar sesión: el backend lo resuelve
+      // a partir del owner del agente. No bloqueamos si falta.
 
       // 1) Ensure session exists
       let session = sessionsByAgent[targetAgentId];
       if (!session) {
+        const env = (import.meta as unknown as { env?: { DEV?: boolean } }).env;
+        const isDev = !!(env && env.DEV);
+        if (isDev) {
+          // eslint-disable-next-line no-console
+          console.debug('[PublicProfile] creating chat session for agent', targetAgentId);
+        }
         const init = await chatApi.initChatSession({
-          tenant_id: tenantId,
           agent_id: targetAgentId,
           metadata: { source: 'public_profile' }
         });
@@ -220,10 +248,15 @@ export default function PublicProfile({ username, isPreview = false, previewDesi
       // 2) Ensure websocket
       let socket = socketsByAgent[targetAgentId];
       if (!socket || !socket.isOpen()) {
+        setConnStatusByAgent(prev => ({ ...prev, [targetAgentId]: 'connecting' }));
         socket = chatApi.connectWebSocket(session.wsUrl, {
+          onOpen: () => {
+            setConnStatusByAgent(prev => ({ ...prev, [targetAgentId]: 'open' }));
+          },
           onError: (err) => {
+            setConnStatusByAgent(prev => ({ ...prev, [targetAgentId]: 'error' }));
             const errorMsg = {
-              id: `msg-${Date.now()}-error`,
+              id: makeMsgId('assistant'),
               role: 'assistant' as const,
               content: `⚠️ Error de chat: ${err.message}`,
               created_at: new Date().toISOString()
@@ -233,22 +266,42 @@ export default function PublicProfile({ username, isPreview = false, previewDesi
               [targetAgentId]: [...(prev[targetAgentId] || []), errorMsg]
             }));
           },
+          onProcessing: (taskId, _data) => {
+            if (!taskId) return;
+            setTaskStatusByAgent(prev => ({
+              ...prev,
+              [targetAgentId]: { ...(prev[targetAgentId] || {}), [taskId]: 'processing' }
+            }));
+          },
           onStreaming: (taskId, data) => {
             if (!data) return;
-            setDraftByAgent(prevDraft => {
-              const existing = prevDraft[targetAgentId];
-              let draftId = existing?.messageId;
-              if (!draftId) {
-                draftId = `msg-${Date.now()}-assistant-draft`;
-                setMessagesByAgent(prev => ({
-                  ...prev,
-                  [targetAgentId]: [
-                    ...(prev[targetAgentId] || []),
-                    { id: draftId, role: 'assistant' as const, content: '', created_at: new Date().toISOString() }
-                  ]
-                }));
+            if (!taskId) return;
+            // Estado -> streaming
+            setTaskStatusByAgent(prev => ({
+              ...prev,
+              [targetAgentId]: { ...(prev[targetAgentId] || {}), [taskId]: 'streaming' }
+            }));
+            setDraftsByAgent(prevDrafts => {
+              const agentDrafts = prevDrafts[targetAgentId] || {};
+              const existing = agentDrafts[taskId];
+              const draftId = existing?.messageId || makeMsgId('assistant', { taskId });
+              if (!existing) {
+                // Insert initial assistant message for this task if not present
+                setMessagesByAgent(prev => {
+                  const arr = prev[targetAgentId] || [];
+                  const already = arr.some(m => m.id === draftId);
+                  return {
+                    ...prev,
+                    [targetAgentId]: already
+                      ? arr
+                      : [
+                          ...arr,
+                          { id: draftId, role: 'assistant' as const, content: '', created_at: new Date().toISOString() }
+                        ]
+                  };
+                });
               }
-              // Append chunk
+              // Append chunk al mensaje del task
               setMessagesByAgent(prev => {
                 const arr = prev[targetAgentId] || [];
                 const updated = arr.map(m => m.id === draftId
@@ -257,37 +310,37 @@ export default function PublicProfile({ username, isPreview = false, previewDesi
                 );
                 return { ...prev, [targetAgentId]: updated };
               });
-              return { ...prevDraft, [targetAgentId]: { taskId: taskId || existing?.taskId, messageId: draftId } };
+              return { ...prevDrafts, [targetAgentId]: { ...agentDrafts, [taskId]: { messageId: draftId } } };
             });
           },
           onResponse: (taskId, payload) => {
             const content = payload?.message?.content || '';
-            setDraftByAgent(prevDraft => {
-              const existing = prevDraft[targetAgentId];
-              if (!existing?.messageId) {
-                const msgId = `msg-${Date.now()}-assistant`;
-                setMessagesByAgent(prev => ({
-                  ...prev,
-                  [targetAgentId]: [
-                    ...(prev[targetAgentId] || []),
-                    { id: msgId, role: 'assistant' as const, content, created_at: new Date().toISOString() }
-                  ]
-                }));
-                return { ...prevDraft, [targetAgentId]: { taskId: taskId || undefined, messageId: msgId } };
-              }
-              const draftId = existing.messageId;
+            if (!taskId) return;
+            // Completar estado
+            setTaskStatusByAgent(prev => ({
+              ...prev,
+              [targetAgentId]: { ...(prev[targetAgentId] || {}), [taskId]: 'completed' }
+            }));
+            setDraftsByAgent(prevDrafts => {
+              const agentDrafts = prevDrafts[targetAgentId] || {};
+              const existing = agentDrafts[taskId];
+              const msgId = existing?.messageId || makeMsgId('assistant', { taskId });
               setMessagesByAgent(prev => {
                 const arr = prev[targetAgentId] || [];
-                const updated = arr.map(m => m.id === draftId
-                  ? { ...m, content: content || m.content }
-                  : m
-                );
-                return { ...prev, [targetAgentId]: updated };
+                const exists = arr.some(m => m.id === msgId);
+                const next = exists
+                  ? arr.map(m => (m.id === msgId ? { ...m, content: content || m.content } : m))
+                  : [
+                      ...arr,
+                      { id: msgId, role: 'assistant' as const, content, created_at: new Date().toISOString() }
+                    ];
+                return { ...prev, [targetAgentId]: next };
               });
-              return prevDraft;
+              return { ...prevDrafts, [targetAgentId]: { ...agentDrafts, [taskId]: { messageId: msgId } } };
             });
           },
           onClose: () => {
+            setConnStatusByAgent(prev => ({ ...prev, [targetAgentId]: 'closed' }));
             setSocketsByAgent(prev => ({ ...prev, [targetAgentId]: null }));
           },
         });
@@ -308,7 +361,7 @@ export default function PublicProfile({ username, isPreview = false, previewDesi
     } catch (err: unknown) {
       const messageText = err instanceof Error ? err.message : 'Error desconocido';
       const errorMsg = {
-        id: `msg-${Date.now()}-error`,
+        id: makeMsgId('assistant'),
         role: 'assistant' as const,
         content: `⚠️ No se pudo enviar el mensaje: ${messageText}`,
         created_at: new Date().toISOString()
@@ -358,6 +411,18 @@ export default function PublicProfile({ username, isPreview = false, previewDesi
             onAgentChange={setCurrentAgentId}
             messagesByAgent={messagesByAgent}
             onSendMessage={handleSendMessage}
+            thinking={(() => {
+              const aid = currentAgentId || profile.agentDetails?.[0]?.id;
+              if (!aid) return false;
+              const map = taskStatusByAgent[aid] || {};
+              const statuses = Object.values(map);
+              // Mostrar "Pensando" solo mientras hay procesamiento y aún no llegó ningún chunk de streaming
+              return statuses.some(s => s === 'processing') && !statuses.some(s => s === 'streaming');
+            })()}
+            connection={(() => {
+              const aid = currentAgentId || profile.agentDetails?.[0]?.id;
+              return (aid && connStatusByAgent[aid]) || undefined;
+            })()}
           />
         );
       case 'shop':

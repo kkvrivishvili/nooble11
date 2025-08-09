@@ -153,6 +153,13 @@ class ChatAPI {
    * Start a new public chat session
    */
   async initChatSession(payload: ChatInitRequest): Promise<ChatInitResponse> {
+    const env = (import.meta as unknown as { env?: { DEV?: boolean } }).env;
+    const isDev = !!(env && env.DEV);
+    if (isDev) {
+      // Debug: log outgoing payload (without sensitive data)
+      // eslint-disable-next-line no-console
+      console.log('[chatApi] initChatSession ->', { agent_id: payload.agent_id, hasMetadata: !!payload.metadata });
+    }
     const res = await fetch(`${ORCHESTRATOR_SERVICE_URL}/api/v1/chat/init`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -161,10 +168,25 @@ class ChatAPI {
         metadata: payload.metadata || {},
       }),
     });
+    if (isDev) {
+      // eslint-disable-next-line no-console
+      console.log('[chatApi] initChatSession <- status', res.status);
+    }
 
     if (!res.ok) {
       const err = await safeJson(res);
-      throw new Error(err?.detail || 'Failed to init chat session');
+      // FastAPI validation errors often return array/object in `detail`
+      let detailMsg = 'Failed to init chat session';
+      if (err) {
+        if (typeof err.detail === 'string') {
+          detailMsg = err.detail;
+        } else if (Array.isArray(err.detail)) {
+          detailMsg = JSON.stringify(err.detail);
+        } else if (err.detail && typeof err.detail === 'object') {
+          detailMsg = JSON.stringify(err.detail);
+        }
+      }
+      throw new Error(detailMsg);
     }
 
     return res.json();
@@ -223,16 +245,23 @@ class ChatAPI {
   connectWebSocket(websocketUrl: string, handlers: ChatSocketHandlers = {}): ChatSocketConnection {
     const wsUrl = resolveWebSocketUrl(websocketUrl);
     const ws = new WebSocket(wsUrl);
+    let seq = 0; // contador de mensajes entrantes por conexión
 
     ws.onopen = () => {
+      // eslint-disable-next-line no-console
+      console.log('[chatApi][ws] open', wsUrl);
       handlers.onOpen?.();
     };
 
     ws.onclose = (ev) => {
+      // eslint-disable-next-line no-console
+      console.log('[chatApi][ws] close', ev.code, ev.reason);
       handlers.onClose?.(ev);
     };
 
     ws.onerror = (_ev) => {
+      // eslint-disable-next-line no-console
+      console.log('[chatApi][ws] error', _ev);
       handlers.onError?.(new Error('WebSocket error'));
     };
 
@@ -244,6 +273,12 @@ class ChatAPI {
         handlers.onError?.(new Error('Invalid WebSocket message format'));
         return;
       }
+      // Log simple y consistente: secuencia, timestamp, tipo, task, chunk si existe
+      const d = msg?.data as { chunk_index?: number; is_final?: boolean } | undefined;
+      const chunkIndex = d?.chunk_index;
+      // eslint-disable-next-line no-console
+      console.log(`[chatApi][ws] #${++seq} ${new Date().toISOString()} type=${String(msg.message_type)} task=${msg.task_id ?? ''} chunk=${chunkIndex ?? ''}`,
+        msg);
 
       handlers.onMessage?.(msg);
 
@@ -295,6 +330,8 @@ class ChatAPI {
           ...(opts?.sessionId ? { session_id: opts.sessionId } : {}),
           ...(opts?.taskId ? { task_id: opts.taskId } : {}),
         };
+        // eslint-disable-next-line no-console
+        console.log('[chatApi][ws] send chat_message', payload);
         ws.send(JSON.stringify(payload));
       },
       sendUserMessage: (content: string, options?: { metadata?: Record<string, unknown>; taskId?: UUID; sessionId?: UUID }) => {
@@ -314,6 +351,8 @@ class ChatAPI {
           ...(options?.sessionId ? { session_id: options.sessionId } : {}),
           ...(options?.taskId ? { task_id: options.taskId } : {}),
         };
+        // eslint-disable-next-line no-console
+        console.log('[chatApi][ws] send user message', payload);
         ws.send(JSON.stringify(payload));
       },
     };

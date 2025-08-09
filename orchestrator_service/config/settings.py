@@ -47,7 +47,12 @@ class OrchestratorSettings(CommonAppSettings):
     
     # Worker configuration for callback processing
     callback_worker_enabled: bool = Field(default=True, description="Habilitar worker de callbacks")
-    callback_worker_count: int = Field(default=1, description="Número de workers de callback")
+    callback_worker_count: int = Field(default=2, description="Número de workers de callback")
+
+    # Pseudo-streaming hacia el frontend (emulado por el Orchestrator)
+    pseudo_streaming_enabled: bool = Field(default=True, description="Emular streaming de respuestas completas hacia el frontend")
+    pseudo_stream_chunk_size: int = Field(default=4, description="Tamaño (en caracteres) de cada chunk de streaming")
+    pseudo_stream_chunk_delay_ms: int = Field(default=30, description="Delay entre chunks (ms)")
     
     class Config:
         env_prefix = ""

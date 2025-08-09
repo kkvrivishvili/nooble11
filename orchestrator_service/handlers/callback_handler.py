@@ -3,6 +3,7 @@ Handler para procesar callbacks de otros servicios.
 Principalmente recibe respuestas del execution service.
 """
 import logging
+import asyncio
 from typing import Dict, Any
 
 from common.handlers.base_handler import BaseHandler
@@ -84,7 +85,40 @@ class CallbackHandler(BaseHandler):
             # Validar y parsear respuesta
             chat_response = ChatResponse.model_validate(action.data)
             
-            # Enviar respuesta via WebSocket
+            # Si está habilitado el pseudo-streaming, enviar la respuesta como chunks antes del final
+            if getattr(self.app_settings, "pseudo_streaming_enabled", False):
+                content = chat_response.message.content or ""
+                # Umbral simple: si es muy corto, evitar streaming innecesario
+                chunk_size = max(8, int(getattr(self.app_settings, "pseudo_stream_chunk_size", 48)))
+                delay_ms = max(0, int(getattr(self.app_settings, "pseudo_stream_chunk_delay_ms", 30)))
+
+                if len(content) > chunk_size * 2:
+                    chunk_index = 0
+                    # Partición básica por caracteres, intentando no cortar palabras cuando es posible
+                    i = 0
+                    while i < len(content):
+                        j = min(i + chunk_size, len(content))
+                        # intentar expandir hasta el próximo espacio si no excede mucho
+                        if j < len(content) and content[j-1] != ' ':
+                            k = content.rfind(' ', i, j)
+                            if k != -1 and (k - i) >= int(chunk_size * 0.6):
+                                j = k + 1
+                        chunk = content[i:j]
+                        i = j
+                        # último chunk?
+                        is_final = i >= len(content)
+                        await self.websocket_manager.send_streaming_chunk(
+                            session_id=action.session_id,
+                            task_id=action.task_id,
+                            content=chunk,
+                            is_final=is_final,
+                            chunk_index=chunk_index,
+                        )
+                        chunk_index += 1
+                        if not is_final and delay_ms:
+                            await asyncio.sleep(delay_ms / 1000.0)
+
+            # Enviar respuesta final via WebSocket
             success = await self.websocket_manager.send_chat_response(
                 session_id=action.session_id,
                 task_id=action.task_id,

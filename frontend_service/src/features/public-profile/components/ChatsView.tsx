@@ -10,6 +10,8 @@ interface ChatsViewProps {
   onAgentChange?: (agentId: string) => void
   messagesByAgent: Record<string, ChatMessage[]>
   onSendMessage?: (message: string, agentId?: string) => void
+  thinking?: boolean
+  connection?: 'connecting' | 'open' | 'closed' | 'error'
 }
 
 interface ChatMessage {
@@ -19,7 +21,7 @@ interface ChatMessage {
   created_at: string
 }
 
-export default function ChatsView({ profile, currentAgentId, onAgentChange, messagesByAgent, onSendMessage }: ChatsViewProps) {
+export default function ChatsView({ profile, currentAgentId, onAgentChange, messagesByAgent, onSendMessage, thinking, connection }: ChatsViewProps) {
   const { theme, layout } = useProfileTheme()
   const [selectedAgentId, setSelectedAgentId] = useState<string | undefined>(currentAgentId)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -82,6 +84,14 @@ export default function ChatsView({ profile, currentAgentId, onAgentChange, mess
         layout.content_width === 'wide' && 'max-w-3xl'
       )}
     >
+      {/* Estado de conexión */}
+      {connection && connection !== 'open' && (
+        <div className="mt-2 text-center text-xs">
+          {connection === 'connecting' && <span>Conectando…</span>}
+          {connection === 'error' && <span className="text-red-600">Error de conexión</span>}
+          {connection === 'closed' && <span className="text-gray-500">Desconectado</span>}
+        </div>
+      )}
       {/* Sugerencias iniciales por agente (se ocultan al primer mensaje) */}
       {(!selectedAgentId || (messagesByAgent[selectedAgentId]?.length ?? 0) === 0) && (
         <div className="mt-3 grid grid-cols-1 gap-3">
@@ -121,7 +131,7 @@ export default function ChatsView({ profile, currentAgentId, onAgentChange, mess
 
       {/* Mensajes */}
       <div className="mt-3 space-y-3 pr-1">
-        {(selectedAgentId && messagesByAgent[selectedAgentId])?.map(msg => (
+        {(selectedAgentId ? (messagesByAgent[selectedAgentId] || []) : []).map((msg: ChatMessage) => (
           <div key={msg.id} className={cn('flex items-start gap-2', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
             {msg.role === 'assistant' && (
               <Avatar className="h-6 w-6">
@@ -133,6 +143,25 @@ export default function ChatsView({ profile, currentAgentId, onAgentChange, mess
             </div>
           </div>
         ))}
+        {/* Indicador de "pensando" */}
+        {thinking && (
+          <div className="flex items-start gap-2 justify-start">
+            <Avatar className="h-6 w-6">
+              <AvatarFallback>{selectedAgent?.name?.[0] || 'A'}</AvatarFallback>
+            </Avatar>
+            <div className="max-w-[75%] px-3 py-2 text-sm border" style={{
+              backgroundColor: `${theme.primary_color || '#000'}10`,
+              borderColor: `${theme.primary_color || '#e5e7eb'}`,
+              borderRadius: theme.border_radius === 'sharp' ? '0.5rem' : theme.border_radius === 'curved' ? '0.75rem' : '1.25rem',
+              color: theme.text_color || '#111827',
+            }}>
+              <span>Pensando</span>
+              <span className="inline-block ml-1 animate-bounce" style={{ animationDelay: '0ms' }}>.</span>
+              <span className="inline-block ml-0.5 animate-bounce" style={{ animationDelay: '100ms' }}>.</span>
+              <span className="inline-block ml-0.5 animate-bounce" style={{ animationDelay: '200ms' }}>.</span>
+            </div>
+          </div>
+        )}
         <div ref={bottomRef} />
       </div>
 
