@@ -75,6 +75,23 @@ class GroqClient:
         messages.append({"role": "user", "content": prompt})
         
         try:
+            # Log resumen de la solicitud a Groq (sin contenido completo)
+            try:
+                self._logger.info(
+                    "GroqClient.generate: preparando request",
+                    extra={
+                        "model": model,
+                        "temperature": temperature,
+                        "max_tokens": max_tokens,
+                        "top_p": top_p,
+                        "has_stop": bool(stop),
+                        "prompt_len": len(prompt or ""),
+                        "system_len": len(system_prompt or "")
+                    }
+                )
+            except Exception:
+                pass
+
             response = await self.client.chat.completions.create(
                 messages=messages,
                 model=model,
@@ -93,6 +110,18 @@ class GroqClient:
                 "total_tokens": response.usage.total_tokens
             }
             
+            # Log resumen de la respuesta
+            try:
+                self._logger.info(
+                    "GroqClient.generate: respuesta recibida",
+                    extra={
+                        "content_length": len(content or ""),
+                        "usage": usage
+                    }
+                )
+            except Exception:
+                pass
+
             return content, usage
             
         except APIConnectionError as e:
