@@ -28,4 +28,10 @@ class QueryServiceSettings(CommonAppSettings):
     worker_count: int = Field(default=5,description="Número de workers para procesar queries")
     worker_sleep_seconds: float = Field(1.0, description="Tiempo de espera entre polls para los workers de ejecución")
 
+    # Qdrant (específico de Query Service)
+    qdrant_collection: str = Field(
+        default="nooble8_vectors",
+        description="Nombre de la colección física en Qdrant para búsquedas del Query Service"
+    )
+
     

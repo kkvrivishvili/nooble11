@@ -193,9 +193,14 @@ class SimpleHandler(BaseHandler):
                         msg.content = system_prompt
                         break
             
-            # LLAMADA A GROQ: Formatear payload según especificaciones oficiales del SDK
+            # LLAMADA A GROQ: Adaptar al contrato de GroqClient.generate(prompt, system_prompt, ...)
+            # Combinar todos los mensajes de rol "system" (incluye plantilla y contexto RAG)
+            system_parts = [msg.content for msg in final_messages if msg.role == "system" and msg.content]
+            system_prompt_combined = "\n\n".join(system_parts) if system_parts else ""
+
             groq_payload = {
-                "messages": [{"role": msg.role, "content": msg.content} for msg in final_messages],
+                "prompt": user_message,
+                "system_prompt": system_prompt_combined,
                 "model": query_config.model.value,  # Usar el enum ChatModel
                 "temperature": query_config.temperature,
                 "max_tokens": query_config.max_tokens,
@@ -221,6 +226,9 @@ class SimpleHandler(BaseHandler):
             
             # Llamar al cliente de Groq (original o con opciones específicas)
             response_text, token_usage = await groq_client_instance.generate(**groq_payload)
+
+            # Normalizar uso de tokens a modelo TokenUsage para logging y respuesta tipada
+            token_usage_model = TokenUsage(**token_usage)
             
             # Construir respuesta
             end_time = time.time()
@@ -234,13 +242,13 @@ class SimpleHandler(BaseHandler):
             response = ChatResponse(
                 conversation_id=UUID(conversation_id),
                 message=response_message,
-                usage=token_usage,
+                usage=token_usage_model,
                 sources=sources,
                 execution_time_ms=int((end_time - start_time) * 1000)
             )
             
             self._logger.info(
-                f"Simple query procesada exitosamente. Tokens: {token_usage.total_tokens}",
+                f"Simple query procesada exitosamente. Tokens: {token_usage_model.total_tokens}",
                 extra={
                     "query_id": conversation_id,
                     "processing_time": response.execution_time_ms,

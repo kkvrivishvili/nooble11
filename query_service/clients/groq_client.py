@@ -24,6 +24,11 @@ class GroqClient:
         if not api_key:
             raise ValueError("API key de Groq es requerida")
         
+        # Guardar configuración para clonar con with_options
+        self.api_key = api_key
+        self.timeout = timeout
+        self.max_retries = max_retries
+
         self.client = AsyncGroq(
             api_key=api_key,
             timeout=timeout,
@@ -31,6 +36,20 @@ class GroqClient:
         )
         
         self._logger = logging.getLogger(__name__)
+        self._logger.setLevel(logging.DEBUG)
+
+    def with_options(self, timeout: Optional[int] = None, max_retries: Optional[int] = None) -> 'GroqClient':
+        """Devuelve una nueva instancia con timeout/max_retries personalizados."""
+        new_client = GroqClient(
+            api_key=self.api_key,
+            timeout=timeout if timeout is not None else self.timeout,
+            max_retries=max_retries if max_retries is not None else self.max_retries,
+        )
+        self._logger.debug(
+            f"Cliente Groq clonado con opciones: timeout={new_client.timeout}s, "
+            f"max_retries={new_client.max_retries}"
+        )
+        return new_client
     
     async def generate(
         self,

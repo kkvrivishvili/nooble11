@@ -17,13 +17,14 @@ from common.models.chat_models import RAGChunk
 class QdrantClient:
     """Cliente oficial de Qdrant para búsquedas vectoriales."""
     
-    def __init__(self, url: str, api_key: Optional[str] = None):
+    def __init__(self, url: str, api_key: Optional[str] = None, collection_name: str = "nooble8_vectors"):
         """
         Inicializa el cliente de Qdrant.
         
         Args:
             url: URL de Qdrant
             api_key: API key opcional
+            collection_name: Nombre de la colección física en Qdrant
         """
         self.client = AsyncQdrantClient(
             url=url,
@@ -31,6 +32,7 @@ class QdrantClient:
             timeout=30
         )
         self.logger = logging.getLogger(__name__)
+        self.collection_name = collection_name
     
     async def search(
         self,
@@ -91,9 +93,9 @@ class QdrantClient:
                 )
             )
         
-        # CAMBIO CRÍTICO: Buscar solo en colección unificada "documents"
+        # Buscar en la colección configurada (p.ej. "nooble8_vectors")
         results = await self.client.search(
-            collection_name="nooble8_vectors",  # Colección física usada en Ingestion
+            collection_name=self.collection_name,
             query_vector=query_embedding,
             query_filter=qdrant_filter,
             limit=top_k,

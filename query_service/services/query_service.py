@@ -49,7 +49,8 @@ class QueryService(BaseService):
         # 2. Cliente de vectores para búsqueda en Qdrant
         self.qdrant_client = QdrantClient(
             url=str(app_settings.qdrant_url) if hasattr(app_settings, 'qdrant_url') and app_settings.qdrant_url else "http://localhost:6333",
-            api_key=app_settings.qdrant_api_key
+            api_key=app_settings.qdrant_api_key,
+            collection_name=str(app_settings.qdrant_collection) if hasattr(app_settings, 'qdrant_collection') and app_settings.qdrant_collection else "nooble8_vectors"
         )
         
         # 3. Cliente de Groq para consultas LLM
