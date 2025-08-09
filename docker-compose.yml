@@ -601,7 +601,6 @@ services:
       # Redis
       - REDIS_HOST=redis_database
       - REDIS_PORT=6379
-      - REDIS_DB=1
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - REDIS_URL=${REDIS_URL}
       # CORS
@@ -709,7 +708,6 @@ services:
       - REDIS_HOST=redis_database
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - REDIS_DB=4
     depends_on:
       redis_database:
         condition: service_healthy
