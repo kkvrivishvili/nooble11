@@ -205,7 +205,10 @@ class SimpleChatHandler:
             # 6. Crear respuesta completa
             response_message = ChatMessage(
                 role="assistant",
-                content=query_response["response"]
+                content=(
+                    query_response.get("message", {}).get("content", 
+                    query_response.get("response", ""))
+                )
             )
             
             chat_response = ChatResponse(
