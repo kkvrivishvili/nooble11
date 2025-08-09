@@ -115,20 +115,26 @@ class AdvanceHandler(BaseHandler):
                         msg.content = system_prompt
                         break
             
-            # LLAMADA A GROQ: Formatear payload según especificaciones oficiales del SDK
-            # En modo avanzado: tools y tool_choice son parámetros de nivel superior
-            groq_payload = {
-                "messages": [{"role": msg.role, "content": msg.content} for msg in messages],
-                "model": query_config.model.value,  # Usar el enum ChatModel
-                "temperature": query_config.temperature,
-                "max_tokens": query_config.max_tokens,
-                "top_p": query_config.top_p,
-                "frequency_penalty": query_config.frequency_penalty,
-                "presence_penalty": query_config.presence_penalty,
-                "stop": query_config.stop if query_config.stop else None,
-                "tools": tools,  # Parámetro de nivel superior según especificaciones de Groq
-                "tool_choice": tool_choice  # Parámetro de nivel superior según especificaciones de Groq
-            }
+            # LLAMADA A GROQ: enviar conversación completa desde el handler
+            # Log seguro de los mensajes finales (roles, conteo) y herramientas
+            try:
+                roles_finales = [m.role for m in messages]
+                self._logger.info(
+                    "QueryService.AdvanceHandler: mensajes finales preparados para Groq",
+                    extra={
+                        "query_id": query_id,
+                        "count": len(messages),
+                        "roles": roles_finales,
+                        "tools_count": len(tools or []),
+                        "model": query_config.model.value,
+                        "temperature": query_config.temperature,
+                        "max_tokens": query_config.max_tokens,
+                        "top_p": query_config.top_p,
+                        "has_stop": bool(query_config.stop),
+                    }
+                )
+            except Exception:
+                pass
             
             # Aplicar configuración dinámica del timeout si está especificada en query_config
             # Si no hay configuración específica, usar el cliente ya inyectado
@@ -145,8 +151,19 @@ class AdvanceHandler(BaseHandler):
                 # Crear una copia del cliente con las opciones específicas
                 groq_client_instance = self.groq_client.with_options(**options)
             
-            # Llamar al cliente de Groq (original o con opciones específicas)
-            response_text, token_usage = await groq_client_instance.generate(**groq_payload)
+            # Llamar al cliente de Groq (original o con opciones específicas) con la conversación completa + tools
+            response_text, token_usage = await groq_client_instance.generate_chat(
+                messages=messages,
+                model=query_config.model.value,
+                temperature=query_config.temperature,
+                max_tokens=query_config.max_tokens,
+                top_p=query_config.top_p,
+                frequency_penalty=query_config.frequency_penalty,
+                presence_penalty=query_config.presence_penalty,
+                stop=query_config.stop if query_config.stop else None,
+                tools=tools,
+                tool_choice=tool_choice,
+            )
             
             # Construir respuesta
             end_time = time.time()
@@ -157,16 +174,19 @@ class AdvanceHandler(BaseHandler):
                 content=response_text
             )
             
+            # Normalizar uso de tokens a modelo TokenUsage para logging y respuesta tipada
+            token_usage_model = TokenUsage(**token_usage)
+
             response = ChatResponse(
                 conversation_id=UUID(query_id),
                 message=response_message,
-                usage=token_usage,
+                usage=token_usage_model,
                 sources=[],  # En advance mode no hay sources directos de RAG
                 execution_time_ms=int((end_time - start_time) * 1000)
             )
             
             self._logger.info(
-                f"Chat avanzado procesado exitosamente. Tokens: {token_usage.total_tokens}",
+                f"Chat avanzado procesado exitosamente. Tokens: {token_usage_model.total_tokens}",
                 extra={
                     "query_id": query_id,
                     "processing_time": response.execution_time_ms,

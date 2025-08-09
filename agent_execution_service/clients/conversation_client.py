@@ -13,7 +13,7 @@ from common.config import ExecutionServiceSettings
 logger = logging.getLogger(__name__)
 
 # Action type para Conversation Service
-ACTION_CONVERSATION_MESSAGE_CREATE = "conversation.message.create"
+ACTION_CONVERSATION_MESSAGE_CREATE = "conversation_service.message.create"
 
 
 class ConversationClient:

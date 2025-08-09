@@ -57,13 +57,18 @@ class ConversationWorker(BaseWorker):
         Maneja las acciones del dominio conversation.
         
         Acciones soportadas:
-        - conversation.message.create: Guardar mensajes (fire-and-forget)
-        - conversation.session.closed: Marcar sesión como cerrada (fire-and-forget)
+        - {service_name}.message.create: Guardar mensajes (fire-and-forget)
+        - {service_name}.session.closed: Marcar sesión como cerrada (fire-and-forget)
         """
         action_type = action.action_type
         
         try:
-            if action_type == "conversation.message.create":
+            # Prefijo dinámico según configuración del servicio (p. ej., "conversation_service")
+            service_prefix = self.settings.service_name
+            message_create_type = f"{service_prefix}.message.create"
+            session_closed_type = f"{service_prefix}.session.closed"
+
+            if action_type == message_create_type:
                 # Validar datos requeridos
                 data = action.data
                 required_fields = ["conversation_id", "user_message", "agent_message"]
@@ -104,7 +109,7 @@ class ConversationWorker(BaseWorker):
                 
                 return None  # Fire-and-forget
             
-            elif action_type == "conversation.session.closed":
+            elif action_type == session_closed_type:
                 # Fire-and-forget: marcar sesión cerrada
                 success = await self.persistence_service.mark_conversation_ended(
                     tenant_id=str(action.tenant_id),

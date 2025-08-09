@@ -223,35 +223,21 @@ class SimpleHandler(BaseHandler):
                         msg.content = system_prompt
                         break
             
-            # LLAMADA A GROQ: Adaptar al contrato de GroqClient.generate(prompt, system_prompt, ...)
-            # Combinar todos los mensajes de rol "system" (incluye plantilla y contexto RAG)
-            system_parts = [msg.content for msg in final_messages if msg.role == "system" and msg.content]
-            system_prompt_combined = "\n\n".join(system_parts) if system_parts else ""
-
-            groq_payload = {
-                "prompt": user_message,
-                "system_prompt": system_prompt_combined,
-                "model": query_config.model.value,  # Usar el enum ChatModel
-                "temperature": query_config.temperature,
-                "max_tokens": query_config.max_tokens,
-                "top_p": query_config.top_p,
-                "frequency_penalty": query_config.frequency_penalty,
-                "presence_penalty": query_config.presence_penalty,
-                "stop": query_config.stop if query_config.stop else None,
-            }
-
-            # Log seguro del payload a Groq (sin incluir textos completos)
+            # LLAMADA A GROQ: enviar conversación completa desde el handler
+            # Log seguro de los mensajes finales (roles y conteo)
             try:
+                roles_finales = [m.role for m in final_messages]
                 self._logger.info(
-                    "QueryService.SimpleHandler: Groq payload preparado",
+                    "QueryService.SimpleHandler: mensajes finales preparados para Groq",
                     extra={
                         "query_id": conversation_id,
+                        "count": len(final_messages),
+                        "roles": roles_finales,
                         "model": query_config.model.value,
                         "temperature": query_config.temperature,
                         "max_tokens": query_config.max_tokens,
                         "top_p": query_config.top_p,
                         "has_stop": bool(query_config.stop),
-                        "system_prompt_len": len(system_prompt_combined or ""),
                     }
                 )
             except Exception:
@@ -271,8 +257,17 @@ class SimpleHandler(BaseHandler):
                 # Crear una copia del cliente con las opciones específicas
                 groq_client_instance = self.groq_client.with_options(**options)
             
-            # Llamar al cliente de Groq (original o con opciones específicas)
-            response_text, token_usage = await groq_client_instance.generate(**groq_payload)
+            # Llamar al cliente de Groq (original o con opciones específicas) con la conversación completa
+            response_text, token_usage = await groq_client_instance.generate_chat(
+                messages=final_messages,
+                model=query_config.model.value,
+                temperature=query_config.temperature,
+                max_tokens=query_config.max_tokens,
+                top_p=query_config.top_p,
+                frequency_penalty=query_config.frequency_penalty,
+                presence_penalty=query_config.presence_penalty,
+                stop=query_config.stop if query_config.stop else None,
+            )
 
             # Normalizar uso de tokens a modelo TokenUsage para logging y respuesta tipada
             token_usage_model = TokenUsage(**token_usage)

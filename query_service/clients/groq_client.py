@@ -138,6 +138,111 @@ class GroqClient:
                 raise ValueError(f"Error en la petición: {e.message}")
             raise ServiceUnavailableError(f"Error en el servidor de Groq: {e.message}")
     
+    async def generate_chat(
+        self,
+        messages: List[Dict[str, Any]],
+        model: str,
+        temperature: float,
+        max_tokens: int,
+        top_p: float,
+        frequency_penalty: float,
+        presence_penalty: float,
+        stop: Optional[Union[str, List[str]]] = None,
+        tools: Optional[List[Dict[str, Any]]] = None,
+        tool_choice: Optional[Any] = None,
+    ) -> Tuple[str, Dict[str, int]]:
+        """
+        Genera una respuesta usando el modelo especificado a partir de una
+        lista completa de mensajes (system/user/assistant).
+        
+        Accepta mensajes como dicts {role, content} o instancias con atributos .role/.content.
+        Devuelve (texto_respuesta, uso_de_tokens).
+        """
+        # Normalizar mensajes al formato esperado por el SDK
+        groq_messages: List[Dict[str, str]] = []
+        roles_seq: List[str] = []
+        for m in messages or []:
+            role = m.get("role") if isinstance(m, dict) else getattr(m, "role", None)
+            content = m.get("content") if isinstance(m, dict) else getattr(m, "content", None)
+            if role and content:
+                groq_messages.append({"role": role, "content": content})
+                roles_seq.append(role)
+        
+        if not groq_messages:
+            raise ValueError("Se requieren mensajes válidos para generate_chat")
+        
+        try:
+            # Log del request (sin contenidos completos)
+            try:
+                self._logger.info(
+                    "GroqClient.generate_chat: preparando request",
+                    extra={
+                        "model": model,
+                        "temperature": temperature,
+                        "max_tokens": max_tokens,
+                        "top_p": top_p,
+                        "has_stop": bool(stop),
+                        "messages_count": len(groq_messages),
+                        "roles": roles_seq,
+                        "tools_count": len(tools or []),
+                    }
+                )
+            except Exception:
+                pass
+
+            # Construir kwargs dinámicamente para no enviar tool_choice=None
+            create_kwargs: Dict[str, Any] = {
+                "messages": groq_messages,
+                "model": model,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                "top_p": top_p,
+                "frequency_penalty": frequency_penalty,
+                "presence_penalty": presence_penalty,
+            }
+            if stop is not None:
+                create_kwargs["stop"] = stop
+            if tools:
+                create_kwargs["tools"] = tools
+                if tool_choice is not None:
+                    create_kwargs["tool_choice"] = tool_choice
+
+            response = await self.client.chat.completions.create(**create_kwargs)
+
+            content = response.choices[0].message.content
+            usage = {
+                "prompt_tokens": response.usage.prompt_tokens,
+                "completion_tokens": response.usage.completion_tokens,
+                "total_tokens": response.usage.total_tokens,
+            }
+
+            try:
+                self._logger.info(
+                    "GroqClient.generate_chat: respuesta recibida",
+                    extra={
+                        "content_length": len(content or ""),
+                        "usage": usage,
+                    }
+                )
+            except Exception:
+                pass
+
+            return content, usage
+
+        except APIConnectionError as e:
+            self._logger.debug(f"Error de conexión con Groq API: {e}")
+            raise ServiceUnavailableError("Error de conexión con la API de Groq")
+        
+        except RateLimitError as e:
+            self._logger.debug(f"Límite de peticiones excedido: {e}")
+            raise ServiceUnavailableError("Límite de peticiones de Groq API excedido")
+        
+        except APIStatusError as e:
+            self._logger.debug(f"Error de API de Groq: {e}")
+            if 400 <= e.status_code < 500:
+                raise ValueError(f"Error en la petición: {e.message}")
+            raise ServiceUnavailableError(f"Error en el servidor de Groq: {e.message}")
+
     async def close(self):
         """Cierra el cliente."""
         await self.client.close()
