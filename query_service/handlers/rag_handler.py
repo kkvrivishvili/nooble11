@@ -7,7 +7,7 @@ from typing import List, Dict, Any, Optional
 from uuid import UUID, uuid4
 
 from common.handlers import BaseHandler
-from common.errors.exceptions import ExternalServiceError
+from common.errors.exceptions import ExternalServiceError, AppValidationError
 from common.models.chat_models import (
     RAGConfig,
     RAGChunk,
@@ -72,6 +72,9 @@ class RAGHandler(BaseHandler):
         )
         
         try:
+            # Validar configuración RAG antes de usarla
+            self._validate_rag_config(rag_config)
+            
             # Usar configuración RAG centralizada
             embedding_request = EmbeddingRequest(
                 input=query_text,
@@ -137,6 +140,26 @@ class RAGHandler(BaseHandler):
         except Exception as e:
             self._logger.error(f"Error en RAG search: {e}", exc_info=True)
             raise ExternalServiceError(f"Error procesando búsqueda RAG: {str(e)}")
+    
+    def _validate_rag_config(self, rag_config: RAGConfig):
+        """Valida la configuración de RAG permitiendo 0 donde corresponda."""
+        # Validar campos requeridos
+        if not rag_config.collection_ids:
+            raise AppValidationError("IDs de colección son requeridos")
+        if not rag_config.embedding_model:
+            raise AppValidationError("Modelo de embedding es requerido")
+        if rag_config.embedding_dimensions is None or rag_config.embedding_dimensions <= 0:
+            raise AppValidationError("Dimensiones de embedding son requeridas")
+        if rag_config.top_k is None or rag_config.top_k < 1:
+            raise AppValidationError("Cantidad de resultados es requerida")
+        if rag_config.similarity_threshold is None:
+            raise AppValidationError("Umbral de similitud es requerido")
+        
+        # Validar valores válidos
+        if rag_config.top_k < 1:
+            raise AppValidationError("Cantidad de resultados debe ser mayor que 0")
+        if rag_config.similarity_threshold < 0 or rag_config.similarity_threshold > 1:
+            raise AppValidationError("Umbral de similitud debe estar entre 0 y 1")
     
     async def _get_query_embedding(
         self,
