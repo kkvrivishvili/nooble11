@@ -168,6 +168,23 @@ class SimpleChatHandler:
                 system_messages=system_messages,
                 user_messages=user_messages
             )
+
+            # Log detalle de mensajes integrados (roles y snippet del último user)
+            try:
+                roles_seq = [m.role for m in integrated_messages]
+                last_user = next((m.content for m in reversed(integrated_messages) if m.role == "user" and m.content), None)
+                self.logger.debug(
+                    "Mensajes integrados listos para Query Service",
+                    extra={
+                        "conversation_id": str(history.conversation_id),
+                        "roles": roles_seq,
+                        "last_user_snippet": (last_user[:120] + "...") if last_user and len(last_user) > 120 else last_user,
+                        "total_messages": len(integrated_messages)
+                    }
+                )
+            except Exception:
+                # Logging defensivo para no romper el flujo por errores de log
+                pass
             
             # 4. Preparar payload para query service (solo campos válidos para ChatRequest)
             payload = {
@@ -201,6 +218,31 @@ class SimpleChatHandler:
                 task_id=task_id,
                 agent_id=agent_id
             )
+
+            # Resumen de respuesta del Query Service
+            try:
+                msg_content = (
+                    query_response.get("message", {}).get("content")
+                    if isinstance(query_response.get("message"), dict)
+                    else None
+                )
+                fallback_resp = query_response.get("response")
+                content_len = len(msg_content or fallback_resp or "")
+                self.logger.info(
+                    "Respuesta recibida de Query Service",
+                    extra={
+                        "has_message": isinstance(query_response.get("message"), dict),
+                        "has_legacy_response": fallback_resp is not None,
+                        "content_length": content_len,
+                        "usage": query_response.get("usage"),
+                        "sources_count": len(query_response.get("sources", [])),
+                        "execution_time_ms": query_response.get("execution_time_ms"),
+                        "conversation_id": str(history.conversation_id),
+                        "task_id": str(task_id)
+                    }
+                )
+            except Exception:
+                pass
             
             # 6. Crear respuesta completa
             response_message = ChatMessage(

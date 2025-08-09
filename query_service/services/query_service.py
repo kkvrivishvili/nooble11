@@ -101,7 +101,33 @@ class QueryService(BaseService):
         
         try:
             if action.action_type == ACTION_QUERY_SIMPLE:
-                return await self._handle_simple(action)
+                self._logger.info(
+                    "QueryService: recibida action query.simple",
+                    extra={
+                        "action_id": str(action.action_id),
+                        "tenant_id": str(action.tenant_id),
+                        "session_id": str(action.session_id),
+                        "task_id": str(action.task_id),
+                        "agent_id": str(action.agent_id)
+                    }
+                )
+                result = await self._handle_simple(action)
+                try:
+                    # Resumen del resultado
+                    msg = result.get("message")
+                    content_len = len(msg.get("content", "")) if isinstance(msg, dict) else 0
+                    self._logger.info(
+                        "QueryService: result query.simple listo",
+                        extra={
+                            "action_id": str(action.action_id),
+                            "content_length": content_len,
+                            "usage": result.get("usage"),
+                            "sources_count": len(result.get("sources", []))
+                        }
+                    )
+                except Exception:
+                    pass
+                return result
             elif action.action_type == ACTION_QUERY_ADVANCE:
                 return await self._handle_advance(action)
             elif action.action_type == ACTION_QUERY_RAG:

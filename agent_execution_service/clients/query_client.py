@@ -75,6 +75,22 @@ class QueryClient:
         actual_timeout = timeout if timeout is not None else self.default_timeout
         
         try:
+            # Log envío de acción (sin contenido sensible)
+            try:
+                self._logger.info(
+                    "Enviando action query.simple a Query Service",
+                    extra={
+                        "action_id": str(action.action_id),
+                        "tenant_id": str(tenant_id),
+                        "session_id": str(session_id),
+                        "task_id": str(task_id),
+                        "agent_id": str(agent_id),
+                        "messages_count": len(payload.get("messages", []))
+                    }
+                )
+            except Exception:
+                pass
+
             response = await self.redis_client.send_action_pseudo_sync(
                 action, 
                 timeout=actual_timeout
@@ -89,6 +105,25 @@ class QueryClient:
                 })
                 raise ExternalServiceError(error_message)
                 
+            # Log respuesta recibida (resumen)
+            try:
+                data = response.data or {}
+                msg = data.get("message")
+                content_len = len(msg.get("content", "")) if isinstance(msg, dict) else 0
+                self._logger.info(
+                    "Respuesta recibida de Query Service (query.simple)",
+                    extra={
+                        "action_id": str(action.action_id),
+                        "success": response.success,
+                        "content_length": content_len,
+                        "usage": data.get("usage"),
+                        "execution_time_ms": data.get("execution_time_ms"),
+                        "sources_count": len(data.get("sources", []))
+                    }
+                )
+            except Exception:
+                pass
+
             return response.data
             
         except TimeoutError as e:

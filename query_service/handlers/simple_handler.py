@@ -94,6 +94,22 @@ class SimpleHandler(BaseHandler):
                     messages.append(ChatMessage.model_validate(msg_data))
                 else:
                     messages.append(msg_data)  # Ya es ChatMessage
+
+            # Log resumen de mensajes recibidos
+            try:
+                roles = [m.role for m in messages]
+                last_user = next((m.content for m in reversed(messages) if m.role == "user" and m.content), None)
+                self._logger.info(
+                    "QueryService.SimpleHandler: mensajes recibidos",
+                    extra={
+                        "query_id": conversation_id,
+                        "roles": roles,
+                        "last_user_snippet": (last_user[:120] + "...") if last_user and len(last_user) > 120 else last_user,
+                        "count": len(messages)
+                    }
+                )
+            except Exception:
+                pass
             
             # Extraer mensaje del usuario (último mensaje con role="user")
             user_message = None
@@ -147,6 +163,20 @@ class SimpleHandler(BaseHandler):
                     agent_id=str(agent_id),
                     filters={"document_ids": rag_config.document_ids} if rag_config.document_ids else None
                 )
+
+                try:
+                    self._logger.info(
+                        "QueryService.SimpleHandler: RAG search ejecutada",
+                        extra={
+                            "query_id": conversation_id,
+                            "collections": rag_config.collection_ids,
+                            "top_k": rag_config.top_k,
+                            "threshold": rag_config.similarity_threshold,
+                            "results": len(search_results or [])
+                        }
+                    )
+                except Exception:
+                    pass
                 
                 # 3. FORMATO GROQ: Inyectar contexto como ChatMessage con role="system" antes del último user message
                 if search_results:
@@ -209,6 +239,23 @@ class SimpleHandler(BaseHandler):
                 "presence_penalty": query_config.presence_penalty,
                 "stop": query_config.stop if query_config.stop else None,
             }
+
+            # Log seguro del payload a Groq (sin incluir textos completos)
+            try:
+                self._logger.info(
+                    "QueryService.SimpleHandler: Groq payload preparado",
+                    extra={
+                        "query_id": conversation_id,
+                        "model": query_config.model.value,
+                        "temperature": query_config.temperature,
+                        "max_tokens": query_config.max_tokens,
+                        "top_p": query_config.top_p,
+                        "has_stop": bool(query_config.stop),
+                        "system_prompt_len": len(system_prompt_combined or ""),
+                    }
+                )
+            except Exception:
+                pass
             
             # Aplicar configuración dinámica si está especificada en query_config
             groq_client_instance = self.groq_client
@@ -246,15 +293,20 @@ class SimpleHandler(BaseHandler):
                 sources=sources,
                 execution_time_ms=int((end_time - start_time) * 1000)
             )
-            
-            self._logger.info(
-                f"Simple query procesada exitosamente. Tokens: {token_usage_model.total_tokens}",
-                extra={
-                    "query_id": conversation_id,
-                    "processing_time": response.execution_time_ms,
-                    "context_chunks": len(sources)
-                }
-            )
+
+            try:
+                self._logger.info(
+                    "QueryService.SimpleHandler: respuesta construida",
+                    extra={
+                        "query_id": conversation_id,
+                        "processing_time": response.execution_time_ms,
+                        "context_chunks": len(sources),
+                        "usage": token_usage_model.model_dump(),
+                        "content_length": len(response_message.content or "")
+                    }
+                )
+            except Exception:
+                pass
             
             return response
             
