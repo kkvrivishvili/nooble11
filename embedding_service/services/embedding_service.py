@@ -121,9 +121,18 @@ class EmbeddingService(BaseService):
             raise ValueError("rag_config es requerido para embedding.generate")
 
         texts = action.data.get("texts", [])
-        chunk_ids = action.data.get("chunk_ids", [])
-        if not texts or not chunk_ids or len(texts) != len(chunk_ids):
-            raise ValueError("Payload debe contener 'texts' y 'chunk_ids' con la misma longitud.")
+        origin = getattr(action, "origin_service", "") or ""
+        chunk_ids = action.data.get("chunk_ids")
+        if not texts:
+            raise ValueError("Payload debe contener 'texts'.")
+        # Si viene de ingestion-service, 'chunk_ids' es obligatorio y debe coincidir en longitud.
+        if origin == "ingestion-service":
+            if not chunk_ids or len(texts) != len(chunk_ids):
+                raise ValueError("Para ingestion-service, el payload debe contener 'texts' y 'chunk_ids' con la misma longitud.")
+        else:
+            # Para query (u otros), si no hay chunk_ids o la longitud no coincide, generamos IDs efímeros
+            if not chunk_ids or len(texts) != len(chunk_ids):
+                chunk_ids = [f"query_{i}" for i in range(len(texts))]
 
         rag_config = action.rag_config
         results = {}
@@ -167,8 +176,8 @@ class EmbeddingService(BaseService):
                 for i, chunk in enumerate(valid_chunks):
                     results[chunk["id"]] = {
                         "chunk_id": chunk["id"],
-                        "embedding": embedding_api_result["embeddings"][i]["embedding"],
-                        "text_index": embedding_api_result["embeddings"][i]["index"]
+                        "embedding": embedding_api_result["embeddings"][i],
+                        "text_index": i
                     }
 
             except Exception as e:

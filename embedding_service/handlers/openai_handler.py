@@ -93,6 +93,16 @@ class OpenAIHandler(BaseHandler):
         )
         
         # Log RAG config si existe
+        # Normalizar rag_config a dict si viene como modelo Pydantic
+        if rag_config and not isinstance(rag_config, dict):
+            try:
+                rag_config = rag_config.model_dump()
+            except Exception:
+                try:
+                    rag_config = rag_config.dict()
+                except Exception:
+                    rag_config = None
+
         if rag_config:
             self._logger.debug(
                 f"[OpenAIHandler] RAG config recibida: "

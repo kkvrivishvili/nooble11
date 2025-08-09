@@ -7,7 +7,7 @@ from uuid import UUID
 
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.models import (
-    Filter, FieldCondition, MatchValue,
+    Filter, FieldCondition, MatchValue, MatchAny,
     SearchParams, PointStruct
 )
 
@@ -64,8 +64,8 @@ class QdrantClient:
             ),
             # Filtro obligatorio por agent_id
             FieldCondition(
-                key="agent_id",
-                match=MatchValue(value=str(agent_id))
+                key="agent_ids",
+                match=MatchAny(any=[str(agent_id)])  # 'agent_ids' es un array en el payload
             )
         ]
         
@@ -74,7 +74,7 @@ class QdrantClient:
             must_conditions.append(
                 FieldCondition(
                     key="collection_id",
-                    match=MatchValue(any=collection_ids)  # Filtro virtual por collection_id
+                    match=MatchAny(any=[str(c) for c in collection_ids])  # Filtro virtual por collection_id
                 )
             )
         
@@ -87,13 +87,13 @@ class QdrantClient:
             qdrant_filter.must.append(
                 FieldCondition(
                     key="document_id",
-                    match=MatchValue(any=filters["document_ids"])
+                    match=MatchAny(any=[str(d) for d in filters["document_ids"]])
                 )
             )
         
         # CAMBIO CRÍTICO: Buscar solo en colección unificada "documents"
         results = await self.client.search(
-            collection_name="documents",  # Colección única
+            collection_name="nooble8_vectors",  # Colección física usada en Ingestion
             query_vector=query_embedding,
             query_filter=qdrant_filter,
             limit=top_k,
@@ -112,7 +112,7 @@ class QdrantClient:
                 similarity_score=hit.score,
                 metadata={
                     **hit.payload.get("metadata", {}),
-                    "agent_id": hit.payload.get("agent_id", agent_id),  # Incluir agent_id
+                    "agent_ids": hit.payload.get("agent_ids", [str(agent_id)]),
                     "tenant_id": hit.payload.get("tenant_id", str(tenant_id))
                 }
             )

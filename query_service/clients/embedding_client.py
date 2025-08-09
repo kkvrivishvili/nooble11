@@ -56,9 +56,9 @@ class EmbeddingClient:
         Returns:
             DomainActionResponse con los embeddings
         """
-        # Payload solo con los textos (datos puros)
+        # Payload solo con los textos (Embedding Service manejará chunk_ids cuando corresponda)
         payload = {
-            "texts": texts  # Solo los datos
+            "texts": texts
         }
         
         # Crear DomainAction con correlation_id para pseudo-sync
@@ -81,7 +81,7 @@ class EmbeddingClient:
             f"Solicitando embeddings para {len(texts)} textos",
             extra={
                 "action_id": action.action_id,
-                "model": rag_config.embedding_model.model_name,
+                "model": rag_config.embedding_model.value,
                 "dimensions": rag_config.embedding_dimensions,
                 "agent_id": agent_id,
                 "tenant_id": tenant_id
@@ -101,7 +101,7 @@ class EmbeddingClient:
                 extra={
                     "action_id": action.action_id,
                     "agent_id": agent_id,
-                    "model": rag_config.embedding_model.model_name
+                    "model": rag_config.embedding_model.value
                 }
             )
             raise Exception(error_msg)

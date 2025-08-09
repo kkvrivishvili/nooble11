@@ -143,7 +143,8 @@ class SimpleHandler(BaseHandler):
                     collection_ids=rag_config.collection_ids,
                     top_k=rag_config.top_k,
                     similarity_threshold=rag_config.similarity_threshold,
-                    tenant_id=str(tenant_id),
+                    tenant_id=tenant_id,
+                    agent_id=str(agent_id),
                     filters={"document_ids": rag_config.document_ids} if rag_config.document_ids else None
                 )
                 
